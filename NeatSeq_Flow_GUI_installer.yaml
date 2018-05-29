@@ -1,0 +1,19 @@
+name: NeatSeq_Flow_GUI
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+# Deps of Neatseq_Flow
+  - python=3.6 
+  - wxpython
+  - pyyaml
+  - munch
+  
+# Software
+  - curl
+  
+  #Neatseq_Flow
+  - pip:
+    - git+https://github.com/flexxui/flexx.git
+    - git+https://github.com/bioinfo-core-BGU/NeatSeq-Flow-GUI.git
+

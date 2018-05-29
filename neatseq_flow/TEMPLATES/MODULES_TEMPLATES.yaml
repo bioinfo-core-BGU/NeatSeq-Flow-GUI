@@ -1,0 +1,311 @@
+Generic:
+    Generic:                        # Name of this step
+        module: Generic             # Name of module
+        base:                       # Name of the step [or list of names] to run after [must be after steps that generates the inputs File_Types] 
+        script_path:                # Main command for this module
+        scope:                      # The scope of this module could be sample/project, the default is by sample
+        inputs:                     # The inputs for this module
+            STR:                    # Input argument, e.g. -i, --input [could be also 'Empty1', 'Empty2'.. for no input argument string] 
+                scope:              # The scope of this input argument could be sample/project
+                                    # If the module scope is project and the argument scope is sample:
+                                    # all the samples inputs File_Types of this argument will be listed as: [input argument] [File_Type(sample#)] e.g. -i sample1.bam -i sample2.bam ... 
+                File_Type:          # The input File_Type could be any File_Type available from previous (in this branch) steps
+                base:               # From which previous step to take the input File_Type. The default is the current step.
+
+        outputs:                    # The outputs for this module
+            STR:                    # Output argument, e.g. -o, --out , the scope of the output arguments is determinant by the module scope
+                                    # could be also 'Empty1', 'Empty2'.. for no output argument string OR 'No_run1', 'No_run2'.. for only entering the file information to output File_Type 
+                File_Type:          # The output File_Type could be any File_Type name for the current branch downstream work 
+                                    # If the File_Type exists its content will be override for the current branch downstream work 
+                prefix:             # A prefix for this output argument file name
+                suffix:             # A suffix for this output argument file name
+
+
+
+Merge:
+    Merge:
+        module: merge 
+        script_path:  
+
+Fastqc:
+    Fastqc:
+        module: fastqc_html
+        base: 
+        script_path: '{Vars.Programs.FastQC}'
+        redirects:
+            --threads:  1       
+            
+Trim_Galore:
+   Trim_Galore:
+        module: Trim_Galore
+        base: 
+        script_path: '{Vars.Programs.Trim_Galore.Main}'
+        cutadapt_path: '{Vars.Programs.Trim_Galore.cutadapt}'
+        redirects:
+            --length: 36
+            -q: 25
+            
+Trimmomatic:
+    Trimmomatic:
+        module: trimmo
+        base: 
+        script_path: 'java -jar {Vars.Programs.Trimmomatic}'
+        todo: ILLUMINACLIP:TruSeq3-SE.fa:2:30:10 LEADING:20 TRAILING:20 SLIDINGWINDOW:4:15
+            MINLEN:36
+        redirects:
+            -threads: 1
+
+Cutadapt(Remove_poly_A):
+    Remove_poly_A:                   # Name of this step
+        module: Cutadapt             # Name of the module used
+        base:                        # Name of the step [or list of names] to run after [must be after a merge step]
+        script_path: '{Vars.Programs.cutadapt}'                # Command for running the Cutadapt script
+        redirects:
+            -a:  "A'{100}'"   
+
+RSEM_Genome_STAR:   
+    RSEM_Genome_STAR:
+        module: RSEM
+        base: 
+        script_path: '{Vars.Programs.RSEM.calculate-expression}'
+        annotation: '{Vars.Genome.gtf}'
+        mapper: star
+        mapper_path: '{Vars.Programs.star}'
+        mode: genome
+        plot_stat: null
+        plot_stat_script_path: '{Vars.Programs.RSEM.plot}' 
+        reference: '{Vars.Genome.reference}'
+        rsem_generate_data_matrix_script_path: '{Vars.Programs.RSEM.generate_data_matrix}'
+        rsem_prepare_reference_script_path: '{Vars.Programs.RSEM.prepare_reference}'
+        redirects:
+            --append-names: null
+            --estimate-rspd: null
+            --output-genome-bam: null
+            -p: 1  
+ 
+RSEM_Genome_Bowtie2:   
+    RSEM_Genome_Bowtie2:
+        module: RSEM
+        base: 
+        script_path: '{Vars.Programs.RSEM.calculate-expression}'
+        annotation: '{Vars.Genome.gff}'
+        gff3: null
+        mapper: bowtie2
+        mapper_path: '{Vars.Programs.bowtie2}'
+        mode: genome
+        plot_stat: null
+        plot_stat_script_path: '{Vars.Programs.RSEM.plot}' 
+        reference: '{Vars.Genome.reference}'
+        rsem_generate_data_matrix_script_path: '{Vars.Programs.RSEM.generate_data_matrix}'
+        rsem_prepare_reference_script_path: '{Vars.Programs.RSEM.prepare_reference}'
+        redirects:
+            --append-names: null
+            --estimate-rspd: null
+            --output-genome-bam: null
+            -p: 1  
+
+RSEM_Transcriptome_Bowtie2:         
+    RSRM_Transcriptome_Bowtie2:
+        module: RSEM
+        base: 
+        script_path: '{Vars.Programs.RSEM.calculate-expression}'
+        annotation: Trinity
+        from_Trinity_to_gene_map_script_path: '{Vars.Programs.RSEM.transcript2gene_map_from_trinity}'
+        mapper: bowtie2
+        mapper_path: '{Vars.Programs.bowtie2}'
+        mode: transcriptome
+        plot_stat: null
+        plot_stat_script_path: '{Vars.Programs.RSEM.plot}' 
+        reference: '{Vars.Genome.reference}'
+        rsem_generate_data_matrix_script_path: '{Vars.Programs.RSEM.generate_data_matrix}'
+        rsem_prepare_reference_script_path: '{Vars.Programs.RSEM.prepare_reference}'
+        redirects:
+            --append-names: null
+            --estimate-rspd: null
+            -p: 1
+
+
+STAR_Mapper(external-index):
+    STAR_Mapper:
+        module:             STAR_mapper
+        base:               
+        script_path:        '{Vars.Programs.star}'
+        redirects:
+            --readMapNumber:    1000
+            --genomeDir:        '{Vars.Genome.STAR_index}'
+
+STAR_Mapper(after-STAR_builder):
+    STAR_Mapper:
+        module:             STAR_mapper
+        base:               
+        script_path:        '{Vars.Programs.star}'
+        scope:              project
+        redirects:
+            --readMapNumber:    1000
+            
+
+
+BWA_Index_Builder:
+    BWA_Index_Builder:
+        module: bwa_builder
+        base: 
+        script_path: '{Vars.Programs.BWA} index'
+        scope: sample
+
+BWA_Mapper:        
+    BWA_Mapper:
+        module: bwa_mapper
+        base: 
+        script_path: '{Vars.Programs.BWA}'
+        scope: sample
+        mod: mem
+        redirects:
+            -t: 1
+            -B: 5
+
+Bowtie2_Index_Builder:            
+    Bowtie2_Index_Builder:
+        module: bowtie2_builder
+        base: 
+        script_path: '{Vars.Programs.bowtie2_builder}'
+        scope: sample
+
+
+Bowtie2_Mapper:        
+    Bowtie2_Mapper:
+        module: bowtie2_mapper
+        base: 
+        script_path: '{Vars.Programs.bowtie2}'
+        scope: sample
+        get_map_log:
+        get_stderr:
+        redirects:
+            --end-to-end:
+            -p: 1
+            -q:  
+
+Samtools:
+    Samtools:
+        module: samtools
+        base: 
+        script_path: '{Vars.Programs.samtools}'
+        view: -buh 
+        sort: -@ 1
+        flagstat:
+        idxstats:
+        index:
+        stats: --remove-dups
+        del_sam:
+        del_unsorted:
+        
+MultQC:
+    MultQC:
+        module: Multiqc
+        base:
+        script_path: '{Vars.Programs.multiqc}'
+
+Spades:
+    Spades:
+        module: spades_assembl
+        base: 
+        script_path: '{Vars.Programs.Spades}'
+        scope: sample
+        truncate_names: 
+        redirects:
+            --careful: 
+            --threads: 1
+            --cov-cutoff: auto
+            
+Quast:
+    Quast:
+        module: quast
+        base: 
+        script_path: '{Vars.Programs.Quast}'
+        scope: sample
+        redirects:
+            --fast: 
+            -t: 1
+            -L: 
+            
+Prokka:
+   Prokka:
+        module: Prokka
+        base: 
+        script_path: '{Vars.Programs.Prokka}'
+        generate_GFF_dir: 
+        redirects:
+            --cpus: 1
+            --force: 
+            --genus: '{Vars.Genome.genus}'
+            --kingdom: '{Vars.Genome.kingdom}'
+            --proteins: VFDB
+
+
+Collect_results           :
+    Collect_results:
+        module: Collect_results
+        base: 
+        script_path: 
+        redirects:
+            --add_samples_names: 
+            --pivot: '''Samples'' ''category'' ''value'''
+            --split_by: ','
+            -R: .tab$
+
+Make_Blast_db:
+    Make_Blast_db:
+        module: makeblastdb
+        base: 
+        script_path: '{Vars.Programs.BLAST.makeblastdb}'
+        redirects:
+            -dbtype: nucl
+        scope: project
+
+
+Blast:
+    Blast:
+        module: blast
+        base: 
+        script_path: '{Vars.Programs.BLAST.blastn}'
+        fasta2use: nucl
+        scope: project
+        redirects:
+            -evalue: '0.0001'
+            -num_descriptions: '20'
+            -num_threads: 1
+            -outfmt: '"6 qseqid sallseqid qlen slen qstart qend sstart send length
+                evalue bitscore score pident qframe"'
+            -query: '{Vars.Query.FASTA}'
+
+
+Parse_Blast:
+    Parse_Blast:
+        module: parse_blast
+        base: 
+        script_path: '{Vars.Programs.parse_blast}'
+        scope: sample
+        redirects:
+            --dbtable: 
+            --group_dif_name: 
+            --max_evalue: 
+            --merge_blast: qseqid
+            --merge_metadata: 
+            --min_coverage: 100
+            --names: '"qseqid sallseqid qlen slen qstart qend sstart send length evalue
+                pident sseq"'
+            --num_hits: 1
+            --sort_str: '''evalue,i,pident,d,length,d'''
+
+
+Gassst:
+    Gassst:
+        module: Gassst
+        base: 
+        script_path: '{Vars.Programs.Gassst}'
+        redirects:
+            -h: 1
+            -i: '{Vars.Query.FASTA}'
+            -l: 0
+            -m: 0
+            -n: 1
+            -p: 95
