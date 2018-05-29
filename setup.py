@@ -20,7 +20,7 @@ setup(
                             'bin/NeatSeq_Flow_GUI.py',
                             ],
     install_requires    = [
-                        "python>=3.6",
+                        "python == 3.6.5",
                         "pyyaml >= 3.12",
                         "munch",
                         "wxpython"
