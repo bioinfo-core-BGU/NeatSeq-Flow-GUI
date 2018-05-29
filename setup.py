@@ -22,7 +22,7 @@ setup(
     install_requires    = [
                         "pyyaml >= 3.12",
                         "munch",
-                        "wxpython"
+                        "wxpython",
                         "pandas"],
     classifiers         = [
                           'Development Status :: 4 - Beta',
