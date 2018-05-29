@@ -71,6 +71,6 @@ For more information about **"NeatSeq-Flow"** see the full documentation on **[R
     ```Bash 
       git clone https://github.com/bioinfo-core-BGU/neatseq-flow.git
     ```
-#£ Contact
+# Contact
 
     Please contact Liron Levin at: [levinl@post.bgu.ac.il](mailto:levinl@post.bgu.ac.il)
