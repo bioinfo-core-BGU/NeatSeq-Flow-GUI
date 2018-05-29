@@ -11,7 +11,7 @@ setup(
     url                 = 'http://neatseq-flow.readthedocs.io/en/latest/',
     description         = 'Package for creation of workflow scripts for execution on computer clusters',
     license             = 'GNU3',
-    long_description    =  open('README').read(),
+    long_description    =  open('README.md').read(),
     download_url        = 'https://github.com/bioinfo-core-BGU/NeatSeq-Flow-GUI.git',
     platforms           = ["POSIX","Windows"],
     packages            = find_packages(),
