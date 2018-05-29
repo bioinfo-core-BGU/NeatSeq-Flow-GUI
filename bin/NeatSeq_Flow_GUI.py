@@ -1,5 +1,7 @@
 from flexx import app, event, ui
-import os
+import os,sys
+
+sys.path.append(os.path.realpath(os.path.expanduser(os.path.dirname(os.path.abspath(__file__))+os.sep+"..")))
 
 STEPS = {'Merge': {'module': 'merge', 'script_path': None  },
 

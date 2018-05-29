@@ -8,6 +8,7 @@ dependencies:
   - wxpython
   - pyyaml
   - munch
+  - pandas
   
 # Software
   - curl
