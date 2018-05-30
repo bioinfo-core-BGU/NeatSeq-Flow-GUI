@@ -1064,6 +1064,7 @@ def Load_MODULES_TEMPLATES():
     import yaml, os, inspect
 
     location = os.path.dirname(os.path.abspath(inspect.getsourcefile(lambda: 0)))
+    location = os.path.expanduser(location+os.sep+"..")
     try:
 
         with open(os.path.join(location, 'NeatSeq_Flow_GUI', 'TEMPLATES', 'MODULES_TEMPLATES.yaml'), 'rb') as infile:
@@ -1634,7 +1635,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
 
     @event.reaction('samples_info.load_samples_file')
     def load_sample_file(self, *events):
-        from neatseq_flow.modules.parse_sample_data import parse_sample_file
+        from NeatSeq_Flow_GUI.modules.parse_sample_data import parse_sample_file
         samples_data = self.samples_info.samples_data
         for ev in events:
             if len(self.samples_info.load_samples_file) > 0:
@@ -1656,7 +1657,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
 
     @event.reaction('step_info.workflow_file')
     def load_workflow_file(self, *events):
-        from neatseq_flow.modules.parse_param_data import parse_param_file
+        from NeatSeq_Flow_GUI.modules.parse_param_data import parse_param_file
         for ev in events:
             if len(self.step_info.workflow_file) > 0:
                 try:
