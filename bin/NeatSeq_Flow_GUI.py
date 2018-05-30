@@ -1066,7 +1066,7 @@ def Load_MODULES_TEMPLATES():
     location = os.path.dirname(os.path.abspath(inspect.getsourcefile(lambda: 0)))
     try:
 
-        with open(os.path.join(location, 'neatseq_flow', 'TEMPLATES', 'MODULES_TEMPLATES.yaml'), 'rb') as infile:
+        with open(os.path.join(location, 'NeatSeq_Flow_GUI', 'TEMPLATES', 'MODULES_TEMPLATES.yaml'), 'rb') as infile:
             MODULES_TEMPLATES = yaml.load(infile, yaml.SafeLoader)
             return MODULES_TEMPLATES
 
@@ -1804,7 +1804,7 @@ if __name__ == '__main__':
     temp_MODULES_TEMPLATES = Load_MODULES_TEMPLATES()
     if len(temp_MODULES_TEMPLATES) > 0:
         MODULES_TEMPLATES = temp_MODULES_TEMPLATES
-    icon='NeatSeq_Flow.ico'
+    icon=os.path.join(os.path.realpath(os.path.expanduser(os.path.dirname(os.path.abspath(__file__))+os.sep+"..")),'NeatSeq_Flow_GUI','NeatSeq_Flow.ico')
     icon = app.assets.add_shared_data('ico.icon', open(icon, 'rb').read())
     m = app.App(NeatSeq_Flow_GUI).launch(runtime ='app',size=(1200, 650),title='NeatSeq-Flow GUI',icon=icon)
     app.run()
