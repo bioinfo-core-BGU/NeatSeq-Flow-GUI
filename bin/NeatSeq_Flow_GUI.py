@@ -1804,8 +1804,9 @@ if __name__ == '__main__':
     temp_MODULES_TEMPLATES = Load_MODULES_TEMPLATES()
     if len(temp_MODULES_TEMPLATES) > 0:
         MODULES_TEMPLATES = temp_MODULES_TEMPLATES
-
-    m = app.App(NeatSeq_Flow_GUI).launch(size=(1200, 650) )
+    icon='NeatSeq_Flow.ico'
+    icon = app.assets.add_shared_data('ico.icon', open(icon, 'rb').read())
+    m = app.App(NeatSeq_Flow_GUI).launch(runtime ='app',size=(1200, 650),title='NeatSeq-Flow GUI',icon=icon)
     app.run()
 
 
