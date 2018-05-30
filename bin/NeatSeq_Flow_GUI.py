@@ -1635,7 +1635,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
 
     @event.reaction('samples_info.load_samples_file')
     def load_sample_file(self, *events):
-        from NeatSeq_Flow_GUI.modules.parse_sample_data import parse_sample_file
+        from neatseq_flow_gui.modules.parse_sample_data import parse_sample_file
         samples_data = self.samples_info.samples_data
         for ev in events:
             if len(self.samples_info.load_samples_file) > 0:
@@ -1657,7 +1657,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
 
     @event.reaction('step_info.workflow_file')
     def load_workflow_file(self, *events):
-        from NeatSeq_Flow_GUI.modules.parse_param_data import parse_param_file
+        from neatseq_flow_gui.modules.parse_param_data import parse_param_file
         for ev in events:
             if len(self.step_info.workflow_file) > 0:
                 try:

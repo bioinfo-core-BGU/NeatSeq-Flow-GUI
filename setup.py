@@ -19,8 +19,8 @@ setup(
     scripts             = ['bin/neatseq_flow_monitor.py',
                             'bin/NeatSeq_Flow_GUI.py',
                             ],
-    data_files          = [('NeatSeq_Flow_GUI',[os.path.join('NeatSeq_Flow_GUI','NeatSeq_Flow.ico')]),
-                            (os.path.join('NeatSeq_Flow_GUI','TEMPLATES'),[os.path.join('NeatSeq_Flow_GUI','TEMPLATES','MODULES_TEMPLATES.yaml')])],
+    data_files          = [('neatseq_flow_gui',[os.path.join('neatseq_flow_gui','NeatSeq_Flow.ico')]),
+                            (os.path.join('neatseq_flow_gui','TEMPLATES'),[os.path.join('neatseq_flow_gui','TEMPLATES','MODULES_TEMPLATES.yaml')])],
     install_requires    = [
                         "pyyaml >= 3.12",
                         "munch",
