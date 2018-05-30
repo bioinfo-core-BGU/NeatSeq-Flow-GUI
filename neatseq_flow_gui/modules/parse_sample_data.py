@@ -23,7 +23,7 @@ VARIANT_FILE_TYPES = ['VCF','G.VCF']
 RECOGNIZED_FILE_TYPES = FASTQ_FILE_TPYES + FASTA_FILE_TYPES + ALIGNMENT_FILE_TYPES + VARIANT_FILE_TYPES 
 GLOBAL_SAMPLE_LIST = ['Title', 'Sample', 'Single', 'Sample_Control'] + RECOGNIZED_FILE_TYPES
 
-from  neatseq_flow.modules.global_defs import ZIPPED_EXTENSIONS, ARCHIVE_EXTENSIONS, KNOWN_FILE_EXTENSIONS
+from  neatseq_flow_gui.modules.global_defs import ZIPPED_EXTENSIONS, ARCHIVE_EXTENSIONS, KNOWN_FILE_EXTENSIONS
 
 
 def remove_comments(filelines):
