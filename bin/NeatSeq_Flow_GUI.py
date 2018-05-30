@@ -1,3 +1,15 @@
+#!/usr/bin/env python
+
+
+
+__author__ = "Liron Levin"
+__version__ = "1.0"
+
+
+__affiliation__ = "Bioinformatics Core Unit, NIBN, Ben Gurion University"
+
+
+
 from flexx import app, event, ui
 import os,sys
 

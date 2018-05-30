@@ -1,5 +1,14 @@
 #!/usr/bin/env python2                                                       
 # -*- coding: UTF-8 -*-
+
+__author__ = "Liron Levin"
+__version__ = "1.2"
+
+
+__affiliation__ = "Bioinformatics Core Unit, NIBN, Ben Gurion University"
+
+
+
 """ 
 :Neatseq-Flow Monitor
 -----------------------
