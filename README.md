@@ -46,7 +46,7 @@ For more information about **"NeatSeq-Flow"** see the full documentation on **[R
   Installing Using Conda will install NeatSeq-Flow-GUI with all its dependencies* in one go: 
   - First if you don't have **Conda**, [install it!](https://conda.io/miniconda.html) 
   - Then in the terminal:
-    1. Download the conda installer file:
+    1. Download the **NeatSeq-Flow-GUI** installer file:
     ```Bash
       wget https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/NeatSeq_Flow_GUI_installer.yaml
     ```
