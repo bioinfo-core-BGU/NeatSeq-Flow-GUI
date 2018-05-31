@@ -1,3 +1,9 @@
+Basic Step:
+    Basic_New_Step:
+        module:  
+        base: 
+        script_path:  
+
 Generic:
     Generic:                        # Name of this step
         module: Generic             # Name of module
