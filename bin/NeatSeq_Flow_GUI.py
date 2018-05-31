@@ -1067,7 +1067,7 @@ def Load_MODULES_TEMPLATES():
     location = os.path.expanduser(location+os.sep+"..")
     try:
 
-        with open(os.path.join(location, 'NeatSeq_Flow_GUI', 'TEMPLATES', 'MODULES_TEMPLATES.yaml'), 'rb') as infile:
+        with open(os.path.join(location, 'neatseq_flow_gui', 'TEMPLATES', 'MODULES_TEMPLATES.yaml'), 'rb') as infile:
             MODULES_TEMPLATES = yaml.load(infile, yaml.SafeLoader)
             return MODULES_TEMPLATES
 
