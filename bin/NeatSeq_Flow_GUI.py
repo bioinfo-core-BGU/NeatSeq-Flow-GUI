@@ -1449,9 +1449,9 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         try:
             self.Run.set_Terminal('Searching for Conda Environments...\n')
             proc = Popen(temp_command, stdout=PIPE, stderr=PIPE, shell=True, universal_newlines=True)
-            outs, errs = proc.communicate(timeout=5)
+            outs, errs = proc.communicate(timeout=25)
 
-        except TimeoutExpired:
+        except :
             proc.kill()
             outs, errs = proc.communicate()
         options = list(map(lambda y: y.split(os.sep)[0].replace('*', '').replace(' ', ''),
@@ -1506,9 +1506,9 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 try:
                     proc = Popen(temp_command, shell=True, executable='/bin/bash', stdout=PIPE, stderr=PIPE,
                                  universal_newlines=True)
-                    outs, errs = proc.communicate(timeout=5)
+                    outs, errs = proc.communicate(timeout=25)
 
-                except TimeoutExpired:
+                except :
                     proc.kill()
                     outs, errs = proc.communicate()
 
@@ -1542,9 +1542,9 @@ class NeatSeq_Flow_GUI(app.PyComponent):
             try:
                 proc = Popen(temp_command, shell=True, executable='/bin/bash', stdout=PIPE, stderr=PIPE,
                              universal_newlines=True)
-                outs, errs = proc.communicate(timeout=5)
+                outs, errs = proc.communicate(timeout=25)
 
-            except TimeoutExpired:
+            except :
                 proc.kill()
                 outs, errs = proc.communicate()
 
