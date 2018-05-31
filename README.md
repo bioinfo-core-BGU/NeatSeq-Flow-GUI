@@ -4,7 +4,7 @@ A Graphical User Interface for the High Throughput Sequencing Workflow Platform 
 
 For more information about **"NeatSeq-Flow"** see the full documentation on **[Read The Docs](http://neatseq-flow.readthedocs.io/en/latest/)**
 
-<img align="right" src="https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/doc/NeatSeq-Flow-GUI.PNG" width="650">
+<img align="right" src="https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/doc/NeatSeq-Flow-GUI.gif" width="650">
 
 ### Table of Contents    
 - [Dependencies](#dependencies)
