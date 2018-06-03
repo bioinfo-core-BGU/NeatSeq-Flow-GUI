@@ -41,7 +41,14 @@
         ```Bash
            conda env create -f NeatSeq_Flow_Tutorial_Install.yaml
         ```  
-
+  4. Download the **Tutorial Work-Flow Parameter file**
+        ```Bash
+           wget https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/doc/Tutorial_Parameter_file.yaml
+        ```  
+  5. Download the **Tutorial Work-Flow Sample file**
+        ```Bash
+           wget https://raw.githubusercontent.com/bioinfo-core-BGU/neatseq-flow-tutorial/master/Samples_conda.nsfs
+        ```   
 
 ## Install NeatSeq-Flow-GUI
    1. Download the **NeatSeq-Flow-GUI** installer file:
@@ -105,6 +112,22 @@
         
         - Click on the step's name (to remove the step) or on a step's option name (to remove the option and it's sub fields) 
         - Click the 'Remove' button
+        
+## Configure the Used Variables in the Work-Flow
+   1. **Edit Variables:**
+   
+      <img src="https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/doc/Edit_Var.gif" width="650">
+      
+      In the 'Vars' Tab choose a variable name to edit, change the key or value and then click on the 'Edit' button.
+      
+   2. **Create New Variable:**
+   
+       <img  src="https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/doc/Create_New_variable.gif" width="650">
+       
+        - You can create new variable by clicking on some existing variable name and then click the 'New Field' button.
+        - You can create new sub variable by clicking on the existing variable to which you want to create a sub variable and then click the 'New Sub Field' button.
+        
+        
         
 # Contact
 Please contact Liron Levin at: [levinl@post.bgu.ac.il](mailto:levinl@post.bgu.ac.il)
