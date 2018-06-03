@@ -11,6 +11,7 @@ For more information about **"NeatSeq-Flow"** see the full documentation on **[R
 - [Installing](#installing)
   - [Using Conda](#using-conda)
   - [No Conda](#no-conda)
+- [Tutorial](# tutorial)
 - [Contact](#contact)
 
 &nbsp;  
@@ -69,7 +70,12 @@ For more information about **"NeatSeq-Flow"** see the full documentation on **[R
   If all the dependencies are satisfied:
   - Just clone the github repository:
     ```Bash 
-      git clone https://github.com/bioinfo-core-BGU/neatseq-flow.git
+      git clone https://github.com/bioinfo-core-BGU/NeatSeq-Flow-GUI.git
     ```
+    
+# Tutorial
+Detailed [Tutorial](https://github.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/blob/master/Tutorial.md) to learn and experience NeatSeq-Flow-GUI.
+
+
 # Contact
 Please contact Liron Levin at: [levinl@post.bgu.ac.il](mailto:levinl@post.bgu.ac.il)
