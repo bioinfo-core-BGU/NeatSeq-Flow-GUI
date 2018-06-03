@@ -28,18 +28,18 @@
     
 ## Install NeatSeq-Flow 
     1. Create New Directory for the Tutorial
-    ``Bash
-      mkdir Tutorial
-      cd Tutorial
-    ```
+        ``Bash
+          mkdir Tutorial
+          cd Tutorial
+        ```
     2. Download the **NeatSeq Flow Tutorial** installer file:
-    ``Bash
-      wget http://neatseq-flow.readthedocs.io/en/latest/_downloads/NeatSeq_Flow_Tutorial_Install.yaml
-    ```
+        ``Bash
+          wget http://neatseq-flow.readthedocs.io/en/latest/_downloads/NeatSeq_Flow_Tutorial_Install.yaml
+        ```
     3. Create the **NeatSeq_Flow_Tutorial** conda environment:
-    ```Bash
-      conda env create -f NeatSeq_Flow_Tutorial_Install.yaml
-    ```  
+        ```Bash
+          conda env create -f NeatSeq_Flow_Tutorial_Install.yaml
+        ```  
 
 
 ## Install NeatSeq-Flow-GUI
