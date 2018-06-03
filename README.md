@@ -11,7 +11,7 @@ For more information about **"NeatSeq-Flow"** see the full documentation on **[R
 - [Installing](#installing)
   - [Using Conda](#using-conda)
   - [No Conda](#no-conda)
-- [Tutorial](# tutorial)
+- [Tutorial](#tutorial)
 - [Contact](#contact)
 
 &nbsp;  
