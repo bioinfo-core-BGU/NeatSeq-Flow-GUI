@@ -1,14 +1,14 @@
 # NeatSeq-Flow-GUI Tutorial
 
 ## In this Tutorial we will:
- - [Install Conda](# install-conda)
- - [Install NeatSeq-Flow](# install-neatseq-flow)
- - [Install NeatSeq-Flow-GUI](# install-neatseq-flow-gui)
- - [Learn How to Create a Work-Flow](# learn-how-to-create-a-work-flow)
- - [Create a Sample file](# create-a-sample-file)
- - [Configure the Used Variables in the Work-Flow](# configure-the-used-variables-in-the-work-flow)
- - [Configure the Cluster information ](# configure-the-cluster-information)
- - [Run the Work-Flow](# run-the-work-flow)
+ - [Install Conda](#install-conda)
+ - [Install NeatSeq-Flow](#install-neatseq-flow)
+ - [Install NeatSeq-Flow-GUI](#install-neatseq-flow-gui)
+ - [Learn How to Create a Work-Flow](#learn-how-to-create-a-work-flow)
+ - [Create a Sample file](#create-a-sample-file)
+ - [Configure the Used Variables in the Work-Flow](#configure-the-used-variables-in-the-work-flow)
+ - [Configure the Cluster information ](#configure-the-cluster-information)
+ - [Run the Work-Flow](#run-the-work-flow)
 
 
 
