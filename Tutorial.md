@@ -140,6 +140,8 @@
         
 ## Configure a Sample file
 
+   In the 'Samples' Tab: 
+
    1. **Edit The Project Title Name:**
    
       - You can edit the project title name by clicking on the Project Title name.
@@ -152,7 +154,7 @@
    
       <img src="https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/doc/Load_Sample_file.gif" width="650">
       
-      - In the 'Samples' Tab click on the 'Load Sample File' button, then choose the work-flow's sample file 'Samples_conda.nsfs' and click open.
+      - Click on the 'Load Sample File' button, then choose the work-flow's sample file 'Samples_conda.nsfs' and click open.
       
       - You can edit the names of the samples by clicking on the sample name. 
       - You can remove a sample/project file by clicking the 'Remove' button.
