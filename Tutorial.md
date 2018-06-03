@@ -28,18 +28,18 @@
     For different operating system go to [Conda](https://conda.io/miniconda.html) 
     
 ## Install NeatSeq-Flow 
-    1. Create New Directory for the Tutorial
-       ``Bash
+  1. Create New Directory for the Tutorial
+       ```Bash
          mkdir Tutorial
          cd Tutorial
        ```
-    2. Download the **NeatSeq Flow Tutorial** installer file:
-        ``Bash
+  2. Download the **NeatSeq Flow Tutorial** installer file:
+        ```Bash
           wget http://neatseq-flow.readthedocs.io/en/latest/_downloads/NeatSeq_Flow_Tutorial_Install.yaml
         ```
-    3. Create the **NeatSeq_Flow_Tutorial** conda environment:
+  3. Create the **NeatSeq_Flow_Tutorial** conda environment:
         ```Bash
-          conda env create -f NeatSeq_Flow_Tutorial_Install.yaml
+           conda env create -f NeatSeq_Flow_Tutorial_Install.yaml
         ```  
 
 
@@ -63,33 +63,46 @@
         ```
     
 ## Learn How to Create a Work-Flow
-    1. Add New Step:
-        In the Work-Flow Tab choose a module template and click on the 'Create New Step' button.
-        <img align="right" src="https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/doc/Add_Step.gif" width="650">
-    2. You can change the new step name by clicking on the step name and edit the key field and then click the 'Edit' button to set the change. 
-        <img align="right" src="https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/doc/Change_Step_Name.gif" width="650">
-    3. To determine the position of the new step in the work-flow:
-        <img align="right" src="https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/doc/Set_base.gif" width="650">    
+   1. **Add New Step:**
+   
+      <img src="https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/doc/Add_Step.gif" width="650">
+      
+      In the Work-Flow Tab choose a module template and click on the 'Create New Step' button.
+   2. **Change Step Name:**
+   
+       <img  src="https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/doc/Change_Step_Name.gif" width="650">
+       
+        You can change the new step name by clicking on the step name and edit the key field and then click the 'Edit' button to set the change. 
+    3. **To determine the position of the new step in the work-flow:**
+    
+        <img src="https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/doc/Set_base.gif" width="650">    
+        
         - Click on the step button to see the step options 
         - Click on the base option
         - Click on the 'Value options' drop-down menu
         - Choose a previous step and click the 'Add' button. This can be repeated to choose several previous steps.
         - Click the 'Edit' button to set the changes.
-    4. Add new step option:
-        <img align="right" src="https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/doc/New_step_option.gif" width="650">    
+    4. **Add new step option:**
+    
+        <img src="https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/doc/New_step_option.gif" width="650">    
+        
         - Click on the step's name (or a step option to create a new sub option)
         - Click on the 'New' button.
         - It is possible to edit the new option name and value by editing the 'Key' field and the 'Value' field, it is also possible to choose from the 'Value options' drop-down menu.
         - Click the 'Edit' button to set the changes.
-    5. Edit step's options:
-        <img align="right" src="https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/doc/Edit_step_option.gif" width="650">    
+    5. **Edit step's options:**
+    
+        <img  src="https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/doc/Edit_step_option.gif" width="650">    
+        
         - Click on the step's option name and change the 'Key' field and/or the 'Value' field, it is also possible to choose from the 'Value options' drop-down menu.
         - When using the 'Value options' drop-down menu, in some cases it is possible to choose variables that are defined in the 'Vars' Tab.
           They will appear in the form of {Vars.some_field.some_sub_field} to indicate the value found in the 'Vars' Tab in the some_sub_field field ( which is a sub field of 'some_field' ).  
         - It is possible to choose file location as a value to the 'Value' field by clicking on the 'Browse' button. 
         - Click the 'Edit' button to set the changes.        
-    6. Remove field or step:
-        <img align="right" src="https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/doc/Remove_field_or_step.gif" width="650">    
+    6. **Remove field or step:**
+    
+        <img  src="https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/doc/Remove_field_or_step.gif" width="650">    
+        
         - Click on the step's name (to remove the step) or on a step's option name (to remove the option and it's sub fields) 
         - Click the 'Remove' button
         
