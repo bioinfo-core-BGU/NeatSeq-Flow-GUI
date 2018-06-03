@@ -5,8 +5,9 @@
  - [Install NeatSeq-Flow](#install-neatseq-flow)
  - [Install NeatSeq-Flow-GUI](#install-neatseq-flow-gui)
  - [Learn How to Create a Work-Flow](#learn-how-to-create-a-work-flow)
- - [Create a Sample file](#create-a-sample-file)
  - [Configure the Used Variables in the Work-Flow](#configure-the-used-variables-in-the-work-flow)
+ - [Load a Work-Flow Parameter File](#load-a-work-flow-parameter-file)
+ - [Configure a Sample file](#configure-a-sample-file)
  - [Configure the Cluster information ](#configure-the-cluster-information)
  - [Run the Work-Flow](#run-the-work-flow)
 
@@ -74,7 +75,7 @@
    
       <img src="https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/doc/Add_Step.gif" width="650">
       
-      In the Work-Flow Tab choose a module template and click on the 'Create New Step' button.
+      In the 'Work-Flow' Tab choose a module template and click on the 'Create New Step' button.
    2. **Change Step Name:**
    
        <img  src="https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/doc/Change_Step_Name.gif" width="650">
@@ -112,7 +113,7 @@
         
         - Click on the step's name (to remove the step) or on a step's option name (to remove the option and it's sub fields) 
         - Click the 'Remove' button
-        
+
 ## Configure the Used Variables in the Work-Flow
    1. **Edit Variables:**
    
@@ -127,6 +128,46 @@
         - You can create new variable by clicking on some existing variable name and then click the 'New Field' button.
         - You can create new sub variable by clicking on the existing variable to which you want to create a sub variable and then click the 'New Sub Field' button.
         
+        
+## Load a Work-Flow Parameter File
+   1. **Load a Sample file:**
+   
+      <img src="https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/doc/Load_WorkFlow_parameter_file.gif" width="650">
+      
+      - In the 'Work-Flow' Tab click on the 'Load WorkFlow' button, then choose the work-flow's parameter file 'Tutorial_Parameter_file.yaml' and click open.
+
+
+        
+## Configure a Sample file
+
+   1. **Edit The Project Title Name:**
+   
+      - You can edit the project title name by clicking on the Project Title name.
+ 
+   2. **Add a Sample/Project File:**
+   
+      - You can add a sample/project file by clicking the 'Add Sample File' or 'Add project File' button and choose a file/s.
+ 
+   3. **Load a Sample file:**
+   
+      <img src="https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/doc/Load_Sample_file.gif" width="650">
+      
+      - In the 'Samples' Tab click on the 'Load Sample File' button, then choose the work-flow's sample file 'Samples_conda.nsfs' and click open.
+      
+      - You can edit the names of the samples by clicking on the sample name. 
+      - You can remove a sample/project file by clicking the 'Remove' button.
+      - You can change a sample/project file type by clicking the drop-down menu or by editing the type name.
+
+        
+## Configure the Cluster information 
+   1. **Edit Field:**
+   
+      In the 'Cluster' Tab choose a field name to edit, change the key or value and then click on the 'Edit' button.
+      
+   2. **Create New Field:**
+   
+        - You can create new field by clicking on some existing field name and then click the 'New Field' button.
+        - You can create new sub field by clicking on the existing field to which you want to create a sub field and then click the 'New Sub Field' button.
         
         
 # Contact
