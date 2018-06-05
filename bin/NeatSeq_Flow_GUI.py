@@ -1468,6 +1468,10 @@ class NeatSeq_Flow_GUI(app.PyComponent):
     def Generate_scripts_command(self, NeatSeq_bin, conda_bin, conda_env, Project_dir, sample_file, parameter_file):
         import os
         from subprocess import Popen, PIPE, STDOUT, TimeoutExpired
+        
+        if len(Project_dir) == 0:
+            Project_dir=os.getcwd()
+        
         Error = ''
         if len(NeatSeq_bin) > 0:
             temp_command = ''
@@ -1523,8 +1527,11 @@ class NeatSeq_Flow_GUI(app.PyComponent):
     
     def Run_scripts_command(self,Project_dir):
         import os
-        
         from subprocess import Popen, PIPE, STDOUT, TimeoutExpired
+        
+        if len(Project_dir) == 0:
+            Project_dir=os.getcwd()
+        
         Error = ''
         temp_command = ''
         if len(Project_dir) > 0:
@@ -1562,6 +1569,10 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         import curses, argparse
         import neatseq_flow_monitor  
         Error = ''
+        
+        if len(Project_dir) == 0:
+            Project_dir=os.getcwd()
+            
         parser = argparse.ArgumentParser(description='Neatseq-flow Monitor By Liron Levin ')
         parser.add_argument('-D', dest='directory',metavar="STR", type=str,default=Project_dir,
                             help='Neatseq-flow project directory ')
