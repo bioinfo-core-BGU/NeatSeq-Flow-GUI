@@ -179,12 +179,14 @@
    
    **If NeatSeq-Flow is installed Locally:**
    - Choose the neatseq_flow.py script location. 
+   
    **In order to Generate the Work-Flow scripts:**
-       1. Select the Sample file.
-       2. Select the Work-Flow parameter-file.
-       3. Choose the Project Directory to generate the Work-Flow scripts in (the default is to use the Current Working Directory )
-       4. Click on the 'Generate scripts' button.
-       
+   
+   1. Select the Sample file.
+   2. Select the Work-Flow parameter-file.
+   3. Choose the Project Directory to generate the Work-Flow scripts in (the default is to use the Current Working Directory )
+   4. Click on the 'Generate scripts' button.
+
    **To run the Work-Flow click on the 'Run scripts' button**
    <img src="https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/doc/Run_scripts.gif" width="650">  
    
