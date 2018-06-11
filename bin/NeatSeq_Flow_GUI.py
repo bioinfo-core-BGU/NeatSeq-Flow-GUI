@@ -628,12 +628,7 @@ class Step_Tree_Class(ui.Widget):
                                 self.tree_value_options_b.set_selected_index(-1)
                                 self.tree_value_options_b.set_text('')
 
-            id = ev.source.title or ev.source.text
-            if ev.new_value:
-                text = id + ' was ' + ev.type
-            else:
-                text = id + ' was ' + 'un-' + ev.type
-            # self.label.set_html(text + '<br />' +  self.label.html)
+          
 
 
 class Only_Tree_Class(ui.Widget):
@@ -843,12 +838,6 @@ class Only_Tree_Class(ui.Widget):
                             self.tree_value_options_b.set_selected_index(-1)
                             self.tree_value_options_b.set_text('')
 
-            id = ev.source.title or ev.source.text
-            if ev.new_value:
-                text = id + ' was ' + ev.type
-            else:
-                text = id + ' was ' + 'un-' + ev.type
-            # self.label.set_html(text + '<br />' +  self.label.html)
 
 
 class Samples_info(ui.Widget):
@@ -1092,7 +1081,7 @@ class Run_NeatSeq_Flow(ui.Widget):
     parameter_file = event.ListProp([], settable=True)
     command = event.ListProp([], settable=True)
     Terminal = event.StringProp('', settable=True)
-    Terminal_lines = event.ListProp([], settable=True)
+    
 
     def init(self):
         with ui.Layout(style='padding: 30px;'):
@@ -1157,11 +1146,11 @@ class Run_NeatSeq_Flow(ui.Widget):
     @event.reaction('Terminal')
     def write_2_Terminal(self, *events):
         if len(self.Terminal) > 0:
-            temp = []  # self.Terminal_lines
+            temp = []  
             temp.extend(self.Terminal.split('\n'))
             temp.extend(['', ''])
             self.label.set_html('<br />'.join(temp))
-            self.set_Terminal('')
+            #self.set_Terminal('')
 
     @event.reaction('Generate_scripts_b.pointer_click')
     def on_Generate_scripts_b_click(self, *events):
@@ -1375,7 +1364,11 @@ class NeatSeq_Flow_GUI(app.PyComponent):
 
         """
 
-
+    Running_script               = event.IntProp(0, settable=True)
+    Generating_scripts           = event.IntProp(0, settable=True)
+    Running_Commands             = event.DictProp({}, settable=True)
+    
+    
     def init(self):
         with ui.VSplit():
             with ui.TabLayout(flex=0.9) as self.TabLayout:
@@ -1392,6 +1385,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
             self.label.set_capture_mouse(2)
             self.label.set_html(html_cite)
             self.TabLayout.set_capture_mouse(2)
+            self.Terminal_string = ''
 
     @event.reaction('label.pointer_move')
     def on_label_move(self, *events):
@@ -1447,7 +1441,6 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         temp_command = temp_command + ' info --env'
 
         try:
-            self.Run.set_Terminal('Searching for Conda Environments...\n')
             proc = Popen(temp_command, stdout=PIPE, stderr=PIPE, shell=True, universal_newlines=True)
             outs, errs = proc.communicate(timeout=25)
 
@@ -1460,10 +1453,12 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         self.Run.set_conda_env(options)
 
         if len(errs) > 0:
-            self.Run.set_Terminal('Error:\n' + errs)
+            self.Terminal_string = self.Terminal_string + '[Searching for Conda Environments :] Error:\n' + errs
+            self.Run.set_Terminal(self.Terminal_string)
 
         if len(options) > 0:
-            self.Run.set_Terminal(str(len(options)) + ' Conda Environments were found ')
+            self.Terminal_string = self.Terminal_string +  ' [Searching for Conda Environments] '+ str(len(options)) + ' Conda Environments were found \n'
+            self.Run.set_Terminal(self.Terminal_string)
 
     def Generate_scripts_command(self, NeatSeq_bin, conda_bin, conda_env, Project_dir, sample_file, parameter_file):
         import os
@@ -1504,22 +1499,16 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 temp_command = temp_command + ' -d ' + Project_dir
             else:
                 Error = Error + 'Error:\n No Project directory \n'
-                
-            if len(Error) == 0: 
-                self.Run.set_Terminal('Generating scripts...\n')
-                try:
-                    proc = Popen(temp_command, shell=True, executable='/bin/bash', stdout=PIPE, stderr=PIPE,
-                                 universal_newlines=True)
-                    outs, errs = proc.communicate(timeout=25)
+            
+            if len(Error) == 0:
+                if self.Generating_scripts == 0:
+                    try:
+                        self.Running_Commands['Generating_scripts'] =  Run_command_in_thread(temp_command)
+                        self.Running_Commands['Generating_scripts'].Run()
+                    except :
+                        pass
+                    self.set_Generating_scripts(1)
 
-                except :
-                    proc.kill()
-                    outs, errs = proc.communicate()
-
-                if len(errs) > 0:
-                    self.Run.set_Terminal('Generating scripts...\n' + outs + 'Error:\n' + errs + '\nDone\n')
-                else:
-                    self.Run.set_Terminal('Generating scripts...\n' + outs + '\nDone\n')
             else:
                 self.Run.set_Terminal(Error)
     
@@ -1535,30 +1524,22 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         Error = ''
         temp_command = ''
         if len(Project_dir) > 0:
-            fname = os.path.join(Project_dir,'scripts', '00.workflow.commands.csh')
+            fname = os.path.join(Project_dir,'scripts', '00.workflow.commands.sh')
             if os.path.isfile(fname): 
-                temp_command = 'csh ' + fname 
+                temp_command = 'bash ' + fname 
             else:
                 Error = Error + 'Error:\n You first need to generate the scripts \n'
         else:
             Error = Error + 'Error:\n No Project directory \n'
             
         if len(Error) == 0:
-            
-            self.Run.set_Terminal('Running scripts...\n')
-            try:
-                proc = Popen(temp_command, shell=True, executable='/bin/bash', stdout=PIPE, stderr=PIPE,
-                             universal_newlines=True)
-                outs, errs = proc.communicate(timeout=25)
-
-            except :
-                proc.kill()
-                outs, errs = proc.communicate()
-
-            if len(errs) > 0:
-                self.Run.set_Terminal('Running scripts...\n' + outs + 'Error:\n' + errs + '\nDone\n')
-            else:
-                self.Run.set_Terminal('Running scripts...\n' + outs + '\nDone\n')
+            if self.Running_script == 0:
+                try:
+                    self.Running_Commands['Running_script'] =  Run_command_in_thread(temp_command)
+                    self.Running_Commands['Running_script'].Run()
+                except :
+                    pass
+                self.set_Running_script(1)
         else:
             self.Run.set_Terminal(Error)
 
@@ -1568,6 +1549,8 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         import os
         import curses, argparse
         import neatseq_flow_monitor  
+        import threading
+        
         Error = ''
         
         if len(Project_dir) == 0:
@@ -1590,9 +1573,10 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                             help='Progress Bar Total Length [in chars] [default=40]')
         args = parser.parse_args()
         if len(Project_dir) > 0:
-            self.Run.set_Terminal('Running Monitor...\n' )
+            self.Terminal_string = self.Terminal_string + 'Running Monitor...\n'
+            self.Run.set_Terminal( self.Terminal_string  )
             try:
-                curses.wrapper(neatseq_flow_monitor.neatseq_flow_monitor,args)
+                threading.Thread(target=lambda : curses.wrapper(neatseq_flow_monitor.neatseq_flow_monitor,args)).start()
             except:
                 Error=Error + 'Error:\n Monitor Error \n'
             
@@ -1600,12 +1584,53 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         else:
             Error = Error + 'Error:\n No Project directory \n'
             
-        if len(Error) == 0:
-            self.Run.set_Terminal('Monitor Closed\n' )
-        else:
-            self.Run.set_Terminal(Error)
+        if len(Error) > 0:
+            self.Terminal_string = self.Terminal_string +  '\n' + Error
+            self.Run.set_Terminal(self.Terminal_string)
 
-
+    @event.action
+    def change_value(self,obj,prop_name,value):
+        obj._mutate(prop_name,value)
+    
+    @event.reaction('Running_script','Generating_scripts')
+    def update_Terminal(self, *events):
+            for ev in events:
+                if ev.new_value>0:
+                    Task_End=False
+                    Title = ''
+                    stat=True
+                    outs = ''
+                    errs = ''
+                    try:
+                        if self.Running_Commands[ev.type].proc.poll() is None:
+                           outs, errs = self.Running_Commands[ev.type].output()
+                           self.change_value(ev.source,ev.type,ev.new_value + 1)
+                        else: 
+                            outs, errs = self.Running_Commands[ev.type].output()
+                            self.Running_Commands[ev.type].Stop()
+                            self.change_value(ev.source,ev.type,0)
+                            Task_End=True
+                    except Exception: 
+                        stat=False
+                        
+                    if stat:
+                        if len(outs) > 0:
+                            Title = Title + outs 
+                        if len(errs) > 0: 
+                            Title = Title  + errs 
+                        if Task_End:
+                            Title = Title + ' Finished!!'
+                        
+                        if len(Title) > 0:
+                            
+                            for line in Title.split('\n'):
+                                if len(line)>0:
+                                    self.Terminal_string = self.Terminal_string + '[ '+ ev.type.replace('_',' ') +' ] : ' + line + '\n'
+                            self.Run.set_Terminal(self.Terminal_string)
+                    
+                    
+    
+    
     @event.reaction('!Run.open_filepicker', 'samples_info.open_filepicker', 'step_info.open_filepicker',
                     'cluster_info.open_filepicker', 'vars_info.open_filepicker')
     def open_filepicker(self, *events):
@@ -1812,6 +1837,68 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 input_list.extend(list(re.findall(var_re, input_dict[key])))
 
 
+class Run_command_in_thread(object):
+   
+    
+    def __init__(self,command):
+       
+        import threading
+        import multiprocessing 
+        import queue 
+        
+        
+        self.stdout       =   queue.Queue()
+        self.stderr       =   queue.Queue()
+        self.get_std_err  =   threading.Thread(target=self.collect_err)
+        self.get_std_out  =   threading.Thread(target=self.collect_out)
+        self.proc         =   None
+        self.Run_command  =   command
+        
+        
+    def collect_out(self):
+        for stdout in iter(self.proc.stdout.readline, ''):
+            if len(stdout)>0:
+                self.stdout.put(stdout,False)
+                
+    def collect_err(self):
+        for stderr in iter(self.proc.stderr.readline, ''):
+            if len(stderr)>0:
+                self.stderr.put(stderr,False)
+        
+    def Run(self):
+        from subprocess import Popen, PIPE, STDOUT
+        self.proc = Popen(self.Run_command , shell=True, executable='/bin/bash', stdout=PIPE, stderr=PIPE,
+                             universal_newlines=True)
+        self.get_std_out.start()
+        self.get_std_err.start()
+       
+    def Stop(self):
+        self.get_std_out.join()
+        self.get_std_err.join()
+        self.proc.kill()
+        
+    
+    
+    def output(self):
+        import time
+        all_out = ''
+        all_err = ''
+        while self.stdout.empty()==False:
+            out = self.stdout.get()
+            all_out = all_out + out 
+            self.stdout.task_done()
+            
+        out=all_out
+        
+        while self.stderr.empty()==False:
+            err = self.stderr.get()
+            all_err = all_err + err 
+            self.stderr.task_done()
+            
+        err=all_err
+        time.sleep(0.000001)
+        return [ out , err]
+    
 if __name__ == '__main__':
     temp_MODULES_TEMPLATES = Load_MODULES_TEMPLATES()
     if len(temp_MODULES_TEMPLATES) > 0:
