@@ -1,4 +1,4 @@
-#!/usr/bin/env python2                                                       
+#!/usr/bin/env python                                                          
 # -*- coding: UTF-8 -*-
 
 __author__ = "Liron Levin"
@@ -144,14 +144,17 @@ class nsfgm:
 
     #Function for getting information from qstat 
     def get_qstat(self):
-       qstat=pd.DataFrame()
-       # run qstat and get running information in xml format 
-       xml=os.popen('qstat -xml -u $USER').read()
-       # extract the jobs names  
-       qstat["Job name"]=[re.sub("[</]+JB_name>","",x) for x in re.findall('[</]+JB_name>\S+',xml)]
-       # extract the jobs status  
-       qstat["State"]=[x.strip('job_list state="') for x in re.findall('job_list state="\w+',xml)]
-       return qstat
+        import subprocess
+        qstat=pd.DataFrame()
+        # run qstat and get running information in xml format
+        if subprocess.call('type qstat', shell=True, 
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE) == 0:
+            xml = os.popen('qstat -xml -u $USER').read()
+            # extract the jobs names  
+            qstat["Job name"]=[re.sub("[</]+JB_name>","",x) for x in re.findall('[</]+JB_name>\S+',xml)]
+            # extract the jobs status  
+            qstat["State"]=[x.strip('job_list state="') for x in re.findall('job_list state="\w+',xml)]
+        return qstat
 
     # function for generating the progress bar
     def gen_bar(self,Bar_len,Bar_Marker,Bar_Spacer):
