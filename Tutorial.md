@@ -173,6 +173,7 @@
         
 ## Run the Work-Flow
    <img src="https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/doc/Generate_scripts.gif" width="650">
+   
    **If NeatSeq-Flow is installed using conda (as in this Tutorial): **
    - Choose the conda environment of which NeatSeq-Flow installed in. 
    **If NeatSeq-Flow is installed Locally : **
@@ -183,9 +184,11 @@
        3. Choose the Project Directory to generate the Work-Flow scripts in (the default is to use the Current Working Directory )
        4. Click on the 'Generate scripts' button.
    **To run the Work-Flow click on the 'Run scripts' button**
-   <img src="https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/doc/Run_scripts.gif" width="650">    
+   <img src="https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/doc/Run_scripts.gif" width="650">  
+   
    **It is possible to monitor the Work-Flow progress by clicking the 'Run Monitor' button**
    <img src="https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/doc/Run_Monitor.gif" width="650">
-
+   
+   
 # Contact
 Please contact Liron Levin at: [levinl@post.bgu.ac.il](mailto:levinl@post.bgu.ac.il)
