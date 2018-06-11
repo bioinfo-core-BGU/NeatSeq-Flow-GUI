@@ -174,10 +174,10 @@
 ## Run the Work-Flow
    <img src="https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/doc/Generate_scripts.gif" width="650">
    
-   **If NeatSeq-Flow is installed using conda (as in this Tutorial): **
+   **If NeatSeq-Flow is installed using conda (as in this Tutorial):**
    - Choose the conda environment of which NeatSeq-Flow installed in.
    
-   **If NeatSeq-Flow is installed Locally : **
+   **If NeatSeq-Flow is installed Locally:**
    - Choose the neatseq_flow.py script location. 
    **In order to Generate the Work-Flow scripts:**
        1. Select the Sample file.
