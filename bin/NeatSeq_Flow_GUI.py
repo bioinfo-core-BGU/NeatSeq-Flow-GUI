@@ -1439,26 +1439,29 @@ class NeatSeq_Flow_GUI(app.PyComponent):
             temp_command = conda_bin
         temp_command = os.path.join(temp_command, 'conda')
         temp_command = temp_command + ' info --env'
-
+        err_flag = False
         try:
-            proc = Popen(temp_command, stdout=PIPE, stderr=PIPE, shell=True, universal_newlines=True)
-            outs, errs = proc.communicate(timeout=25)
+            self.Run.set_Terminal(self.Terminal_string + '[Searching for Conda Environments]: Searching...\n')
+            conda_proc = Popen(temp_command, stdout=PIPE, stderr=PIPE, shell=True, universal_newlines=True)
+            outs, errs = conda_proc.communicate(timeout=15)
 
         except :
-            proc.kill()
-            outs, errs = proc.communicate()
-        options = list(map(lambda y: y.split(os.sep)[0].replace('*', '').replace(' ', ''),
-                           filter(lambda x: len(x.split(os.sep)) > 1, outs.split('\n'))))
-
-        self.Run.set_conda_env(options)
-
+            err_flag = True
+            conda_proc.kill()
+            outs, errs = conda_proc.communicate()
+            
+        
         if len(errs) > 0:
-            self.Terminal_string = self.Terminal_string + '[Searching for Conda Environments :] Error:\n' + errs
-            self.Run.set_Terminal(self.Terminal_string)
-
-        if len(options) > 0:
-            self.Terminal_string = self.Terminal_string +  ' [Searching for Conda Environments] '+ str(len(options)) + ' Conda Environments were found \n'
-            self.Run.set_Terminal(self.Terminal_string)
+            self.Terminal_string = self.Terminal_string + '[Searching for Conda Environments]: Error:\n' + errs
+        if len(outs) > 0:
+            options = list(map(lambda y: y.split(os.sep)[0].replace('*', '').replace(' ', ''),
+                           filter(lambda x: len(x.split(os.sep)) > 1, outs.split('\n'))))
+            self.Run.set_conda_env(options)
+            if len(options) > 0:
+                self.Terminal_string = self.Terminal_string +  ' [Searching for Conda Environments]: '+ str(len(options)) + ' Conda Environments were found \n'
+        if err_flag:
+            self.Terminal_string = self.Terminal_string + '[Searching for Conda Environments]: Finished with Error!! \מ'    
+        self.Run.set_Terminal(self.Terminal_string)
 
     def Generate_scripts_command(self, NeatSeq_bin, conda_bin, conda_env, Project_dir, sample_file, parameter_file):
         import os
@@ -1501,13 +1504,38 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 Error = Error + 'Error:\n No Project directory \n'
             
             if len(Error) == 0:
-                if self.Generating_scripts == 0:
-                    try:
-                        self.Running_Commands['Generating_scripts'] =  Run_command_in_thread(temp_command)
-                        self.Running_Commands['Generating_scripts'].Run()
-                    except :
-                        pass
-                    self.set_Generating_scripts(1)
+                err_flag = False
+                try:
+                    self.Run.set_Terminal(self.Terminal_string + '[Generating scripts]:  Generating...\n')
+                    Generating_proc = Popen(temp_command, stdout=PIPE, stderr=PIPE, shell=True,
+                                            universal_newlines=True , executable='/bin/bash')
+                    outs, errs = Generating_proc.communicate(timeout=15)
+
+                except :
+                    err_flag = True
+                    Generating_proc.kill()
+                    outs, errs = Generating_proc.communicate()
+                
+                if len(errs) > 0:
+                    for line in errs.split('\n'):
+                        if len(line)>0:
+                            self.Terminal_string = self.Terminal_string + '[Generating scripts]:  ' + line + '\n'
+                if len(outs) > 0:
+                    for line in outs.split('\n'):
+                        if len(line)>0:
+                            self.Terminal_string = self.Terminal_string + '[Generating scripts]:  ' + line + '\n'
+                if err_flag:
+                    self.Terminal_string = self.Terminal_string + '[Generating scripts]: Finished with Error!! \מ'
+                self.Run.set_Terminal(self.Terminal_string)
+                
+                
+                # if self.Generating_scripts == 0:
+                    # try:
+                        # self.Running_Commands['Generating_scripts'] =  Run_command_in_thread(temp_command)
+                        # self.Running_Commands['Generating_scripts'].Run()
+                    # except :
+                        # pass
+                    # self.set_Generating_scripts(1)
 
             else:
                 self.Run.set_Terminal(Error)
@@ -1592,7 +1620,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
     def change_value(self,obj,prop_name,value):
         obj._mutate(prop_name,value)
     
-    @event.reaction('Running_script','Generating_scripts')
+    @event.reaction('Running_script') #,'Generating_scripts')
     def update_Terminal(self, *events):
             for ev in events:
                 if ev.new_value>0:
