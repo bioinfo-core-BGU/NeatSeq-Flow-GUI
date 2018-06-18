@@ -326,10 +326,11 @@ class Step_Tree_Class(ui.Widget):
                                                                 placeholder_text='Value options:')
                         self.tree_add_option_b = ui.Button(text='Add')
                     with ui.VSplit(flex=0.0035,style='min-width: 90px; max-width: 90px;'):
-                        self.tree_submit_b = ui.Button(text='Edit')
-                        self.tree_new_b = ui.Button(text='New')
-                        self.file_path_b = ui.Button(text='Browse')
-                        self.tree_remove_b = ui.Button(text='Remove')
+                        self.tree_submit_b      = ui.Button(text='Edit')
+                        self.tree_new_b         = ui.Button(text='New')
+                        self.file_path_b        = ui.Button(text='Browse')
+                        self.tree_duplicate_b   = ui.Button(text='Duplicate')
+                        self.tree_remove_b      = ui.Button(text='Remove')
                 self.tree = ui.TreeWidget(flex=0.2, max_selected=1)
                 self.tree.text = 'Top_level'
                 ui.Label(text='__________________')
@@ -347,19 +348,7 @@ class Step_Tree_Class(ui.Widget):
                 with self.tree:
                     self.create_tree(self.Graphical_panel.Steps_Data)
                     self.collapse_all_not_selectd(self.tree)
-                        
-            # self.tree_lay.set_capture_mouse(2)
-            # self.canvas_lay.set_capture_mouse(2)
-    
-    # @event.reaction('tree_lay.pointer_move')
-    # def on_label_move(self, *events):
-        # self.tree_lay.set_flex(0.7)
-        # #self.tree_lay.apply_style('max-width: 500px;')
 
-    # @event.reaction('canvas_lay.pointer_move')
-    # def on_label_after(self, *events):
-        # self.tree_lay.set_flex(0.3)
-        # #self.tree_lay.apply_style('max-width: 200px;')
         
     def uncorrect_dict(self, dic, converer):
         if isinstance(dic, dict):
@@ -578,6 +567,23 @@ class Step_Tree_Class(ui.Widget):
                 self.current_selected.set_collapsed(True)
                 self.current_selected.dispose()
                 self.current_selected = None
+
+    @event.reaction('tree_duplicate_b.pointer_click')
+    def tree_duplicate_button_click(self, *events):
+        for ev in events:
+            if self.current_selected != None:
+                with self.current_selected.parent:
+                    if len(self.current_selected.title) > 0:
+                        self.create_tree({self.current_selected.title:self.current_selected.text})
+                    else:
+                        dict=self.tree2dict(self.current_selected)
+                        if self.current_selected.parent.text == 'Top_level':
+                            new_name = self.current_selected.text+'_copy'
+                            if new_name not in self.Graphical_panel.Steps_Data.keys():
+                                self.create_tree({new_name:dict})
+                        else:
+                            self.create_tree({self.current_selected.text:dict})
+
 
     @event.reaction('tree.children**.checked', 'tree.children**.selected',
                     'tree.children**.collapsed')
