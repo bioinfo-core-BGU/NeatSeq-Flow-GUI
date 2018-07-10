@@ -73,7 +73,7 @@ RSEM_Genome_STAR:
     RSEM_Genome_STAR:
         module: RSEM
         base: 
-        script_path: '{Vars.Programs.RSEM.calculate-expression}'
+        script_path: '{Vars.Programs.RSEM.calculate_expression}'
         annotation: '{Vars.Genome.gtf}'
         mapper: star
         mapper_path: '{Vars.Programs.star}'
@@ -93,7 +93,7 @@ RSEM_Genome_Bowtie2:
     RSEM_Genome_Bowtie2:
         module: RSEM
         base: 
-        script_path: '{Vars.Programs.RSEM.calculate-expression}'
+        script_path: '{Vars.Programs.RSEM.calculate_expression}'
         annotation: '{Vars.Genome.gff}'
         gff3: null
         mapper: bowtie2
@@ -114,7 +114,7 @@ RSEM_Transcriptome_Bowtie2:
     RSRM_Transcriptome_Bowtie2:
         module: RSEM
         base: 
-        script_path: '{Vars.Programs.RSEM.calculate-expression}'
+        script_path: '{Vars.Programs.RSEM.calculate_expression}'
         annotation: Trinity
         from_Trinity_to_gene_map_script_path: '{Vars.Programs.RSEM.transcript2gene_map_from_trinity}'
         mapper: bowtie2

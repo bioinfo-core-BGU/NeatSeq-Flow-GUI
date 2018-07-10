@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/gpfs0/bioinfo/apps/Miniconda2/Miniconda_v4.3.21/envs/NeatSeq_Flow_GUI/bin/python
 
 
 
@@ -45,6 +45,7 @@ MODULES_TEMPLATES = {'Basic': {'Basic_New_Step': {'base': None, 'module': None, 
                      }
 FILE_TYPES = ['Single', 'Forward', 'Reverse', 'Nucleotide', 'Protein', 'SAM', 'BAM', 'REFERENCE', 'VCF', 'G.VCF']
 
+FIELDS2SPLIT = ['base'] 
 
 html_cite='''
     <p class=MsoNormal dir=LTR style='margin-top:0cm;margin-bottom:0cm;margin-bottom:.0000pt;
@@ -446,7 +447,7 @@ class Step_Tree_Class(ui.Widget):
                 steps[tree.text] = dict(self.tree2dict_for_export(tree))
             else:
                 if len(tree.title) > 0:
-                    if len(tree.text.split(',')) > 1:
+                    if (len(tree.text.split(',')) > 1) and (tree.title in FIELDS2SPLIT):
                         steps[tree.title] = tree.text.split(',')
                     else:
                         steps[tree.title] = tree.text
@@ -461,8 +462,10 @@ class Step_Tree_Class(ui.Widget):
                 steps[tree.text] = dict(self.tree2dict(tree))
             else:
                 if len(tree.title) > 0:
-                    steps[tree.title] = tree.text.split(',')
-
+                    if tree.title in FIELDS2SPLIT:
+                        steps[tree.title] = tree.text.split(',')
+                    else:
+                        steps[tree.title] = [tree.text]
                 else:
                     steps[tree.text] = None
         return steps
@@ -728,13 +731,14 @@ class Only_Tree_Class(ui.Widget):
                 steps[tree.text] = dict(self.tree2dict_for_export(tree))
             else:
                 if len(tree.title) > 0:
-                    if len(tree.text.split(',')) > 1:
+                    if (len(tree.text.split(',')) > 1) and (tree.title in FIELDS2SPLIT):
                         steps[tree.title] = tree.text.split(',')
                     else:
                         steps[tree.title] = tree.text
                 else:
                     steps[tree.text] = None
         return steps
+
 
     @event.action
     def collapse_all_not_selectd(self, current_tree):
@@ -1018,28 +1022,64 @@ class Samples_info(ui.Widget):
 
 
 def select_files(select_style='Single', select_type='Open', wildcard='*'):
-    import wx, os
-    app = wx.App(None)
+    try:
+        import wx, os
+        app = wx.App(None)
 
-    if select_type == 'Open':
-        style = wx.FD_OPEN | wx.FD_FILE_MUST_EXIST
-        if select_style != 'Single':
-            style = style | wx.FD_MULTIPLE
-    elif select_type == 'Dir':
-        style = wx.DD_DEFAULT_STYLE
-    else:
-        style = wx.FD_SAVE
-    if select_type == 'Dir':
-        dialog = wx.DirDialog(None, "Choose Directory", "", style=style)
-    else:
-        dialog = wx.FileDialog(None, select_type, wildcard=wildcard, style=style)
-    if dialog.ShowModal() == wx.ID_OK:
-        if select_type == 'Dir':
-            path = dialog.GetPath()
-            dialog.Destroy()
-            return [[path, path]]
+        if select_type == 'Open':
+            style = wx.FD_OPEN | wx.FD_FILE_MUST_EXIST
+            if select_style != 'Single':
+                style = style | wx.FD_MULTIPLE
+        elif select_type == 'Dir':
+            style = wx.DD_DEFAULT_STYLE
         else:
-            path = dialog.GetPaths()
+            style = wx.FD_SAVE
+        if select_type == 'Dir':
+            dialog = wx.DirDialog(None, "Choose Directory", "", style=style)
+        else:
+            dialog = wx.FileDialog(None, select_type, wildcard=wildcard, style=style)
+        if dialog.ShowModal() == wx.ID_OK:
+            if select_type == 'Dir':
+                path = dialog.GetPath()
+                dialog.Destroy()
+                if len(path)>0:
+                    return [[path, path]]
+                else:
+                    return []
+            else:
+                path = dialog.GetPaths()
+            files = []
+            for file in path:
+                files.append([file, os.path.basename(file)])
+            if len(files) > 0:
+                path = files
+            else:
+                path = []
+
+        else:
+            path = []
+
+        dialog.Destroy()
+        return path
+    except:
+        import os
+        from tkinter import filedialog
+        from tkinter import Tk
+ 
+        Tk().withdraw() 
+        path = []
+        if select_type == 'Open':
+            if select_style == 'Single':
+                path = [filedialog.askopenfilename(title='Choose a file')]
+            else:
+                path = list(filedialog.askopenfilenames(title='Choose files'))
+        elif select_type == 'Dir':
+            path = filedialog.askdirectory(title="Choose Directory")
+            if len(path)>0:
+                return [[path, path]]
+        else:
+            path = filedialog.asksaveasfilename(title='Save')
+            
         files = []
         for file in path:
             files.append([file, os.path.basename(file)])
@@ -1047,14 +1087,10 @@ def select_files(select_style='Single', select_type='Open', wildcard='*'):
             path = files
         else:
             path = []
-
-    else:
-        path = []
-
-    dialog.Destroy()
-    return path
-
-
+        return path
+        
+        
+        
 def Load_MODULES_TEMPLATES():
     import yaml, os, inspect
 
