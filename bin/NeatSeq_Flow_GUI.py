@@ -1082,12 +1082,13 @@ def select_files(select_style='Single', select_type='Open', wildcard='*'):
             
         files = []
         for file in path:
-            files.append([file, os.path.basename(file)])
+            if len(file)>0:
+                files.append([file, os.path.basename(file)])
         if len(files) > 0:
             path = files
         else:
             path = []
-            
+        
         return path
         
         
