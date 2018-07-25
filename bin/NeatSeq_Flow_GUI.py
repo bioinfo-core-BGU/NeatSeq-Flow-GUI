@@ -1,4 +1,4 @@
-#!/gpfs0/bioinfo/apps/Miniconda2/Miniconda_v4.3.21/envs/NeatSeq_Flow_GUI/bin/python
+#!/home/ElkabezLAB/.conda/envs/NeatSeq_Flow_GUI/bin/python
 
 
 
@@ -1078,7 +1078,7 @@ def select_files(select_style='Single', select_type='Open', wildcard='*'):
             if len(path)>0:
                 return [[path, path]]
         else:
-            path = filedialog.asksaveasfilename(title='Save')
+            path = [filedialog.asksaveasfilename(title='Save')]
             
         files = []
         for file in path:
@@ -1087,6 +1087,7 @@ def select_files(select_style='Single', select_type='Open', wildcard='*'):
             path = files
         else:
             path = []
+            
         return path
         
         

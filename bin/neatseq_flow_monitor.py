@@ -106,12 +106,12 @@ from datetime import datetime
 from multiprocessing import Process, Queue
 
 
-SCREEN_W=200
-SCREEN_H=100
-VERSION= "v1.2"
-PARAM_LIST = ["Dir"]
-__author__ = "Liron Levin"
-
+SCREEN_W     = 200
+SCREEN_H     = 100
+VERSION      = "v1.2"
+PARAM_LIST   = ["Dir"]
+__author__   = "Liron Levin"
+jid_name_sep = '_'
 class nsfgm:
 #  Main class for neatseq-flow Log file parser
     #Function for setting the main directory [the pipeline run location]
@@ -210,7 +210,7 @@ class nsfgm:
                 # get only the data for the chosen step
                 runlog_Data=runlog_Data.loc[runlog_Data["Instance"]==Instance,].copy()
                 # change the names of the jobs to the samples names
-                runlog_Data['Job name']=list(map(lambda x,y,z: re.sub("^"+y+"_"+z+"_","",re.sub("_[0-9]+$","",x)) ,runlog_Data['Job name'],runlog_Data['Module'],runlog_Data['Instance'] ))
+                runlog_Data['Job name']=list(map(lambda x,y,z: re.sub("^"+y+jid_name_sep+z+jid_name_sep,"",re.sub(jid_name_sep+"[0-9]+$","",x)) ,runlog_Data['Job name'],runlog_Data['Module'],runlog_Data['Instance'] ))
                 args_pivot=['Job name','Event','Timestamp']
                 # generate a pivot table
                 logpiv = runlog_Data.pivot(index=args_pivot[0], columns=args_pivot[1], values=args_pivot[2])
