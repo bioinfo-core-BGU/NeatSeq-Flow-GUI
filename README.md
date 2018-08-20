@@ -33,7 +33,7 @@ For more information about **"NeatSeq-Flow"** see the full documentation on **[R
 
 ## Dependencies
 **For NeatSeq-Flow-GUI to work you will need:**
-- python >= 3.6
+- python = 3.6.5
 - wxpython
 - pyyaml
 - munch

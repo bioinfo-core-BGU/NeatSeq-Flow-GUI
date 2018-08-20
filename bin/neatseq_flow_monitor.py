@@ -2,7 +2,7 @@
 # -*- coding: UTF-8 -*-
 
 __author__ = "Liron Levin"
-__version__ = "1.2"
+__version__ = "1.3"
 
 
 __affiliation__ = "Bioinformatics Core Unit, NIBN, Ben Gurion University"
@@ -108,7 +108,7 @@ from multiprocessing import Process, Queue
 
 SCREEN_W     = 200
 SCREEN_H     = 100
-VERSION      = "v1.2"
+VERSION      = "v1.3"
 PARAM_LIST   = ["Dir"]
 __author__   = "Liron Levin"
 jid_name_sep = '_'
@@ -149,7 +149,8 @@ class nsfgm:
         # run qstat and get running information in xml format
         if subprocess.call('type qstat', shell=True, 
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE) == 0:
-            xml = os.popen('qstat -xml -u $USER').read()
+            #xml = os.popen('qstat -xml -u $USER').read()
+            xml = os.popen('qstat -xml ').read()
             # extract the jobs names  
             qstat["Job name"]=[re.sub("[</]+JB_name>","",x) for x in re.findall('[</]+JB_name>\S+',xml)]
             # extract the jobs status  
@@ -290,15 +291,6 @@ class nsfgm:
             # generate the progress bar column
             [char_value,bar]=self.gen_bar(Bar_len,Bar_Marker,Bar_Spacer)
             Runs_str="Progress #=" + str(char_value)+"seconds"
-            # # get the running information from qstat and add the information to the Data-Frame
-            # qstat=self.get_qstat()
-            # if len(qstat)>0:
-                # runlog_Data=runlog_Data.merge(qstat,how='left')
-                # runlog_Data.loc[runlog_Data["State"].isnull(),"State"]=''
-            # else:
-                # runlog_Data["State"]=''
-            # logpiv=logpiv.join(runlog_Data.groupby("Instance")["State"].apply(lambda x:list(x).count("running")),how="left", rsuffix='running')            
-
             # generate the items Data-Frame to show in the window
             self.items =pd.DataFrame()
             # # Make sure the instances names are no longer then 20 chars
