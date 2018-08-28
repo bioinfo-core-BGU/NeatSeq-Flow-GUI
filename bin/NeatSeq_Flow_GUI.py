@@ -1,4 +1,4 @@
-#!/home/ElkabezLAB/.conda/envs/NeatSeq_Flow_GUI/bin/python
+#!/usr/bin/env python
 
 
 
@@ -1504,7 +1504,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
             if len(options) > 0:
                 self.Terminal_string = self.Terminal_string +  ' [Searching for Conda Environments]: '+ str(len(options)) + ' Conda Environments were found \n'
         if err_flag:
-            self.Terminal_string = self.Terminal_string + '[Searching for Conda Environments]: Finished with Error!! \מ'    
+            self.Terminal_string = self.Terminal_string + '[Searching for Conda Environments]: Finished with Error!! \n'    
         self.Run.set_Terminal(self.Terminal_string)
 
     def Generate_scripts_command(self, NeatSeq_bin, conda_bin, conda_env, Project_dir, sample_file, parameter_file):
@@ -1569,7 +1569,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                         if len(line)>0:
                             self.Terminal_string = self.Terminal_string + '[Generating scripts]:  ' + line + '\n'
                 if err_flag:
-                    self.Terminal_string = self.Terminal_string + '[Generating scripts]: Finished with Error!! \מ'
+                    self.Terminal_string = self.Terminal_string + '[Generating scripts]: Finished with Error!! \n'
                 self.Run.set_Terminal(self.Terminal_string)
                 
                 
