@@ -15,6 +15,8 @@ import os,sys
 
 sys.path.append(os.path.realpath(os.path.expanduser(os.path.dirname(os.path.abspath(__file__))+os.sep+"..")))
 
+MODULES_TEMPLATES_FILE= 'https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/neatseq_flow_gui/TEMPLATES/MODULES_TEMPLATES.yaml'
+
 STEPS = {'Merge': {'module': 'merge', 'script_path': None  },
 
          }
@@ -1095,12 +1097,21 @@ def select_files(select_style='Single', select_type='Open', wildcard='*'):
         
 def Load_MODULES_TEMPLATES():
     import yaml, os, inspect
+    import urllib.request
 
     location = os.path.dirname(os.path.abspath(inspect.getsourcefile(lambda: 0)))
     location = os.path.expanduser(location+os.sep+"..")
+    
+    local_MODULES_TEMPLATES_FILE = os.path.abspath(os.path.join(location, 'neatseq_flow_gui', 'TEMPLATES', 'MODULES_TEMPLATES.yaml'))
+    try:
+        urllib.request.urlretrieve(MODULES_TEMPLATES_FILE,local_MODULES_TEMPLATES_FILE)
+        print("Modules Templates File was Updated Successfully!")
+    except:
+        print("Modules Templates File could not be Updated")
+    
     try:
 
-        with open(os.path.join(location, 'neatseq_flow_gui', 'TEMPLATES', 'MODULES_TEMPLATES.yaml'), 'rb') as infile:
+        with open(local_MODULES_TEMPLATES_FILE, 'rb') as infile:
             MODULES_TEMPLATES = yaml.load(infile, yaml.SafeLoader)
             return MODULES_TEMPLATES
 
