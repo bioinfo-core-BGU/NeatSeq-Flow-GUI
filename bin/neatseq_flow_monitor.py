@@ -111,7 +111,7 @@ SCREEN_H     = 100
 VERSION      = "v1.3"
 PARAM_LIST   = ["Dir"]
 __author__   = "Liron Levin"
-jid_name_sep = '_'
+jid_name_sep = '..'
 class nsfgm:
 #  Main class for neatseq-flow Log file parser
     #Function for setting the main directory [the pipeline run location]
