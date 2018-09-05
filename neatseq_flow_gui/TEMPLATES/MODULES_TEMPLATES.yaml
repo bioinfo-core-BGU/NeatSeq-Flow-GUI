@@ -6,7 +6,7 @@ Basic Step:
 
 Generic:
     Generic:                        # Name of this step
-        module: Generic             # Name of module
+        module:            Generic  # Name of module
         base:                       # Name of the step [or list of names] to run after [must be after steps that generates the inputs File_Types] 
         script_path:                # Main command for this module
         scope:                      # The scope of this module could be sample/project, the default is by sample
@@ -17,7 +17,7 @@ Generic:
                                     # all the samples inputs File_Types of this argument will be listed as: [input argument] [File_Type(sample#)] e.g. -i sample1.bam -i sample2.bam ... 
                 File_Type:          # The input File_Type could be any File_Type available from previous (in this branch) steps
                 base:               # From which previous step to take the input File_Type. The default is the current step.
-
+                           
         outputs:                    # The outputs for this module
             STR:                    # Output argument, e.g. -o, --out , the scope of the output arguments is determinant by the module scope
                                     # could be also 'Empty1', 'Empty2'.. for no output argument string OR 'No_run1', 'No_run2'.. for only entering the file information to output File_Type 
@@ -28,432 +28,614 @@ Generic:
 
 
 
-Merge:
-    Merge:
-        module: merge 
-        script_path:  
+Merge:                    
+    Merge:                
+        module:           merge 
+        script_path:      
 
-Fastqc:
-    Fastqc:
-        module: fastqc_html
-        base: 
-        script_path: '{Vars.Programs.FastQC}'
-        redirects:
-            --threads:  1       
+Fastqc:                   
+    Fastqc:               
+        module:           fastqc_html
+        base:             
+        script_path:      '{Vars.Programs.FastQC}'
+        redirects:        
+            --threads:    1
+
+Trim_Galore:              
+   Trim_Galore:           
+        module:           Trim_Galore
+        base:             
+        script_path:      '{Vars.Programs.Trim_Galore.Main}'
+        cutadapt_path:    '{Vars.Programs.Trim_Galore.cutadapt}'
+        redirects:        
+            --length:     36
+            -q:           25
+
+Trimmomatic:              
+    Trimmomatic:          
+        module:           trimmo
+        base:             
+        script_path:      'java -jar {Vars.Programs.Trimmomatic.Bin}'
+        todo:             'ILLUMINACLIP:{Vars.Programs.Trimmomatic.Adapters_File}:2:30:10 LEADING:20 TRAILING:20 SLIDINGWINDOW:4:15 MINLEN:36'
+        redirects:        
+            -threads:     1
+
+
+Trimmomatic(Using_CONDA): 
+    Trimmomatic:          
+        module:           trimmo
+        base:             
+        script_path:      '{Vars.Programs.Trimmomatic.Bin}'
+        todo:             'ILLUMINACLIP:{Vars.Programs.Trimmomatic.Adapters_File}:2:30:10 LEADING:20 TRAILING:20 SLIDINGWINDOW:4:15 MINLEN:36'
+        redirects:        
+            -threads:     1 
+
+Cutadapt(Remove_poly_A):   
+    Remove_poly_A:                                           # Name of this step
+        module:            Cutadapt                          # Name of the module used
+        base:                                                # Name of the step [or list of names] to run after [must be after a merge step]
+        script_path:       '{Vars.Programs.cutadapt}'        # Command for running the Cutadapt script
+        redirects:         
+            -a:            "A'{100}'"   
+
+RSEM_Genome_STAR:                                 
+    RSEM_Genome_STAR:                             
+        module:                                   RSEM
+        base:                                     
+        script_path:                              '{Vars.Programs.RSEM.calculate_expression}'
+        annotation:                               '{Vars.Genome.gtf}'
+        mapper:                                   star
+        mapper_path:                              '{Vars.Programs.star}'
+        mode:                                     genome
+        plot_stat:                                
+        plot_stat_script_path:                    '{Vars.Programs.RSEM.plot}' 
+        reference:                                '{Vars.Genome.reference}'
+        rsem_generate_data_matrix_script_path:    '{Vars.Programs.RSEM.generate_data_matrix}'
+        rsem_prepare_reference_script_path:       '{Vars.Programs.RSEM.prepare_reference}'
+        redirects:                                
+            --append-names:                       
+            --estimate-rspd:                      
+            --output-genome-bam:                  
+            -p:                                   1
+
+RSEM_Genome_Bowtie2:                              
+    RSEM_Genome_Bowtie2:                          
+        module:                                   RSEM
+        base:                                     
+        script_path:                              '{Vars.Programs.RSEM.calculate_expression}'
+        annotation:                               '{Vars.Genome.gff}'
+        gff3:                                     
+        mapper:                                   bowtie2
+        mapper_path:                              '{Vars.Programs.bowtie2}'
+        mode:                                     genome
+        plot_stat:                                
+        plot_stat_script_path:                    '{Vars.Programs.RSEM.plot}' 
+        reference:                                '{Vars.Genome.reference}'
+        rsem_generate_data_matrix_script_path:    '{Vars.Programs.RSEM.generate_data_matrix}'
+        rsem_prepare_reference_script_path:       '{Vars.Programs.RSEM.prepare_reference}'
+        redirects:                                
+            --append-names:                       
+            --estimate-rspd:                      
+            --output-genome-bam:                  
+            -p:                                   1
+
+RSEM_Transcriptome_Bowtie2:                       
+    RSRM_Transcriptome_Bowtie2:                   
+        module:                                   RSEM
+        base:                                     
+        script_path:                              '{Vars.Programs.RSEM.calculate_expression}'
+        annotation:                               Trinity
+        from_Trinity_to_gene_map_script_path:     '{Vars.Programs.RSEM.transcript2gene_map_from_trinity}'
+        mapper:                                   bowtie2
+        mapper_path:                              '{Vars.Programs.bowtie2}'
+        mode:                                     transcriptome
+        plot_stat:                                
+        plot_stat_script_path:                    '{Vars.Programs.RSEM.plot}' 
+        reference:                                '{Vars.Genome.reference}'
+        rsem_generate_data_matrix_script_path:    '{Vars.Programs.RSEM.generate_data_matrix}'
+        rsem_prepare_reference_script_path:       '{Vars.Programs.RSEM.prepare_reference}'
+        redirects:                                
+            --append-names:                       
+            --estimate-rspd:                      
+            -p:                                   1
+
+
+STAR_Mapper(external-index):      
+    STAR_Mapper:                  
+        module:                   STAR_mapper
+        base:                     
+        script_path:              '{Vars.Programs.star}'
+        redirects:                
+            --readMapNumber:      1000
+            --genomeDir:          '{Vars.Genome.STAR_index}'
+
+STAR_Mapper(after-STAR_builder):  
+    STAR_Mapper:                  
+        module:                   STAR_mapper
+        base:                     
+        script_path:              '{Vars.Programs.star}'
+        scope:                    project
+        redirects:                
+            --readMapNumber:      1000
             
-Trim_Galore:
-   Trim_Galore:
-        module: Trim_Galore
-        base: 
-        script_path: '{Vars.Programs.Trim_Galore.Main}'
-        cutadapt_path: '{Vars.Programs.Trim_Galore.cutadapt}'
-        redirects:
-            --length: 36
-            -q: 25
-            
-Trimmomatic:
-    Trimmomatic:
-        module: trimmo
-        base: 
-        script_path: 'java -jar {Vars.Programs.Trimmomatic.Bin}'
-        todo: ILLUMINACLIP:{Vars.Programs.Trimmomatic.Adapters_File}:2:30:10 LEADING:20 TRAILING:20 SLIDINGWINDOW:4:15
-            MINLEN:36
-        redirects:
-            -threads: 1
-
-            
-Trimmomatic(Using_CONDA):            
-    Trimmomatic:
-        module:         trimmo
-        base:           Merge
-        script_path:    {Vars.Programs.Trimmomatic.Bin}
-        todo:           'ILLUMINACLIP:{Vars.Programs.Trimmomatic.Adapters_File}:2:30:10 LEADING:20 TRAILING:20 SLIDINGWINDOW:4:15 MINLEN:36'
-        redirects:
-            -threads:   1 
-
-Cutadapt(Remove_poly_A):
-    Remove_poly_A:                   # Name of this step
-        module: Cutadapt             # Name of the module used
-        base:                        # Name of the step [or list of names] to run after [must be after a merge step]
-        script_path: '{Vars.Programs.cutadapt}'                # Command for running the Cutadapt script
-        redirects:
-            -a:  "A'{100}'"   
-
-RSEM_Genome_STAR:   
-    RSEM_Genome_STAR:
-        module: RSEM
-        base: 
-        script_path: '{Vars.Programs.RSEM.calculate_expression}'
-        annotation: '{Vars.Genome.gtf}'
-        mapper: star
-        mapper_path: '{Vars.Programs.star}'
-        mode: genome
-        plot_stat: null
-        plot_stat_script_path: '{Vars.Programs.RSEM.plot}' 
-        reference: '{Vars.Genome.reference}'
-        rsem_generate_data_matrix_script_path: '{Vars.Programs.RSEM.generate_data_matrix}'
-        rsem_prepare_reference_script_path: '{Vars.Programs.RSEM.prepare_reference}'
-        redirects:
-            --append-names: null
-            --estimate-rspd: null
-            --output-genome-bam: null
-            -p: 1  
- 
-RSEM_Genome_Bowtie2:   
-    RSEM_Genome_Bowtie2:
-        module: RSEM
-        base: 
-        script_path: '{Vars.Programs.RSEM.calculate_expression}'
-        annotation: '{Vars.Genome.gff}'
-        gff3: null
-        mapper: bowtie2
-        mapper_path: '{Vars.Programs.bowtie2}'
-        mode: genome
-        plot_stat: null
-        plot_stat_script_path: '{Vars.Programs.RSEM.plot}' 
-        reference: '{Vars.Genome.reference}'
-        rsem_generate_data_matrix_script_path: '{Vars.Programs.RSEM.generate_data_matrix}'
-        rsem_prepare_reference_script_path: '{Vars.Programs.RSEM.prepare_reference}'
-        redirects:
-            --append-names: null
-            --estimate-rspd: null
-            --output-genome-bam: null
-            -p: 1  
-
-RSEM_Transcriptome_Bowtie2:         
-    RSRM_Transcriptome_Bowtie2:
-        module: RSEM
-        base: 
-        script_path: '{Vars.Programs.RSEM.calculate_expression}'
-        annotation: Trinity
-        from_Trinity_to_gene_map_script_path: '{Vars.Programs.RSEM.transcript2gene_map_from_trinity}'
-        mapper: bowtie2
-        mapper_path: '{Vars.Programs.bowtie2}'
-        mode: transcriptome
-        plot_stat: null
-        plot_stat_script_path: '{Vars.Programs.RSEM.plot}' 
-        reference: '{Vars.Genome.reference}'
-        rsem_generate_data_matrix_script_path: '{Vars.Programs.RSEM.generate_data_matrix}'
-        rsem_prepare_reference_script_path: '{Vars.Programs.RSEM.prepare_reference}'
-        redirects:
-            --append-names: null
-            --estimate-rspd: null
-            -p: 1
 
 
-STAR_Mapper(external-index):
-    STAR_Mapper:
-        module:             STAR_mapper
+BWA_Index_Builder:          
+    BWA_Index_Builder:      
+        module:             bwa_builder
         base:               
-        script_path:        '{Vars.Programs.star}'
-        redirects:
-            --readMapNumber:    1000
-            --genomeDir:        '{Vars.Genome.STAR_index}'
+        script_path:        '{Vars.Programs.BWA} index'
+        scope:              sample
 
-STAR_Mapper(after-STAR_builder):
-    STAR_Mapper:
-        module:             STAR_mapper
+BWA_Mapper:                 
+    BWA_Mapper:             
+        module:             bwa_mapper
         base:               
-        script_path:        '{Vars.Programs.star}'
-        scope:              project
-        redirects:
-            --readMapNumber:    1000
-            
+        script_path:        '{Vars.Programs.BWA}'
+        scope:              sample
+        mod:                mem
+        redirects:          
+            -t:             1
+            -B:             5
+
+Bowtie2_Index_Builder:      
+    Bowtie2_Index_Builder:  
+        module:             bowtie2_builder
+        base:               
+        script_path:        '{Vars.Programs.bowtie2_builder}'
+        scope:              sample
 
 
-BWA_Index_Builder:
-    BWA_Index_Builder:
-        module: bwa_builder
-        base: 
-        script_path: '{Vars.Programs.BWA} index'
-        scope: sample
+Bowtie2_Mapper:             
+    Bowtie2_Mapper:         
+        module:             bowtie2_mapper
+        base:               
+        script_path:        '{Vars.Programs.bowtie2}'
+        scope:              sample
+        get_map_log:        
+        get_stderr:         
+        redirects:          
+            --end-to-end:   
+            -p:             1
+            -q:             
 
-BWA_Mapper:        
-    BWA_Mapper:
-        module: bwa_mapper
-        base: 
-        script_path: '{Vars.Programs.BWA}'
-        scope: sample
-        mod: mem
-        redirects:
-            -t: 1
-            -B: 5
+Samtools:              
+    Samtools:          
+        module:        samtools
+        base:          
+        script_path:   '{Vars.Programs.samtools}'
+        view:          -buh 
+        sort:          -@ 1
+        flagstat:      
+        idxstats:      
+        index:         
+        stats:         --remove-dups
+        del_sam:       
+        del_unsorted:  
+        type2use:      sam
 
-Bowtie2_Index_Builder:            
-    Bowtie2_Index_Builder:
-        module: bowtie2_builder
-        base: 
-        script_path: '{Vars.Programs.bowtie2_builder}'
-        scope: sample
-
-
-Bowtie2_Mapper:        
-    Bowtie2_Mapper:
-        module: bowtie2_mapper
-        base: 
-        script_path: '{Vars.Programs.bowtie2}'
-        scope: sample
-        get_map_log:
-        get_stderr:
-        redirects:
-            --end-to-end:
-            -p: 1
-            -q:  
-
-Samtools:
-    Samtools:
-        module: samtools
-        base: 
-        script_path: '{Vars.Programs.samtools}'
-        view: -buh 
-        sort: -@ 1
-        flagstat:
-        idxstats:
-        index:
-        stats: --remove-dups
-        del_sam:
-        del_unsorted:
-        type2use: sam
-        
-MultQC:
-    MultQC:
-        module: Multiqc
-        base:
+MultQC:              
+    MultQC:          
+        module:      Multiqc
+        base:        
         script_path: '{Vars.Programs.multiqc}'
 
-Spades:
-    Spades:
-        module: spades_assembl
-        base: 
-        script_path: '{Vars.Programs.Spades}'
-        scope: sample
-        truncate_names: 
-        redirects:
-            --careful: 
-            --threads: 1
-            --cov-cutoff: auto
-            
-Quast:
-    Quast:
-        module: quast
-        base: 
-        script_path: '{Vars.Programs.Quast}'
-        scope: sample
-        redirects:
-            --fast: 
-            -t: 1
-            -L: 
-            
-Prokka:
-   Prokka:
-        module: Prokka
-        base: 
-        script_path: '{Vars.Programs.Prokka}'
-        generate_GFF_dir: 
-        redirects:
-            --cpus: 1
-            --force: 
-            --genus: '{Vars.Genome.genus}'
-            --kingdom: '{Vars.Genome.kingdom}'
-            --proteins: VFDB
+Spades:                     
+    Spades:                 
+        module:             spades_assembl
+        base:               
+        script_path:        '{Vars.Programs.Spades}'
+        scope:              sample
+        truncate_names:     
+        redirects:          
+            --careful:      
+            --threads:      1
+            --cov-cutoff:   auto
+
+Quast:                 
+    Quast:             
+        module:        quast
+        base:          
+        script_path:   '{Vars.Programs.Quast}'
+        scope:         sample
+        redirects:     
+            --fast:    
+            -t:        1
+            -L:        
+
+Prokka:                     
+   Prokka:                  
+        module:             Prokka
+        base:               
+        script_path:        '{Vars.Programs.Prokka}'
+        generate_GFF_dir:   
+        redirects:          
+            --cpus:         1
+            --force:        
+            --genus:        '{Vars.Genome.genus}'
+            --kingdom:      '{Vars.Genome.kingdom}'
+            --proteins:     VFDB
 
 
-Collect_results           :
-    Collect_results:
-        module: Collect_results
-        base: 
-        script_path: 
-        redirects:
+Collect_results(Merge):           
+    Collect_results:              
+        module:                   Collect_results
+        base:                     
+        script_path:              
+        redirects:                
+            --add_samples_names:  
+            --Merge_by:           '{Vars.Meta_Data.Meta_Data_Sample_ID_Column_Name} Samples'
+            -R:                  .tab$
+
+Collect_results(Merge_Matrixes2Excel):   
+    Collect_results:                     
+        module:                          Collect_results
+        base:                            
+        script_path:                     
+        redirects:                       
+            --Excel:                     
+            -R:                          .merg$
+
+
+Collect_results(Merge_Matrixes_with_MetaData):           
+    Collect_results:              
+        module:                   Collect_results
+        base:                     
+        script_path:              
+        redirects:                
+            --ignore_shared_col:  
+            --MetaData:           '{Vars.Meta_Data.Meta_Data_File}'
+            --Merge_by:           '{Vars.Meta_Data.Meta_Data_Sample_ID_Column_Name} Samples'
+            -R:                  .tab$
+
+
+Collect_results(pivot):          
+    Collect_results:             
+        module:                  Collect_results
+        base:                    
+        script_path:             
+        redirects:               
             --add_samples_names: 
-            --pivot: '''Samples'' ''category'' ''value'''
-            --split_by: ','
-            -R: .tab$
+            --pivot:             '''Samples'' ''category'' ''value'''
+            --split_by:          ','
+            -R:                  .tab$
 
-Make_Blast_db(prot):
-    Make_Blast_db:
-        module: makeblastdb
-        base: 
-        script_path: '{Vars.Programs.BLAST.makeblastdb}'
-        redirects:
-            -dbtype: prot
-        scope: project
+Collect_results(pivot_no_header):     
+    Collect_results:                  
+        module:                       Collect_results
+        base:                         
+        script_path:                  
+        redirects:                    
+            --add_samples_names:      
+            --header:                 
+            --pivot:                  "'Samples' '5' '0'"
+            -R:                       .tab$
 
-Make_Blast_db(nucl):
-    Make_Blast_db:
-        module: makeblastdb
-        base: 
-        script_path: '{Vars.Programs.BLAST.makeblastdb}'
-        redirects:
-            -dbtype: nucl
-        scope: project
+
+Make_Blast_db(prot):   
+    Make_Blast_db:     
+        module:        makeblastdb
+        base:          
+        script_path:   '{Vars.Programs.BLAST.makeblastdb}'
+        redirects:     
+            -dbtype:   prot
+        scope:         project
+
+Make_Blast_db(nucl):   
+    Make_Blast_db:     
+        module:        makeblastdb
+        base:          
+        script_path:   '{Vars.Programs.BLAST.makeblastdb}'
+        redirects:     
+            -dbtype:   nucl
+        scope:         project
         
-Blastn:
-    Blastn:
-        module: blast
-        base: 
-        script_path: '{Vars.Programs.BLAST.blastn}'
-        fasta2use: nucl
-        db2use: nucl
-        scope: project
-        redirects:
-            -evalue: '0.0001'
-            -num_descriptions: '20'
-            -num_threads: 1
-            -outfmt: '"6 qseqid sallseqid qlen slen qstart qend sstart send length
-                evalue bitscore score pident qframe"'
-            -query: '{Vars.Query.Nucl_FASTA}'
-Blastp:
+Blastn(Project):                 
+    Blastn:                      
+        module:                  blast
+        base:                    
+        script_path:             '{Vars.Programs.BLAST.blastn}'
+        fasta2use:               nucl
+        db2use:                  nucl
+        scope:                   project
+        redirects:               
+            -evalue:             '0.0001'
+            -num_descriptions:   '20'
+            -num_threads:        1
+            -outfmt:             '"6 qseqid sallseqid qlen slen qstart qend sstart send length evalue bitscore score pident qframe"'
+            -query:              '{Vars.Query.Nucl_FASTA}'
+
+Blastp(Project):                 
+    Blastp:                      
+        module:                  blast
+        base:                    
+        script_path:             '{Vars.Programs.BLAST.blastp}'
+        fasta2use:               prot
+        db2use:                  prot
+        scope:                   project
+        redirects:               
+            -evalue:             '0.0001'
+            -num_descriptions:   '20'
+            -num_threads:        1
+            -outfmt:             '"6 qseqid sallseqid qlen slen qstart qend sstart send length evalue bitscore score pident qframe"'
+            -query:              '{Vars.Query.Prot_FASTA}'
+
+Blastx(Project):                 
+    Blastx:                      
+        module:                  blast
+        base:                    
+        script_path:             '{Vars.Programs.BLAST.blastx}'
+        fasta2use:               nucl
+        db2use:                  prot
+        scope:                   project
+        redirects:               
+            -evalue:             '0.0001'
+            -num_descriptions:   '20'
+            -num_threads:        1
+            -outfmt:             '"6 qseqid sallseqid qlen slen qstart qend sstart send length evalue bitscore score pident qframe"'
+            -query:              '{Vars.Query.Nucl_FASTA}'
+
+tBlastn(Project):                
+    tBlastn:                     
+        module:                  tBlastn
+        base:                    
+        script_path:             '{Vars.Programs.BLAST.tBlastn}'
+        fasta2use:               prot
+        db2use:                  nucl
+        scope:                   project
+        redirects:               
+            -evalue:             '0.0001'
+            -num_descriptions:   '20'
+            -num_threads:        1
+            -outfmt:             '"6 qseqid sallseqid qlen slen qstart qend sstart send length evalue bitscore score pident qframe"'
+            -query:              '{Vars.Query.Prot_FASTA}'
+
+Parse_Blast(Project):            
+    Parse_Blast:                 
+        module:                  parse_blast
+        base:                    
+        script_path:             '{Vars.Programs.parse_blast}'
+        scope:                   project
+        redirects:               
+            --dbtable:           
+            --group_dif_name:    
+            --max_evalue:        
+            --merge_blast:       qseqid
+            --merge_metadata:    
+            --min_coverage:      100
+            --names:             '"qseqid sallseqid qlen slen qstart qend sstart send length evalue pident sseq"'
+            --num_hits:          1
+            --sort_str:          '''evalue,i,pident,d,length,d'''
+
+
+Blastn(Sample):                  
+    Blastn:                      
+        module:                  blast
+        base:                    
+        script_path:             '{Vars.Programs.BLAST.blastn}'
+        fasta2use:               nucl
+        db2use:                  nucl
+        scope:                   sample
+        redirects:               
+            -evalue:             '0.0001'
+            -num_descriptions:   '20'
+            -num_threads:        1
+            -outfmt:             '"6 qseqid sallseqid qlen slen qstart qend sstart send length evalue bitscore score pident qframe"'
+            -query:              '{Vars.Query.Nucl_FASTA}'
+
+Blastp(Sample):
     Blastp:
-        module: blast
+        module:                  blast
         base: 
-        script_path: '{Vars.Programs.BLAST.blastp}'
-        fasta2use: prot
-        db2use: prot
-        scope: project
-        redirects:
-            -evalue: '0.0001'
-            -num_descriptions: '20'
-            -num_threads: 1
-            -outfmt: '"6 qseqid sallseqid qlen slen qstart qend sstart send length
-                evalue bitscore score pident qframe"'
-            -query: '{Vars.Query.Prot_FASTA}'
+        script_path:             '{Vars.Programs.BLAST.blastp}'
+        fasta2use:               prot
+        db2use:                  prot
+        scope:                   sample
+        redirects:               
+            -evalue:             '0.0001'
+            -num_descriptions:   '20'
+            -num_threads:        1
+            -outfmt:             '"6 qseqid sallseqid qlen slen qstart qend sstart send length evalue bitscore score pident qframe"'
+            -query:              '{Vars.Query.Prot_FASTA}'
 
-Blastx:
-    Blastx:
-        module: blast
-        base: 
-        script_path: '{Vars.Programs.BLAST.blastx}'
-        fasta2use: nucl
-        db2use: prot
-        scope: project
-        redirects:
-            -evalue: '0.0001'
-            -num_descriptions: '20'
-            -num_threads: 1
-            -outfmt: '"6 qseqid sallseqid qlen slen qstart qend sstart send length
-                evalue bitscore score pident qframe"'
-            -query: '{Vars.Query.Nucl_FASTA}'
+Blastx(Sample):                          
+    Blastx:                      
+        module:                  blast
+        base:                    
+        script_path:             '{Vars.Programs.BLAST.blastx}'
+        fasta2use:               nucl
+        db2use:                  prot
+        scope:                   sample
+        redirects:               
+            -evalue:             '0.0001'
+            -num_descriptions:   '20'
+            -num_threads:        1
+            -outfmt:             '"6 qseqid sallseqid qlen slen qstart qend sstart send length evalue bitscore score pident qframe"'
+            -query:              '{Vars.Query.Nucl_FASTA}'
 
-tBlastn:
-    tBlastn:
-        module: tBlastn
-        base: 
-        script_path: '{Vars.Programs.BLAST.tBlastn}'
-        fasta2use: prot
-        db2use: nucl
-        scope: project
-        redirects:
-            -evalue: '0.0001'
-            -num_descriptions: '20'
-            -num_threads: 1
-            -outfmt: '"6 qseqid sallseqid qlen slen qstart qend sstart send length
-                evalue bitscore score pident qframe"'
-            -query: '{Vars.Query.Prot_FASTA}'
+tBlastn(Sample):                         
+    tBlastn:                     
+        module:                  tBlastn
+        base:                    
+        script_path:             '{Vars.Programs.BLAST.tBlastn}'
+        fasta2use:               prot
+        db2use:                  nucl
+        scope:                   sample
+        redirects:               
+            -evalue:             '0.0001'
+            -num_descriptions:   '20'
+            -num_threads:        1
+            -outfmt:             '"6 qseqid sallseqid qlen slen qstart qend sstart send length evalue bitscore score pident qframe"'
+            -query:              '{Vars.Query.Prot_FASTA}'
 
-Parse_Blast:
-    Parse_Blast:
-        module: parse_blast
-        base: 
-        script_path: '{Vars.Programs.parse_blast}'
-        scope: sample
-        redirects:
-            --dbtable: 
-            --group_dif_name: 
-            --max_evalue: 
-            --merge_blast: qseqid
-            --merge_metadata: 
-            --min_coverage: 100
-            --names: '"qseqid sallseqid qlen slen qstart qend sstart send length evalue
-                pident sseq"'
-            --num_hits: 1
-            --sort_str: '''evalue,i,pident,d,length,d'''
+Parse_Blast(Sample):             
+    Parse_Blast:                 
+        module:                  parse_blast
+        base:                    
+        script_path:             '{Vars.Programs.parse_blast}'
+        scope:                   sample
+        redirects:               
+            --dbtable:           
+            --group_dif_name:    
+            --max_evalue:        
+            --merge_blast:       qseqid
+            --merge_metadata:    
+            --min_coverage:      100
+            --names:             '"qseqid sallseqid qlen slen qstart qend sstart send length evalue pident sseq"'
+            --num_hits:          1
+            --sort_str:          '''evalue,i,pident,d,length,d'''
 
 
-Gassst:
-    Gassst:
-        module: Gassst
-        base: 
-        script_path: '{Vars.Programs.Gassst}'
+
+Gassst:               
+    Gassst:           
+        module:       Gassst
+        base:         
+        script_path:  '{Vars.Programs.Gassst}'
+        redirects:    
+            -h:       1
+            -i:       '{Vars.Query.Nucl_FASTA}'
+            -l:       0
+            -m:       0
+            -n:       1
+            -p:       95
+
+
+Tree_Plot(From_Internal_Excel):
+    Tree_Plot:
+        module:                             Tree_plot                                            # Name of the used module
+        base:                                                                                    # Name of the step [or list of names] to run after and generate a Tree plot [must be after a tree making step]
+                                                                                                 # If more then one base is specified: the first overwrite the other bases overlapped slots  
+        script_path:                                                                             # Command for running the Tree plot script
+                                                                                                 # If this line is empty or missing it will try using the module's associated script
+        iterate_on_bases:                                                                        # If set will iterate over the step's bases and generate a plot for each base. 
+        tree_by_heatmap:                                                                         # Generate additional tree using Hierarchical Clustering of the heatmap
         redirects:
-            -h: 1
-            -i: '{Vars.Query.Nucl_FASTA}'
-            -l: 0
-            -m: 0
-            -n: 1
-            -p: 95
+            --layout:                       rectangular                                          # Tree layout [fan or rectangular (default)]
+            --M_Excel:                      '{Vars.Meta_Data.Meta_Data_Sheet_Name}'              # If the Meta_Data input is an Excel file indicate the sheet name to use
+            --ID_field:                     '{Vars.Meta_Data.Meta_Data_Sample_ID_Column_Name}'   # Column name in the Meta Data file for IDs found in the tips of the tree
+            --cols_to_use:                  '{Vars.Meta_Data.Meta_Data_Column2use}'              # Columns in the Meta Data file to use and the order from the center up  
+            --open.angle:                   20                                                   # Tree open angle.
+            --OTU:                          '{Vars.Meta_Data.Meta_Data_OTU_Column_Name}'         # Column name in the Meta Data file to use as OTU annotation
+            --labels:                                                                            # Use branch length labels
+            --Tip_labels:                                                                        # Show tip labels
+            --H_Excel:                      '{Vars.Meta_Data.Data_Heatmap_Sheet_Name}'           # If the heatmap input is an Excel file indicate the sheet name to use
+            --heatmap_cell_border:          'white'                                              # Color of heatmap cell border [default='white']
+            --heatmap_lowest_value:         'white'                                              # Color of heatmap lowest value [default='white']
+            --heatmap_highest_value:        'red'                                                # Color of heatmap highest value [default='red']
+            --cols_to_use_heatmap:          '{Vars.Meta_Data.Data_Heatmap_Column2use}'           # Columns in the heatmap Data file to use and the order from the center up
+            --ID_heatmap_field:             '{Vars.Meta_Data.Data_Heatmap_Sample_ID_Column_Name}'# Column name for IDs found in the tips of the tree in the heatmap Data file
+            --heatmap_variable:                                                                  # Use only variable columns in the heatmap
+            --heatmap_HC_dist:              'maximum'                                            # The heatmap Hierarchical Clustering dist method
+            --heatmap_HC_agg:               'average'                                            # The heatmap Hierarchical Clustering agglomeration method
+
 
 
 Tree_Plot(Simple):
     Tree_Plot:
-        module: Tree_plot                                                        # Name of the used module
-        base:                                                                    # Name of the step [or list of names] to run after and generate a Tree plot [must be after a tree making step]
-                                                                                 # If more then one base is specified: the first overwrite the other bases overlapped slots  
-        script_path:                                                             # Command for running the Tree plot script
-                                                                                 # If this line is empty or missing it will try using the module's associated script
-        iterate_on_bases:                                                        # If set will iterate over the step's bases and generate a plot for each base. 
-        tree_by_heatmap:                                                         # Generate additional tree using Hierarchical Clustering of the heatmap
+        module:                             Tree_plot                                            # Name of the used module
+        base:                                                                                    # Name of the step [or list of names] to run after and generate a Tree plot [must be after a tree making step]
+                                                                                                 # If more then one base is specified: the first overwrite the other bases overlapped slots  
+        script_path:                                                                             # Command for running the Tree plot script
+                                                                                                 # If this line is empty or missing it will try using the module's associated script
+        iterate_on_bases:                                                                        # If set will iterate over the step's bases and generate a plot for each base. 
+        tree_by_heatmap:                                                                         # Generate additional tree using Hierarchical Clustering of the heatmap
         redirects:
-            --layout: rectangular                                                # Tree layout [fan or rectangular (default)]
-            --Meta_Data: '{Vars.Meta_Data.Meta_Data_File}'                       # Path to tab-delimited Meta Data file with header line. 
-                                                                                 # If this line is empty or missing it will try searching for results data.
-            --M_Excel: '{Vars.Meta_Data.Meta_Data_Sheet_Name}'                   # If the Meta_Data input is an Excel file indicate the sheet name to use
-            --ID_field: '{Vars.Meta_Data.Meta_Data_ID_Column_Name}'              # Column name in the Meta Data file for IDs found in the tips of the tree
-            --cols_to_use: '{Vars.Meta_Data.Meta_Data_Column2use}'               # Columns in the Meta Data file to use and the order from the center up  
-            --open.angle:  20                                                    # Tree open angle.
-            --OTU: '{Vars.Meta_Data.Meta_Data_OTU_Column_Name}'                  # Column name in the Meta Data file to use as OTU annotation
-            --labels:                                                            # Use branch length labels
-            --Tip_labels:                                                        # Show tip labels
-            --heatmap: '{Vars.Meta_Data.Data_Heatmap_File}'                      # Path to Data file to generate a heatmap 
-                                                                                 # If this line is empty it will try searching for results data.
-            --H_Excel: '{Vars.Meta_Data.Data_Heatmap_Sheet_Name}'                # If the heatmap input is an Excel file indicate the sheet name to use
-            --heatmap_cell_border: 'white'                                       # Color of heatmap cell border [default='white']
-            --heatmap_lowest_value: 'white'                                      # Color of heatmap lowest value [default='white']
-            --heatmap_highest_value: 'red'                                       # Color of heatmap highest value [default='red']
-            --cols_to_use_heatmap: '{Vars.Meta_Data.Data_Heatmap_Column2use}'    # Columns in the heatmap Data file to use and the order from the center up
-            --ID_heatmap_field: '{Vars.Meta_Data.Data_Heatmap_ID_Column_Name}'   # Column name for IDs found in the tips of the tree in the heatmap Data file
-            --heatmap_variable:                                                  # Use only variable columns in the heatmap
-            --heatmap_HC_dist: 'maximum'                                         # The heatmap Hierarchical Clustering dist method
-            --heatmap_HC_agg:  'average'                                         # The heatmap Hierarchical Clustering agglomeration method
+            --layout:                       rectangular                                          # Tree layout [fan or rectangular (default)]
+            --Meta_Data:                    '{Vars.Meta_Data.Meta_Data_File}'                    # Path to tab-delimited Meta Data file with header line. 
+                                                                                                 # If this line is empty or missing it will try searching for results data.
+            --M_Excel:                      '{Vars.Meta_Data.Meta_Data_Sheet_Name}'              # If the Meta_Data input is an Excel file indicate the sheet name to use
+            --ID_field:                     '{Vars.Meta_Data.Meta_Data_Sample_ID_Column_Name}'   # Column name in the Meta Data file for IDs found in the tips of the tree
+            --cols_to_use:                  '{Vars.Meta_Data.Meta_Data_Column2use}'              # Columns in the Meta Data file to use and the order from the center up  
+            --open.angle:                   20                                                   # Tree open angle.
+            --OTU:                          '{Vars.Meta_Data.Meta_Data_OTU_Column_Name}'         # Column name in the Meta Data file to use as OTU annotation
+            --labels:                                                                            # Use branch length labels
+            --Tip_labels:                                                                        # Show tip labels
+            --heatmap:                      '{Vars.Meta_Data.Data_Heatmap_File}'                 # Path to Data file to generate a heatmap 
+                                                                                                 # If this line is empty it will try searching for results data.
+            --H_Excel:                      '{Vars.Meta_Data.Data_Heatmap_Sheet_Name}'           # If the heatmap input is an Excel file indicate the sheet name to use
+            --heatmap_cell_border:          'white'                                              # Color of heatmap cell border [default='white']
+            --heatmap_lowest_value:         'white'                                              # Color of heatmap lowest value [default='white']
+            --heatmap_highest_value:        'red'                                                # Color of heatmap highest value [default='red']
+            --cols_to_use_heatmap:          '{Vars.Meta_Data.Data_Heatmap_Column2use}'           # Columns in the heatmap Data file to use and the order from the center up
+            --ID_heatmap_field:             '{Vars.Meta_Data.Data_Heatmap_Sample_ID_Column_Name}'# Column name for IDs found in the tips of the tree in the heatmap Data file
+            --heatmap_variable:                                                                  # Use only variable columns in the heatmap
+            --heatmap_HC_dist:              'maximum'                                            # The heatmap Hierarchical Clustering dist method
+            --heatmap_HC_agg:               'average'                                            # The heatmap Hierarchical Clustering agglomeration method
 
 
 Tree_Plot(Extended):
     Tree_Plot:
-        module: Tree_plot                                                        # Name of the used module
-        base:                                                                    # Name of the step [or list of names] to run after and generate a Tree plot [must be after a tree making step]
-                                                                                 # If more then one base is specified: the first overwrite the other bases overlapped slots  
-        script_path:                                                             # Command for running the Tree plot script
-                                                                                 # If this line is empty or missing it will try using the module's associated script
-        iterate_on_bases:                                                        # If set will iterate over the step's bases and generate a plot for each base. 
-        tree_by_heatmap:                                                         # Generate additional tree using Hierarchical Clustering of the heatmap
+        module:                             Tree_plot                                                # Name of the used module
+        base:                                                                                        # Name of the step [or list of names] to run after and generate a Tree plot [must be after a tree making step]
+                                                                                                     # If more then one base is specified: the first overwrite the other bases overlapped slots  
+        script_path:                                                                                 # Command for running the Tree plot script
+                                                                                                     # If this line is empty or missing it will try using the module's associated script
+        iterate_on_bases:                                                                            # If set will iterate over the step's bases and generate a plot for each base. 
+        tree_by_heatmap:                                                                             # Generate additional tree using Hierarchical Clustering of the heatmap
         redirects:
-            --layout: rectangular                                                # Tree layout [fan or rectangular (default)]
-            --Meta_Data: '{Vars.Meta_Data.Meta_Data_File}'                       # Path to tab-delimited Meta Data file with header line. 
-                                                                                 # If this line is empty or missing it will try searching for results data.
-            --M_Excel: '{Vars.Meta_Data.Meta_Data_Sheet_Name}'                   # If the Meta_Data input is an Excel file indicate the sheet name to use
-            --ID_field: '{Vars.Meta_Data.Meta_Data_ID_Column_Name}'              # Column name in the Meta Data file for IDs found in the tips of the tree
-            --cols_to_use: '{Vars.Meta_Data.Meta_Data_Column2use}'               # Columns in the Meta Data file to use and the order from the center up  
-            --open.angle:  20                                                    # Tree open angle.
-            --branch.length:                                                     # Don't use branch length [cladogram]
-            --conect.tip:                                                        # Connect the tip to its label
-            --pre_spacer:  0.05                                                  # Space before the label text [default=0.05]
-            --post_spacer: 0.01                                                  # Space after the label text [default=0.01]
-            --OTU: '{Vars.Meta_Data.Meta_Data_OTU_Column_Name}'                  # Column name in the Meta Data file to use as OTU annotation
-            --labels:                                                            # Use branch length labels
-            --Tip_labels:                                                        # Show tip labels
-            --heatmap: '{Vars.Meta_Data.Data_Heatmap_File}'                      # Path to Data file to generate a heatmap 
-                                                                                 # If this line is empty it will try searching for results data.
-            --H_Excel: '{Vars.Meta_Data.Data_Heatmap_Sheet_Name}'                # If the heatmap input is an Excel file indicate the sheet name to use
-            --heatmap_cell_border: 'white'                                       # Color of heatmap cell border [default='white']
-            --heatmap_lowest_value: 'white'                                      # Color of heatmap lowest value [default='white']
-            --heatmap_highest_value: 'red'                                       # Color of heatmap highest value [default='red']
-            --cols_to_use_heatmap: '{Vars.Meta_Data.Data_Heatmap_Column2use}'    # Columns in the heatmap Data file to use and the order from the center up
-            --ID_heatmap_field: '{Vars.Meta_Data.Data_Heatmap_ID_Column_Name}'   # Column name for IDs found in the tips of the tree in the heatmap Data file
-            --heatmap_variable:                                                  # Use only variable columns in the heatmap
-            --heatmap_count_by_sep: ','                                          # Count the sep in each cell to generate the values for the heatmap
-            --heatmap_HC_dist: 'maximum'                                         # The heatmap Hierarchical Clustering dist method
-            --heatmap_HC_agg:  'average'                                         # The heatmap Hierarchical Clustering agglomeration method
-            
-            
+            --layout:                       rectangular                                              # Tree layout [fan or rectangular (default)]
+            --Meta_Data:                    '{Vars.Meta_Data.Meta_Data_File}'                        # Path to tab-delimited Meta Data file with header line. 
+                                                                                                     # If this line is empty or missing it will try searching for results data.
+            --M_Excel:                      '{Vars.Meta_Data.Meta_Data_Sheet_Name}'                  # If the Meta_Data input is an Excel file indicate the sheet name to use
+            --ID_field:                     '{Vars.Meta_Data.Meta_Data_Sample_ID_Column_Name}'       # Column name in the Meta Data file for IDs found in the tips of the tree
+            --cols_to_use:                  '{Vars.Meta_Data.Meta_Data_Column2use}'                  # Columns in the Meta Data file to use and the order from the center up  
+            --open.angle:                   20                                                       # Tree open angle.
+            --branch.length:                                                                         # Don't use branch length [cladogram]
+            --conect.tip:                                                                            # Connect the tip to its label
+            --pre_spacer:                   0.05                                                     # Space before the label text [default=0.05]
+            --post_spacer:                  0.01                                                     # Space after the label text [default=0.01]
+            --OTU:                          '{Vars.Meta_Data.Meta_Data_OTU_Column_Name}'             # Column name in the Meta Data file to use as OTU annotation
+            --labels:                                                                                # Use branch length labels
+            --Tip_labels:                                                                            # Show tip labels
+            --heatmap:                      '{Vars.Meta_Data.Data_Heatmap_File}'                     # Path to Data file to generate a heatmap 
+                                                                                                     # If this line is empty it will try searching for results data.
+            --H_Excel:                      '{Vars.Meta_Data.Data_Heatmap_Sheet_Name}'               # If the heatmap input is an Excel file indicate the sheet name to use
+            --heatmap_cell_border:          'white'                                                  # Color of heatmap cell border [default='white']
+            --heatmap_lowest_value:         'white'                                                  # Color of heatmap lowest value [default='white']
+            --heatmap_highest_value:        'red'                                                    # Color of heatmap highest value [default='red']
+            --cols_to_use_heatmap:          '{Vars.Meta_Data.Data_Heatmap_Column2use}'               # Columns in the heatmap Data file to use and the order from the center up
+            --ID_heatmap_field:             '{Vars.Meta_Data.Data_Heatmap_Sample_ID_Column_Name}'    # Column name for IDs found in the tips of the tree in the heatmap Data file
+            --heatmap_variable:                                                                      # Use only variable columns in the heatmap
+            --heatmap_count_by_sep:         ','                                                      # Count the sep in each cell to generate the values for the heatmap
+            --heatmap_HC_dist:              'maximum'                                                # The heatmap Hierarchical Clustering dist method
+            --heatmap_HC_agg:               'average'                                                # The heatmap Hierarchical Clustering agglomeration method
+
+
+Snippy:                     
+    Snippy:                 
+        module:             Snippy
+        base:               
+        script_path:        '{Vars.Programs.Snippy.Bin}'
+        phyloviz:           
+            --Cut:          
+            --S_MetaData:   '{Vars.Meta_Data.Meta_Data_Sample_ID_Column_Name}'
+            -C:             0.7
+            -M:             '{Vars.Meta_Data.Meta_Data_File}' 
+        snippy_core:
+            script_path:    '{Vars.Programs.Snippy.Snippy_Core}'
+            --noref:        
+        redirects:          1
+            --cpus:         1
+            --force:        
+            --mapqual:      60
+            --mincov:       10
+            --minfrac:      0.9
+            --reference:    '{Vars.Genome.reference}'
+
+
+Gubbins:
+    Gubbins:                                                                                        # Name of this step
+        module:            Gubbins                                                                  # Name of the module used
+        base:                                                                                       # Name of the step [or list of names] to run after [must be after a step that generates a Project level nucleotide Multi-FASTA alignment]
+        script_path:       '{Vars.Programs.Gubbins}'                                                # Command for running the gubbins script, if empty or this line dose not exist will not run gubbins
+        env:                                                                                        # env parameters that needs to be in the PATH for running this module
+        phyloviz:                                                                                   # Generate phyloviz ready to use files
+            -M:             '{Vars.Meta_Data.Meta_Data_File}'                                       # Location of a MetaData file 
+            --Cut:                                                                                  # Use only Samples found in the metadata file
+            --S_MetaData:   '{Vars.Meta_Data.Meta_Data_Sample_ID_Column_Name}'                      # The name of the samples ID column
+        redirects:          
+            --threads:      1                                                                       # Parameters for running Gubbins            
             
 NGSplot(genebody):
     NGSplot:
@@ -466,60 +648,252 @@ NGSplot(genebody):
             -R:             genebody
             -P:             1
             -GO:            hc
-            
-            
+
+
 CD_HIT(prot):
     CD_HIT:
-        module: cd_hit
+        module:        cd_hit
         base: 
-        script_path: '{Vars.Programs.cd_hit_est}'
+        script_path:   '{Vars.Programs.cd_hit_est}'
         scope: 
         redirects:
-            -T: 1
+            -T:        1
 
 CD_HIT(nucl):
     CD_HIT:
-        module: cd_hit
-        base: 
-        script_path: '{Vars.Programs.cd_hit}'
+        module:        cd_hit
+        base:  
+        script_path:   '{Vars.Programs.cd_hit}'
         scope: 
         redirects:
-            -T: 1
+            -T:        1
 
 Mpileup2Varscan:
     Mpileup2Varscan:
-        module: mpileup_varscan
+        module:              mpileup_varscan
         base: 
-        script_path: 'java -jar {Vars.Programs.VarScan} mpileup2snp'
-        mpileup_path: '{Vars.Programs.samtools} mpileup {Vars.Parameters.mpileup.mpileup_arguments}'
-        scope: sample
+        script_path:         'java -jar {Vars.Programs.VarScan} mpileup2snp'
+        mpileup_path:        '{Vars.Programs.samtools} mpileup {Vars.Parameters.mpileup.mpileup_arguments}'
+        scope:               sample
         redirects:
-            --min-coverage: 4
+            --min-coverage:  4
             --output-vcf:
-            --variants: 1
+            --variants:      1
 
 
 Freebayes:
     Freebayes:
-        module: freebayes
+        module:             freebayes
         base: 
-        script_path: '{Vars.Programs.freebayes}'
+        script_path:        '{Vars.Programs.freebayes}'
         scope: 
-        output_type: vcf
+        output_type:        vcf
         redirects: 
             --strict-vcf:
 
 
 Vcftools:
     Vcftools:
-        module: vcftools
+        module:                    vcftools
         base: 
-        script_path: '{Vars.Programs.vcftools}'
+        script_path:               '{Vars.Programs.vcftools}'
         scope: 
-        input: vcf
+        input:                     vcf
         redirects:
             --recode:
             --extract-FORMAT-info: GT
             --get-INFO:
                 - NS
                 - DB
+
+Hmmscan(prot):
+    Hmmscan:
+        module:             hmmscan
+        base:               
+        script_path:        '{Vars.Programs.hmmscan}'
+        scope:              
+        type:               prot
+        output_type:        domtblout 
+        hmmdb:              '{Vars.Databases.pfam}'
+        redirects:
+            --cpu:          1
+
+Sketch(per_Sample):
+    Sketch:
+        module:         mash_sketch
+        base:           
+        script_path:    '{Vars.Programs.mash} sketch'
+        scope:          sample
+        type:           fastq
+        rm_merged:
+        redirects:
+            -m:         2
+            -p:         1
+
+Sketch(Project):
+    Sketch:
+        module:         mash_sketch
+        base:           
+        script_path:    '{Vars.Programs.mash} sketch'
+        src_scope:      sample
+        scope:          project
+        type:           fastq
+        rm_merged:
+        redirects:
+            -m:         2
+            -p:         1
+
+Mash_Dist(External_FASTA_Reference_Per_Sample):
+    Mash_Dist:
+        module:         mash_dist
+        base:          
+        script_path:    '{Vars.Programs.mash} dist'
+        reference:
+            path:       '{Vars.Genome.reference}'
+        query:
+            scope:      sample
+            type:       fastq
+            msh:
+
+Mash_Dist(Project_FASTA_Reference_Per_Sample):
+    Mash_Dist:
+        module:         mash_dist
+        base:          
+        script_path:    '{Vars.Programs.mash} dist'
+        reference:
+            scope:      project
+            type:       fasta
+            msh:
+        query:
+            scope:      sample
+            type:       fastq
+            msh:
+
+Mash_Dist(Project_vs_Project_Mashed_fastq):
+    Mash_Dist:
+        module:         mash_dist
+        base:          
+        script_path:    '{Vars.Programs.mash} dist'
+        reference:
+            scope:      project
+            type:       fastq
+            msh:
+        query:
+            scope:      project
+            type:       fastq
+            msh:
+
+Mash_Dist(Project_vs_Sample_Mashed_fastq):
+    Mash_Dist:
+        module:         mash_dist
+        base:          
+        script_path:    '{Vars.Programs.mash} dist'
+        reference:
+            scope:      project
+            type:       fastq
+            msh:
+        query:
+            scope:      sample
+            type:       fastq
+            msh:
+
+
+Trinity(Project):
+    module:                 trinity
+    base:       
+    scope:                  project
+    script_path:            '{Vars.Programs.Trinity.Bin}'
+    redirects:
+        --CPU:              1
+        --seqType:          fq
+        --JM:               60G
+        --min_kmer_cov:     2
+        --full_cleanup:
+
+Trinity_grid(Project):
+    module:                 trinity
+    base:       
+    scope:                  project
+    script_path:            '{Vars.Programs.Trinity.Bin}'
+    redirects:
+        --grid_conf:        '{Vars.Programs.Trinity.Trinity_grid_conf_file}'
+        --CPU:              1
+        --seqType:          fq
+        --JM:               60G
+        --min_kmer_cov:     2
+        --full_cleanup:
+
+Add_Trinity_Tags:
+    Add_Trinity_Tags:
+        module:       add_trinity_tags
+        base:         
+        script_path:  
+        
+
+Trinity_Mapping(Project):     
+    Trinity_Mapping:          
+        module:               trinity_mapping
+        base:                 
+        scope:                project
+        script_path:          '{Vars.Programs.Trinity.align_and_estimate_abundance}'
+        redirects:            
+            --est_method:     RSEM
+            --aln_method:     bowtie
+            --trinity_mode:   
+            -–gene_trans_map: 
+            --seqType:        fq
+
+Trinity_Mapping(Sample):      
+    Trinity_Mapping:          
+        module:               trinity_mapping
+        base:                 
+        scope:                sample
+        script_path:          '{Vars.Programs.Trinity.align_and_estimate_abundance}'
+        redirects:            
+            --est_method:     RSEM
+            --aln_method:     bowtie
+            --trinity_mode:   
+            -–gene_trans_map: 
+            --seqType:        fq
+
+Trinity_Mapping_Statistics(Gene_Level): 
+    Trinity_Mapping_Statistics:         
+        module:                         trinmap_statistics
+        base:                           
+        script_path:                    '{Vars.Programs.Trinity.abundance_estimates_to_matrix}'
+        use_genes:                      
+        redirects:                      
+            --est_method:               RSEM
+
+Trinity_Mapping_Statistics(Isoform_Level): 
+    Trinity_Mapping_Statistics:         
+        module:                         trinmap_statistics
+        base:                           
+        script_path:                    '{Vars.Programs.Trinity.abundance_estimates_to_matrix}'
+        redirects:                      
+            --est_method:               RSEM
+
+
+TransDecoder(Sample):
+    TransDecoder:
+        module:             TransDecoder
+        base:               
+        script_path:        '{Vars.Programs.TransDecoder}'
+        scope:              sample
+
+TransDecoder(project):
+    TransDecoder:
+        module:             TransDecoder
+        base:               
+        script_path:        '{Vars.Programs.TransDecoder}'
+        scope:              project
+
+
+Trinotate(Project):
+    Trinotate:
+        module:             Trinotate
+        base:               
+        script_path:        '{Vars.Programs.Trinotate}'
+        scope:              project
+        sqlitedb:           {Vars.Databases.Trinotate.sqlitedb}
+        cp_sqlitedb:    
