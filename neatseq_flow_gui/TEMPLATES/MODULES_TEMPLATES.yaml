@@ -55,11 +55,21 @@ Trimmomatic:
     Trimmomatic:
         module: trimmo
         base: 
-        script_path: 'java -jar {Vars.Programs.Trimmomatic}'
-        todo: ILLUMINACLIP:TruSeq3-SE.fa:2:30:10 LEADING:20 TRAILING:20 SLIDINGWINDOW:4:15
+        script_path: 'java -jar {Vars.Programs.Trimmomatic.Bin}'
+        todo: ILLUMINACLIP:{Vars.Programs.Trimmomatic.Adapters_File}:2:30:10 LEADING:20 TRAILING:20 SLIDINGWINDOW:4:15
             MINLEN:36
         redirects:
             -threads: 1
+
+            
+Trimmomatic(Using_CONDA):            
+    Trimmomatic:
+        module:         trimmo
+        base:           Merge
+        script_path:    {Vars.Programs.Trimmomatic.Bin}
+        todo:           'ILLUMINACLIP:{Vars.Programs.Trimmomatic.Adapters_File}:2:30:10 LEADING:20 TRAILING:20 SLIDINGWINDOW:4:15 MINLEN:36'
+        redirects:
+            -threads:   1 
 
 Cutadapt(Remove_poly_A):
     Remove_poly_A:                   # Name of this step
@@ -203,6 +213,7 @@ Samtools:
         stats: --remove-dups
         del_sam:
         del_unsorted:
+        type2use: sam
         
 MultQC:
     MultQC:
@@ -258,7 +269,16 @@ Collect_results           :
             --split_by: ','
             -R: .tab$
 
-Make_Blast_db:
+Make_Blast_db(prot):
+    Make_Blast_db:
+        module: makeblastdb
+        base: 
+        script_path: '{Vars.Programs.BLAST.makeblastdb}'
+        redirects:
+            -dbtype: prot
+        scope: project
+
+Make_Blast_db(nucl):
     Make_Blast_db:
         module: makeblastdb
         base: 
@@ -266,14 +286,14 @@ Make_Blast_db:
         redirects:
             -dbtype: nucl
         scope: project
-
-
-Blast:
-    Blast:
+        
+Blastn:
+    Blastn:
         module: blast
         base: 
         script_path: '{Vars.Programs.BLAST.blastn}'
         fasta2use: nucl
+        db2use: nucl
         scope: project
         redirects:
             -evalue: '0.0001'
@@ -281,8 +301,54 @@ Blast:
             -num_threads: 1
             -outfmt: '"6 qseqid sallseqid qlen slen qstart qend sstart send length
                 evalue bitscore score pident qframe"'
-            -query: '{Vars.Query.FASTA}'
+            -query: '{Vars.Query.Nucl_FASTA}'
+Blastp:
+    Blastp:
+        module: blast
+        base: 
+        script_path: '{Vars.Programs.BLAST.blastp}'
+        fasta2use: prot
+        db2use: prot
+        scope: project
+        redirects:
+            -evalue: '0.0001'
+            -num_descriptions: '20'
+            -num_threads: 1
+            -outfmt: '"6 qseqid sallseqid qlen slen qstart qend sstart send length
+                evalue bitscore score pident qframe"'
+            -query: '{Vars.Query.Prot_FASTA}'
 
+Blastx:
+    Blastx:
+        module: blast
+        base: 
+        script_path: '{Vars.Programs.BLAST.blastx}'
+        fasta2use: nucl
+        db2use: prot
+        scope: project
+        redirects:
+            -evalue: '0.0001'
+            -num_descriptions: '20'
+            -num_threads: 1
+            -outfmt: '"6 qseqid sallseqid qlen slen qstart qend sstart send length
+                evalue bitscore score pident qframe"'
+            -query: '{Vars.Query.Nucl_FASTA}'
+
+tBlastn:
+    tBlastn:
+        module: tBlastn
+        base: 
+        script_path: '{Vars.Programs.BLAST.tBlastn}'
+        fasta2use: prot
+        db2use: nucl
+        scope: project
+        redirects:
+            -evalue: '0.0001'
+            -num_descriptions: '20'
+            -num_threads: 1
+            -outfmt: '"6 qseqid sallseqid qlen slen qstart qend sstart send length
+                evalue bitscore score pident qframe"'
+            -query: '{Vars.Query.Prot_FASTA}'
 
 Parse_Blast:
     Parse_Blast:
@@ -310,8 +376,150 @@ Gassst:
         script_path: '{Vars.Programs.Gassst}'
         redirects:
             -h: 1
-            -i: '{Vars.Query.FASTA}'
+            -i: '{Vars.Query.Nucl_FASTA}'
             -l: 0
             -m: 0
             -n: 1
             -p: 95
+
+
+Tree_Plot(Simple):
+    Tree_Plot:
+        module: Tree_plot                                                        # Name of the used module
+        base:                                                                    # Name of the step [or list of names] to run after and generate a Tree plot [must be after a tree making step]
+                                                                                 # If more then one base is specified: the first overwrite the other bases overlapped slots  
+        script_path:                                                             # Command for running the Tree plot script
+                                                                                 # If this line is empty or missing it will try using the module's associated script
+        iterate_on_bases:                                                        # If set will iterate over the step's bases and generate a plot for each base. 
+        tree_by_heatmap:                                                         # Generate additional tree using Hierarchical Clustering of the heatmap
+        redirects:
+            --layout: rectangular                                                # Tree layout [fan or rectangular (default)]
+            --Meta_Data: '{Vars.Meta_Data.Meta_Data_File}'                       # Path to tab-delimited Meta Data file with header line. 
+                                                                                 # If this line is empty or missing it will try searching for results data.
+            --M_Excel: '{Vars.Meta_Data.Meta_Data_Sheet_Name}'                   # If the Meta_Data input is an Excel file indicate the sheet name to use
+            --ID_field: '{Vars.Meta_Data.Meta_Data_ID_Column_Name}'              # Column name in the Meta Data file for IDs found in the tips of the tree
+            --cols_to_use: '{Vars.Meta_Data.Meta_Data_Column2use}'               # Columns in the Meta Data file to use and the order from the center up  
+            --open.angle:  20                                                    # Tree open angle.
+            --OTU: '{Vars.Meta_Data.Meta_Data_OTU_Column_Name}'                  # Column name in the Meta Data file to use as OTU annotation
+            --labels:                                                            # Use branch length labels
+            --Tip_labels:                                                        # Show tip labels
+            --heatmap: '{Vars.Meta_Data.Data_Heatmap_File}'                      # Path to Data file to generate a heatmap 
+                                                                                 # If this line is empty it will try searching for results data.
+            --H_Excel: '{Vars.Meta_Data.Data_Heatmap_Sheet_Name}'                # If the heatmap input is an Excel file indicate the sheet name to use
+            --heatmap_cell_border: 'white'                                       # Color of heatmap cell border [default='white']
+            --heatmap_lowest_value: 'white'                                      # Color of heatmap lowest value [default='white']
+            --heatmap_highest_value: 'red'                                       # Color of heatmap highest value [default='red']
+            --cols_to_use_heatmap: '{Vars.Meta_Data.Data_Heatmap_Column2use}'    # Columns in the heatmap Data file to use and the order from the center up
+            --ID_heatmap_field: '{Vars.Meta_Data.Data_Heatmap_ID_Column_Name}'   # Column name for IDs found in the tips of the tree in the heatmap Data file
+            --heatmap_variable:                                                  # Use only variable columns in the heatmap
+            --heatmap_HC_dist: 'maximum'                                         # The heatmap Hierarchical Clustering dist method
+            --heatmap_HC_agg:  'average'                                         # The heatmap Hierarchical Clustering agglomeration method
+
+
+Tree_Plot(Extended):
+    Tree_Plot:
+        module: Tree_plot                                                        # Name of the used module
+        base:                                                                    # Name of the step [or list of names] to run after and generate a Tree plot [must be after a tree making step]
+                                                                                 # If more then one base is specified: the first overwrite the other bases overlapped slots  
+        script_path:                                                             # Command for running the Tree plot script
+                                                                                 # If this line is empty or missing it will try using the module's associated script
+        iterate_on_bases:                                                        # If set will iterate over the step's bases and generate a plot for each base. 
+        tree_by_heatmap:                                                         # Generate additional tree using Hierarchical Clustering of the heatmap
+        redirects:
+            --layout: rectangular                                                # Tree layout [fan or rectangular (default)]
+            --Meta_Data: '{Vars.Meta_Data.Meta_Data_File}'                       # Path to tab-delimited Meta Data file with header line. 
+                                                                                 # If this line is empty or missing it will try searching for results data.
+            --M_Excel: '{Vars.Meta_Data.Meta_Data_Sheet_Name}'                   # If the Meta_Data input is an Excel file indicate the sheet name to use
+            --ID_field: '{Vars.Meta_Data.Meta_Data_ID_Column_Name}'              # Column name in the Meta Data file for IDs found in the tips of the tree
+            --cols_to_use: '{Vars.Meta_Data.Meta_Data_Column2use}'               # Columns in the Meta Data file to use and the order from the center up  
+            --open.angle:  20                                                    # Tree open angle.
+            --branch.length:                                                     # Don't use branch length [cladogram]
+            --conect.tip:                                                        # Connect the tip to its label
+            --pre_spacer:  0.05                                                  # Space before the label text [default=0.05]
+            --post_spacer: 0.01                                                  # Space after the label text [default=0.01]
+            --OTU: '{Vars.Meta_Data.Meta_Data_OTU_Column_Name}'                  # Column name in the Meta Data file to use as OTU annotation
+            --labels:                                                            # Use branch length labels
+            --Tip_labels:                                                        # Show tip labels
+            --heatmap: '{Vars.Meta_Data.Data_Heatmap_File}'                      # Path to Data file to generate a heatmap 
+                                                                                 # If this line is empty it will try searching for results data.
+            --H_Excel: '{Vars.Meta_Data.Data_Heatmap_Sheet_Name}'                # If the heatmap input is an Excel file indicate the sheet name to use
+            --heatmap_cell_border: 'white'                                       # Color of heatmap cell border [default='white']
+            --heatmap_lowest_value: 'white'                                      # Color of heatmap lowest value [default='white']
+            --heatmap_highest_value: 'red'                                       # Color of heatmap highest value [default='red']
+            --cols_to_use_heatmap: '{Vars.Meta_Data.Data_Heatmap_Column2use}'    # Columns in the heatmap Data file to use and the order from the center up
+            --ID_heatmap_field: '{Vars.Meta_Data.Data_Heatmap_ID_Column_Name}'   # Column name for IDs found in the tips of the tree in the heatmap Data file
+            --heatmap_variable:                                                  # Use only variable columns in the heatmap
+            --heatmap_count_by_sep: ','                                          # Count the sep in each cell to generate the values for the heatmap
+            --heatmap_HC_dist: 'maximum'                                         # The heatmap Hierarchical Clustering dist method
+            --heatmap_HC_agg:  'average'                                         # The heatmap Hierarchical Clustering agglomeration method
+            
+            
+            
+NGSplot(genebody):
+    NGSplot:
+        module:             NGSplot
+        base:               
+        script_path:        'Rscript {Vars.Programs.NGSplot.Bin}'
+        setenv:             'NGSPLOT={Vars.Programs.NGSplot.Dir}'
+        redirects:
+            -G:             '{Vars.Programs.NGSplot.Genome_Name}'
+            -R:             genebody
+            -P:             1
+            -GO:            hc
+            
+            
+CD_HIT(prot):
+    CD_HIT:
+        module: cd_hit
+        base: 
+        script_path: '{Vars.Programs.cd_hit_est}'
+        scope: 
+        redirects:
+            -T: 1
+
+CD_HIT(nucl):
+    CD_HIT:
+        module: cd_hit
+        base: 
+        script_path: '{Vars.Programs.cd_hit}'
+        scope: 
+        redirects:
+            -T: 1
+
+
+Mpileup2Varscan:
+    module: mpileup_varscan
+    base: 
+    script_path: 'java -jar '{Vars.Programs.VarScan} mpileup2snp'
+    mpileup_path: '{Vars.Programs.samtools} mpileup {Vars.Parameters.mpileup.mpileup_arguments}'
+    scope: sample
+    redirects:
+        --min-coverage: 4
+        --output-vcf:
+        --variants: 1
+
+
+Freebayes:
+    Freebayes:
+        module: freebayes
+        base: 
+        script_path: '{Vars.Programs.freebayes}'
+        scope: 
+        output_type: vcf
+        redirects: 
+            --strict-vcf:
+
+
+Vcftools:
+    Vcftools:
+        module: vcftools
+        base: 
+        script_path: '{Vars.Programs.vcftools}'
+        scope: 
+        input: vcf
+        redirects:
+            --recode:
+            --extract-FORMAT-info: GT
+            --get-INFO:
+                - NS
+                - DB
