@@ -799,29 +799,31 @@ Mash_Dist(Project_vs_Sample_Mashed_fastq):
 
 
 Trinity(Project):
-    module:                 trinity
-    base:       
-    scope:                  project
-    script_path:            '{Vars.Programs.Trinity.Bin}'
-    redirects:
-        --CPU:              1
-        --seqType:          fq
-        --JM:               60G
-        --min_kmer_cov:     2
-        --full_cleanup:
+    Trinity:
+        module:                 trinity
+        base:       
+        scope:                  project
+        script_path:            '{Vars.Programs.Trinity.Bin}'
+        redirects:
+            --CPU:              1
+            --seqType:          fq
+            --JM:               60G
+            --min_kmer_cov:     2
+            --full_cleanup:
 
 Trinity_grid(Project):
-    module:                 trinity
-    base:       
-    scope:                  project
-    script_path:            '{Vars.Programs.Trinity.Bin}'
-    redirects:
-        --grid_conf:        '{Vars.Programs.Trinity.Trinity_grid_conf_file}'
-        --CPU:              1
-        --seqType:          fq
-        --JM:               60G
-        --min_kmer_cov:     2
-        --full_cleanup:
+    Trinity:
+        module:                 trinity
+        base:       
+        scope:                  project
+        script_path:            '{Vars.Programs.Trinity.Bin}'
+        redirects:
+            --grid_conf:        '{Vars.Programs.Trinity.Trinity_grid_conf_file}'
+            --CPU:              1
+            --seqType:          fq
+            --JM:               60G
+            --min_kmer_cov:     2
+            --full_cleanup:     
 
 Add_Trinity_Tags:
     Add_Trinity_Tags:
