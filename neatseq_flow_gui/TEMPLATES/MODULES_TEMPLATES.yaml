@@ -486,17 +486,17 @@ CD_HIT(nucl):
         redirects:
             -T: 1
 
-
 Mpileup2Varscan:
-    module: mpileup_varscan
-    base: 
-    script_path: 'java -jar {Vars.Programs.VarScan} mpileup2snp'
-    mpileup_path: '{Vars.Programs.samtools} mpileup {Vars.Parameters.mpileup.mpileup_arguments}'
-    scope: sample
-    redirects:
-        --min-coverage: 4
-        --output-vcf:
-        --variants: 1
+    Mpileup2Varscan:
+        module: mpileup_varscan
+        base: 
+        script_path: 'java -jar {Vars.Programs.VarScan} mpileup2snp'
+        mpileup_path: '{Vars.Programs.samtools} mpileup {Vars.Parameters.mpileup.mpileup_arguments}'
+        scope: sample
+        redirects:
+            --min-coverage: 4
+            --output-vcf:
+            --variants: 1
 
 
 Freebayes:
