@@ -490,7 +490,7 @@ CD_HIT(nucl):
 Mpileup2Varscan:
     module: mpileup_varscan
     base: 
-    script_path: 'java -jar '{Vars.Programs.VarScan} mpileup2snp'
+    script_path: 'java -jar {Vars.Programs.VarScan} mpileup2snp'
     mpileup_path: '{Vars.Programs.samtools} mpileup {Vars.Parameters.mpileup.mpileup_arguments}'
     scope: sample
     redirects:
