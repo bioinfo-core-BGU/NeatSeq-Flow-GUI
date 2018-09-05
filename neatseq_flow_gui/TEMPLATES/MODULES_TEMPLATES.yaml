@@ -895,5 +895,5 @@ Trinotate(Project):
         base:               
         script_path:        '{Vars.Programs.Trinotate}'
         scope:              project
-        sqlitedb:           {Vars.Databases.Trinotate.sqlitedb}
+        sqlitedb:           '{Vars.Databases.Trinotate.sqlitedb}'
         cp_sqlitedb:    
