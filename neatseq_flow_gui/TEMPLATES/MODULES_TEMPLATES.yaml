@@ -524,7 +524,7 @@ Tree_Plot(From_Internal_Excel):
             --heatmap_lowest_value:         'white'                                              # Color of heatmap lowest value [default='white']
             --heatmap_highest_value:        'red'                                                # Color of heatmap highest value [default='red']
             --cols_to_use_heatmap:          '{Vars.Meta_Data.Data_Heatmap_Column2use}'           # Columns in the heatmap Data file to use and the order from the center up
-            --ID_heatmap_field:             '{Vars.Meta_Data.Data_Heatmap_Sample_ID_Column_Name}'# Column name for IDs found in the tips of the tree in the heatmap Data file
+            --ID_heatmap_field:             '{Vars.Meta_Data.Data_Heatmap_Sample_ID_Column_Name}' # Column name for IDs found in the tips of the tree in the heatmap Data file
             --heatmap_variable:                                                                  # Use only variable columns in the heatmap
             --heatmap_HC_dist:              'maximum'                                            # The heatmap Hierarchical Clustering dist method
             --heatmap_HC_agg:               'average'                                            # The heatmap Hierarchical Clustering agglomeration method
@@ -558,7 +558,7 @@ Tree_Plot(Simple):
             --heatmap_lowest_value:         'white'                                              # Color of heatmap lowest value [default='white']
             --heatmap_highest_value:        'red'                                                # Color of heatmap highest value [default='red']
             --cols_to_use_heatmap:          '{Vars.Meta_Data.Data_Heatmap_Column2use}'           # Columns in the heatmap Data file to use and the order from the center up
-            --ID_heatmap_field:             '{Vars.Meta_Data.Data_Heatmap_Sample_ID_Column_Name}'# Column name for IDs found in the tips of the tree in the heatmap Data file
+            --ID_heatmap_field:             '{Vars.Meta_Data.Data_Heatmap_Sample_ID_Column_Name}' # Column name for IDs found in the tips of the tree in the heatmap Data file
             --heatmap_variable:                                                                  # Use only variable columns in the heatmap
             --heatmap_HC_dist:              'maximum'                                            # The heatmap Hierarchical Clustering dist method
             --heatmap_HC_agg:               'average'                                            # The heatmap Hierarchical Clustering agglomeration method
@@ -615,7 +615,7 @@ Snippy:
         snippy_core:
             script_path:    '{Vars.Programs.Snippy.Snippy_Core}'
             --noref:        
-        redirects:          1
+        redirects:          
             --cpus:         1
             --force:        
             --mapqual:      60
