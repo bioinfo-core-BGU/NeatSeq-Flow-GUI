@@ -90,15 +90,15 @@
         - Click on the 'Value options' drop-down menu
         - Choose a previous step and click the 'Add' button. This can be repeated to choose several previous steps.
         - Click the 'Edit' button to set the changes.
-    4. **Add new step option:**
+   4. **Add new step option:**
     
         <img src="https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/doc/New_step_option.gif" width="650">    
         
         - Click on the step's name (or a step option to create a new sub option)
         - Click on the 'New' button.
-        - It is possible to edit the new option name and value by editing the 'Key' field and the 'Value' field, it is also possible to choose from the 'Value options' drop-down menu.
+        - It is possible to edit the new option name and value by editing the 'Key' field and the 'Value' field, it is also possible to             choose from the 'Value options' drop-down menu.
         - Click the 'Edit' button to set the changes.
-    5. **Edit step's options:**
+   5. **Edit step's options:**
     
         <img  src="https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/doc/Edit_step_option.gif" width="650">    
         
@@ -107,7 +107,7 @@
           They will appear in the form of {Vars.some_field.some_sub_field} to indicate the value found in the 'Vars' Tab in the some_sub_field field ( which is a sub field of 'some_field' ).  
         - It is possible to choose file location as a value to the 'Value' field by clicking on the 'Browse' button. 
         - Click the 'Edit' button to set the changes.        
-    6. **Remove field or step:**
+   6. **Remove field or step:**
     
         <img  src="https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/doc/Remove_field_or_step.gif" width="650">    
         
