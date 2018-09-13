@@ -52,20 +52,20 @@
         ```   
 
 ## Install NeatSeq-Flow-GUI
-   1. Download the **NeatSeq-Flow-GUI** installer file:
+  1. Download the **NeatSeq-Flow-GUI** installer file:
         ```Bash
           wget https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/NeatSeq_Flow_GUI_installer.yaml
         ```
-    2. Create the **NeatSeq_Flow_GUI** conda environment:
+  2. Create the **NeatSeq_Flow_GUI** conda environment:
         ```Bash
           conda env create -f NeatSeq_Flow_GUI_installer.yaml
         ```  
-    3. Activate the **NeatSeq_Flow_GUI** conda environment:
+  3. Activate the **NeatSeq_Flow_GUI** conda environment:
         ```Bash
           bash
           source activate NeatSeq_Flow_GUI
         ```
-    4. Run **NeatSeq_Flow_GUI**:
+  4. Run **NeatSeq_Flow_GUI**:
         ```Bash 
           NeatSeq_Flow_GUI.py
         ```
@@ -80,8 +80,8 @@
    
        <img  src="https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/doc/Change_Step_Name.gif" width="650">
        
-        You can change the new step name by clicking on the step name and edit the key field and then click the 'Edit' button to set the change. 
-    3. **To determine the position of the new step in the work-flow:**
+        You can change the new step name by clicking on the step name and edit the key field and then click the 'Edit' button to set the         change.
+   3. **To determine the position of the new step in the work-flow:**
     
         <img src="https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/doc/Set_base.gif" width="650">    
         
