@@ -87,7 +87,10 @@ class Graphical_panel(ui.CanvasWidget):
         self.calculate_steps_conections()
         if len(self.steps.keys()) > 0:
             for step in self.steps.keys():
-                self.create_Button(step, self, [50, 50])
+                if 'SKIP' in self.steps[step].keys():
+                    self.create_Button(step, self, [50, 50],'gray')
+                else:
+                    self.create_Button(step, self, [50, 50])
 
     def get_Button_by_name(self, name):
         Button = None
@@ -212,14 +215,19 @@ class Graphical_panel(ui.CanvasWidget):
         self.steps_conections = steps_conections
         self.first_step = first
 
-    def create_Button(self, Button_name, parent, pos):
+    def create_Button(self, Button_name, parent, pos, color='white'):
         Button_id = 'Button' + str(self.Button_count)
         self.Button_count = self.Button_count + 1
         setattr(self, Button_id, ui.Button(text=Button_name, parent=parent))
         getattr(self, Button_id)._last_pos = pos
         getattr(self, Button_id).Button_id = Button_id
-        style = 'position:absolute;left:' + getattr(self, Button_id)._last_pos[0] + 'px; top:' + \
-                getattr(self, Button_id)._last_pos[1] + 'px;'
+        style = 'position:absolute;left:' + \
+                getattr(self, Button_id)._last_pos[0] + \
+                'px; top:' + \
+                getattr(self, Button_id)._last_pos[1] + \
+                'px;'
+        if color!='white':
+            style = style + 'background-color:' + color + ';'
         getattr(self, Button_id).apply_style(style)
         self.Button_list.append(Button_id)
 
@@ -437,10 +445,14 @@ class Step_Tree_Class(ui.Widget):
                 with ui.TreeItem(text=level, checked=None):
                     self.create_tree(current_level[level])
             else:
+               
                 if current_level[level] == None:
                     ui.TreeItem(text=level, checked=None)
-                else:
+                elif ((len(str(current_level[level]).split(',')) > 1) and isinstance(current_level[level], list)):
+                    ui.TreeItem(title=level, text='['+str(current_level[level])+']', checked=None)
+                else: 
                     ui.TreeItem(title=level, text=str(current_level[level]), checked=None)
+                    
 
     def tree2dict_for_export(self, current_tree):
         steps = {}
@@ -449,10 +461,13 @@ class Step_Tree_Class(ui.Widget):
                 steps[tree.text] = dict(self.tree2dict_for_export(tree))
             else:
                 if len(tree.title) > 0:
-                    if (len(tree.text.split(',')) > 1) and (tree.title in FIELDS2SPLIT):
-                        steps[tree.title] = tree.text.split(',')
+                    if (len(tree.text.split(',')) > 1):
+                        if (tree.text.startswith('[') and tree.text.endswith(']') ): #(tree.title in FIELDS2SPLIT):
+                            steps[tree.title] = tree.text.lstrip('[').rstrip(']').split(',')
+                        else:
+                            steps[tree.title] = tree.text
                     else:
-                        steps[tree.title] = tree.text
+                        steps[tree.title] = tree.text.lstrip('[').rstrip(']')
                 else:
                     steps[tree.text] = None
         return steps
@@ -464,10 +479,13 @@ class Step_Tree_Class(ui.Widget):
                 steps[tree.text] = dict(self.tree2dict(tree))
             else:
                 if len(tree.title) > 0:
-                    if tree.title in FIELDS2SPLIT:
-                        steps[tree.title] = tree.text.split(',')
+                    if (len(tree.text.split(',')) > 1):
+                        if (tree.text.startswith('[') and tree.text.endswith(']') ): #(tree.title in FIELDS2SPLIT):
+                            steps[tree.title] = tree.text.lstrip('[').rstrip(']').split(',')
+                        else:
+                            steps[tree.title] = [tree.text]
                     else:
-                        steps[tree.title] = [tree.text]
+                        steps[tree.title] = [tree.text.lstrip('[').rstrip(']')]
                 else:
                     steps[tree.text] = None
         return steps
@@ -496,11 +514,14 @@ class Step_Tree_Class(ui.Widget):
             for tree in Top_level_tree.children:
                 if tree.title == 'base':
                     newsteps = ''
-                    for step in tree.text.split(','):
+                    for step in tree.text.lstrip('[').rstrip(']').split(','):
                         if step == From:
                             step = To
                         newsteps = newsteps + step + ','
-                    tree.set_text(newsteps.strip(','))
+                    if len(newsteps.strip(',').split(','))>1:
+                        tree.set_text('['+newsteps.strip(',')+']')
+                    else:
+                        tree.set_text(newsteps.strip(','))
 
     def update_bases_for_remove(self, step):
         bases = ''
@@ -512,15 +533,29 @@ class Step_Tree_Class(ui.Widget):
         for Top_level_tree in self.tree.children:
             for tree in Top_level_tree.children:
                 if tree.title == 'base':
-                    if step in tree.text.split(','):
-                        if bases != '':
-                            tree.set_text(tree.text.replace(step, bases))
-                        else:
-                            if tree.text.replace(step, '').strip(',') == '':
-                                tree.set_text('base')
-                                tree.set_title('')
+                    if step in tree.text.lstrip('[').rstrip(']').split(','):
+                        temp_text=[]
+                        for old_steps in tree.text.lstrip('[').rstrip(']').split(','):
+                             
+                            if step == old_steps:
+                                temp_text.extend([bases.lstrip('[').rstrip(']').split(',')])
+                                                  
                             else:
-                                tree.set_text(tree.text.replace(step, '').strip(','))
+                                temp_text.extend([old_steps])
+                        unique_temp_text=[]        
+                        list(map(lambda x: x  if x in unique_temp_text  else unique_temp_text.append([x]) ,temp_text ))
+                        temp_text=unique_temp_text
+                        if '' in temp_text:
+                            temp_text.remove('')
+                        
+                        if len(temp_text)==0:
+                            tree.set_text('base')
+                            tree.set_title('')
+                        elif len(temp_text)==1:
+                            tree.set_text(str(temp_text))
+                        else:
+                            tree.set_text('['+str(temp_text)+']')
+
 
     @event.reaction('tree_submit_b.pointer_click')
     def tree_submit_button_click(self, *events):
@@ -547,11 +582,15 @@ class Step_Tree_Class(ui.Widget):
             if self.current_selected != None:
                 if self.tree_value_b.disabled != True:
                     if self.tree_value_options_b.text != '':
-                        if self.tree_value_b.text != '':
-                            self.tree_value_b.set_text(self.tree_value_b.text + ',' + self.tree_value_options_b.text)
+                        if self.tree_value_b.text.lstrip('[').rstrip(']') != '':
+                            if (self.current_selected.title == 'base') or (len(self.current_selected.title) ==0 and self.current_selected.text=='base') or (self.tree_value_b.text.startswith('[') and self.tree_value_b.text.endswith(']')):
+                                self.tree_value_b.set_text('['+self.tree_value_b.text.lstrip('[').rstrip(']') + ',' + self.tree_value_options_b.text+']')
+                            else:
+                                self.tree_value_b.set_text(self.tree_value_b.text + ' ' + self.tree_value_options_b.text)
+                        elif self.tree_value_b.text.startswith('[') and self.tree_value_b.text.endswith(']'):
+                            self.tree_value_b.set_text('['+self.tree_value_options_b.text+']')
                         else:
                             self.tree_value_b.set_text(self.tree_value_options_b.text)
-
     @event.reaction('tree_new_b.pointer_click')
     def tree_new_button_click(self, *events):
         for ev in events:
@@ -721,10 +760,14 @@ class Only_Tree_Class(ui.Widget):
                 with ui.TreeItem(text=level, checked=None):
                     self.create_tree(current_level[level])
             else:
+               
                 if current_level[level] == None:
                     ui.TreeItem(text=level, checked=None)
-                else:
+                elif ((len(str(current_level[level]).split(',')) > 1) and isinstance(current_level[level], list)):
+                    ui.TreeItem(title=level, text='['+str(current_level[level])+']', checked=None)
+                else: 
                     ui.TreeItem(title=level, text=str(current_level[level]), checked=None)
+                    
 
     def tree2dict_for_export(self, current_tree):
         steps = {}
@@ -733,14 +776,16 @@ class Only_Tree_Class(ui.Widget):
                 steps[tree.text] = dict(self.tree2dict_for_export(tree))
             else:
                 if len(tree.title) > 0:
-                    if (len(tree.text.split(',')) > 1) and (tree.title in FIELDS2SPLIT):
-                        steps[tree.title] = tree.text.split(',')
+                    if (len(tree.text.split(',')) > 1):
+                        if (tree.text.startswith('[') and tree.text.endswith(']') ): #(tree.title in FIELDS2SPLIT):
+                            steps[tree.title] = tree.text.lstrip('[').rstrip(']').split(',')
+                        else:
+                            steps[tree.title] = tree.text
                     else:
-                        steps[tree.title] = tree.text
+                        steps[tree.title] = tree.text.lstrip('[').rstrip(']')
                 else:
                     steps[tree.text] = None
         return steps
-
 
     @event.action
     def collapse_all_not_selectd(self, current_tree):
@@ -779,8 +824,13 @@ class Only_Tree_Class(ui.Widget):
             if self.current_selected != None:
                 if self.tree_value_b.disabled != True:
                     if self.tree_value_options_b.text != '':
-                        if self.tree_value_b.text != '':
-                            self.tree_value_b.set_text(self.tree_value_b.text + ',' + self.tree_value_options_b.text)
+                        if self.tree_value_b.text.lstrip('[').rstrip(']') != '':
+                            if (self.current_selected.title == 'base') or (len(self.current_selected.title) ==0 and self.current_selected.text=='base') or (self.tree_value_b.text.startswith('[') and self.tree_value_b.text.endswith(']')):
+                                self.tree_value_b.set_text('['+self.tree_value_b.text.lstrip('[').rstrip(']') + ',' + self.tree_value_options_b.text+']')
+                            else:
+                                self.tree_value_b.set_text(self.tree_value_b.text + ' ' + self.tree_value_options_b.text)
+                        elif self.tree_value_b.text.startswith('[') and self.tree_value_b.text.endswith(']'):
+                            self.tree_value_b.set_text('['+self.tree_value_options_b.text+']')
                         else:
                             self.tree_value_b.set_text(self.tree_value_options_b.text)
 
