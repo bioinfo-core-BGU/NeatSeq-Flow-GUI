@@ -289,9 +289,6 @@ class Graphical_panel(ui.CanvasWidget):
     @event.reaction('pointer_down')
     def on_click(self, *events):
         self.order_Buttons()
-        for ev in events:
-            if 'Ctrl' in ev.modifiers:
-                self.create_Button(str(ev.pos), ev.source, ev.pos)
         self.update()
 
     @event.reaction('!children**.pointer_move', '!children**.pointer_down')
