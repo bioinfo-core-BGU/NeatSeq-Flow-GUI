@@ -36,7 +36,7 @@
        ```
   2. Download the **NeatSeq Flow Tutorial** installer file:
         ```Bash
-          wget http://neatseq-flow.readthedocs.io/en/latest/_downloads/NeatSeq_Flow_Tutorial_Install.yaml
+          wget https://raw.githubusercontent.com/bioinfo-core-BGU/neatseq-flow-tutorial/master/NeatSeq_Flow_Tutorial_Install.yaml
         ```
   3. Create the **NeatSeq_Flow_Tutorial** conda environment:
         ```Bash
