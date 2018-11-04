@@ -1858,13 +1858,13 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                     with open(self.step_info.save_workflow_file[0][0], 'w') as outfile:
                         param_data = {}
                         param_data['Global_params'] = OrderedDict(self.cluster_info.Data)
-                        yaml.dump(param_data, outfile, default_flow_style=False)
+                        yaml.dump(param_data, outfile, default_flow_style=False,width=float("inf"))
                         param_data = {}
                         param_data['Vars'] = OrderedDict(self.vars_info.Data)
-                        yaml.dump(param_data, outfile, default_flow_style=False)
+                        yaml.dump(param_data, outfile, default_flow_style=False,width=float("inf"))
                         param_data = {}
                         param_data['Step_params'] = OrderedDict(self.step_info.Data)
-                        yaml.dump(param_data, outfile, default_flow_style=False)
+                        yaml.dump(param_data, outfile, default_flow_style=False,width=float("inf"))
 
 
                 except:
