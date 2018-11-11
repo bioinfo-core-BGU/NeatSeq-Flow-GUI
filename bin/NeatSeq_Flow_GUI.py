@@ -1483,20 +1483,19 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                           title='Help')
             
             self.label = ui.Label(text='NeatSeq-Flow Graphical User Interface By Liron Levin',
-                                  style='padding-left: 40px; background: #e8eaff; min-height: 25px; font-size:20px; transition: all 0.5s;')
+                                  style='padding-left: 40px; background: #e8eaff; min-height: 15px; font-size:15px; transition: all 0.5s;')
             self.label.set_capture_mouse(2)
             self.label.set_html(html_cite)
             self.TabLayout.set_capture_mouse(2)
             self.Terminal_string = ''
 
-    @event.reaction('label.pointer_move')
-    def on_label_move(self, *events):
+    @event.reaction('label.pointer_click')
+    def on_label_click(self, *events):
         self.label.set_flex(0.2)
-
 
     @event.reaction('TabLayout.pointer_move')
     def on_label_after(self, *events):
-        self.label.set_flex(0.03)
+        self.label.set_flex(0.02)
 
 
     def filepicker_options(self, key):
