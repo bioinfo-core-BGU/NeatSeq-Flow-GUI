@@ -12,6 +12,7 @@ dependencies:
   
 # Software
   - curl
+  - git
   
   #Neatseq_Flow
   - pip:
