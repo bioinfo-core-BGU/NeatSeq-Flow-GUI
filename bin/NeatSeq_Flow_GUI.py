@@ -1233,9 +1233,10 @@ class Run_NeatSeq_Flow(ui.Widget):
             self.Run_scripts_b      = ui.Button(text='Run scripts', style='max-height: 35px; max-width: 200px;')
             self.Run_Monitor_b      = ui.Button(text='Run Monitor', style='max-height: 35px; max-width: 200px;')
             
-            ui.Label(text='Terminal:',style='padding-left: 0px; padding-top: 20px; font-size: 120% ;')
-            self.label = ui.Label(wrap=0, style='padding: 15px ;border: 1px solid gray; border-radius: 10px; height: 150px; overflow-y: auto;')
-            ui.Label()
+            with ui.VSplit(): 
+                ui.Label(flex=0.005,text='Terminal:',style='padding-left: 0px; padding-top: 20px; font-size: 120% ;min-height: 10px;')
+                self.label = ui.Label(flex=0.02 ,style='padding: 20px ; border: 1px solid gray; border-radius: 10px;   overflow-y: auto; overflow-x: auto;')
+                ui.Label(flex=0.03 ,style='padding: 0px ; ')
 
     @event.reaction('conda_env')
     def conda_env_options(self, *events):
