@@ -47,6 +47,8 @@ MODULES_TEMPLATES = {'Basic': {'Basic_New_Step': {'base': None, 'module': None, 
                      }
 FILE_TYPES = ['Single', 'Forward', 'Reverse', 'Nucleotide', 'Protein', 'SAM', 'BAM', 'REFERENCE', 'VCF', 'G.VCF']
 
+FILE_TYPES_SLOTS = ['fastq.S', 'fastq.F', 'fastq.R', 'fasta.nucl', 'fasta.prot', 'sam', 'bam', 'reference', 'vcf', 'g.vcf']
+
 FIELDS2SPLIT = ['base'] 
 
 html_cite='''
@@ -498,7 +500,9 @@ class Step_Tree_Class(ui.Widget):
     def get_options(self, key):
         options = {'base': lambda: filter(lambda x: x != self.current_selected.parent.text,
                                           self.Graphical_panel.Steps_Data.keys()),
-                   'scope': lambda: ['sample', 'project']
+                   'scope': lambda: ['sample', 'project'],
+                   'File_Type' : lambda:  self.get_file_type_options(self.Graphical_panel.Steps_Data,FILE_TYPES_SLOTS)
+                   
                    }
 
         if key in options.keys():
@@ -506,6 +510,19 @@ class Step_Tree_Class(ui.Widget):
         else:
             return None
 
+    def get_file_type_options(self,dic,options):
+        if isinstance(dic,dict):
+            for key in dic.keys():
+                if isinstance(dic[key],dict):
+                    self.get_file_type_options(dic[key],options)
+                else:
+                    if (key == 'File_Type') and (dic[key] != None):
+                        options.extend(str(dic[key]).strip('[').strip(']').split(','))
+        unique_options=[]
+        map(lambda x: False if x in unique_options else unique_options.append(x) ,options)
+        return unique_options
+    
+    
     def update_bases(self, From, To):
         for Top_level_tree in self.tree.children:
             for tree in Top_level_tree.children:
@@ -582,6 +599,8 @@ class Step_Tree_Class(ui.Widget):
                         if self.tree_value_b.text.lstrip('[').rstrip(']') != '':
                             if (self.current_selected.title == 'base') or (len(self.current_selected.title) ==0 and self.current_selected.text=='base') or (self.tree_value_b.text.startswith('[') and self.tree_value_b.text.endswith(']')):
                                 self.tree_value_b.set_text('['+self.tree_value_b.text.lstrip('[').rstrip(']') + ',' + self.tree_value_options_b.text+']')
+                            elif (self.current_selected.title == 'File_Type') or (len(self.current_selected.title) ==0 and self.current_selected.text=='File_Type'):
+                                self.tree_value_b.set_text(self.tree_value_b.text + ',' + self.tree_value_options_b.text)
                             else:
                                 self.tree_value_b.set_text(self.tree_value_b.text + ' ' + self.tree_value_options_b.text)
                         elif self.tree_value_b.text.startswith('[') and self.tree_value_b.text.endswith(']'):
@@ -824,6 +843,8 @@ class Only_Tree_Class(ui.Widget):
                         if self.tree_value_b.text.lstrip('[').rstrip(']') != '':
                             if (self.current_selected.title == 'base') or (len(self.current_selected.title) ==0 and self.current_selected.text=='base') or (self.tree_value_b.text.startswith('[') and self.tree_value_b.text.endswith(']')):
                                 self.tree_value_b.set_text('['+self.tree_value_b.text.lstrip('[').rstrip(']') + ',' + self.tree_value_options_b.text+']')
+                            elif (self.current_selected.title == 'File_Type') or (len(self.current_selected.title) ==0 and self.current_selected.text=='File_Type'):
+                                self.tree_value_b.set_text(self.tree_value_b.text + ',' + self.tree_value_options_b.text)
                             else:
                                 self.tree_value_b.set_text(self.tree_value_b.text + ' ' + self.tree_value_options_b.text)
                         elif self.tree_value_b.text.startswith('[') and self.tree_value_b.text.endswith(']'):
@@ -1232,7 +1253,6 @@ class Run_NeatSeq_Flow(ui.Widget):
             self.Generate_scripts_b = ui.Button(text='Generate scripts', style='max-height: 35px; max-width: 200px;')
             self.Run_scripts_b      = ui.Button(text='Run scripts', style='max-height: 35px; max-width: 200px;')
             self.Run_Monitor_b      = ui.Button(text='Run Monitor', style='max-height: 35px; max-width: 200px;')
-            
             with ui.VSplit(): 
                 ui.Label(flex=0.005,text='Terminal:',style='padding-left: 0px; padding-top: 20px; font-size: 120% ;min-height: 10px;')
                 self.label = ui.Label(flex=0.02 ,style='padding: 20px ; border: 1px solid gray; border-radius: 10px;   overflow-y: auto; overflow-x: auto;')
@@ -1490,6 +1510,10 @@ class NeatSeq_Flow_GUI(app.PyComponent):
             self.TabLayout.set_capture_mouse(2)
             self.Terminal_string = ''
 
+    # @event.reaction('label.pointer_move')
+    # def on_label_move(self, *events):
+        # self.label.set_flex(0.2)
+    
     @event.reaction('label.pointer_click')
     def on_label_click(self, *events):
         self.label.set_flex(0.2)
@@ -2037,6 +2061,8 @@ if __name__ == '__main__':
     #icon = app.assets.add_shared_data('ico.icon', open(icon, 'rb').read())
     m = app.App(NeatSeq_Flow_GUI).launch(runtime ='app',size=(1200, 650),title='NeatSeq-Flow GUI',icon=icon)
     app.run()
+
+
 
 
 
