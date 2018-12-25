@@ -45,7 +45,7 @@ Executor = ['SGE', 'SLURM', 'Local']
 MODULES_TEMPLATES = {'Basic': {'Basic_New_Step': {'base': None, 'module': None, 'script_path': None, }}
 
                      }
-FILE_TYPES = ['Single', 'Forward', 'Reverse', 'Nucleotide', 'Protein', 'SAM', 'BAM', 'REFERENCE', 'VCF', 'G.VCF']
+FILE_TYPES = ['Single', 'Forward', 'Reverse', 'Nucleotide', 'Protein', 'SAM', 'BAM', 'REFERENCE', 'VCF', 'G.VCF','genes.counts','HTSeq.counts','results']
 
 FILE_TYPES_SLOTS = ['fastq.S', 'fastq.F', 'fastq.R', 'fasta.nucl', 'fasta.prot', 'sam', 'bam', 'reference', 'vcf', 'g.vcf']
 
