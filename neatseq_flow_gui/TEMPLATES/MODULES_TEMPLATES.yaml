@@ -140,6 +140,78 @@ RSEM_Transcriptome_Bowtie2:
             -p:                                   1
 
 
+DeSeq2_Simple(Using_Conda):
+    DeSeq2:                               # Name of this step
+        conda:
+            env: '{Vars.DeSeq2.conda_env}'
+        module: DeSeq2                    # Name of the used module
+        base:                             # Name of the step [or list of names] to run after with count results.
+        script_path:                      # Command for running the a DeSeq2 script
+                                          # If this line is empty or missing it will try using the module's associated script
+        redirects:
+            --SAMPLE_DATA_FILE:   '{Vars.DeSeq2.SAMPLE_DATA}'        # Path to Samples Information File
+            --GENE_ID_TYPE: ensembl_gene_id   # The Gene ID Type i.e 'ENSEMBL'[for Bioconductor] OR 'ensembl_gene_id'/'ensembl_transcript_id' [for ENSEMBL]
+            --Species:            '{Vars.DeSeq2.Species}'        # Species Name to Retrieve Annotation Data from ENSEMBL
+            --DESIGN:                     # The Main DeSeq2 Design [ ~ Group ]
+            --LRT:                        # The LRT DeSeq2 Design
+            --NORMALIZATION_TYPE:  'RLOG'  # The DeSeq2 Normalization Type To Use [VSD , RLOG] The Default is VSD            
+            --ALPHA: 0.05                 # Significant Level Cutoff, The Default is 0.05
+            --FoldChange: 1               # Fold change Cutoff [testing for fold changes greater in absolute value], The Default is 1
+            --CONTRAST:                   # The DeSeq Contrast Design [Group,Treatment,Control] [Not For LTR] .
+            --GENES_PLOT:                 # Genes Id To Plot count Data [separated by ','] 
+            --X_AXIS:                     # The Filed In the Sample Data To Use as X Axis
+            --GROUP:                      # The Filed In the Sample Data To Group By [can be two fields separated by ',']
+            --stand:                      # The Data will be Standardized Before Clustering.
+            --PCA_COLOR:                  # The Filed In the Sample Data To Determine Color In The PCA Plot
+            --PCA_SHAPE:                  # The Filed In the Sample Data To Determine Shape In The PCA Plot
+            --Enriched_terms_overlap:     # Test for genes overlap in enriched terms
+            
+DeSeq2_Extended(Using_Conda):
+    DeSeq2:                               # Name of this step                               # Name of this step
+        conda:
+            env: '{Vars.DeSeq2.conda_env}'
+        module: DeSeq2                    # Name of the used module
+        base:                             # Name of the step [or list of names] to run after with count results.
+        script_path:                      # Command for running the a DeSeq2 script
+                                          # If this line is empty or missing it will try using the module's associated script
+        use_click:                        # Will use the CLICK clustering program (Shamir et al. 2000). 
+        redirects:
+            --SAMPLE_DATA_FILE:   '{Vars.DeSeq2.SAMPLE_DATA}'        # Path to Samples Information File
+            --GENE_ID_TYPE: ensembl_gene_id  # The Gene ID Type i.e 'ENSEMBL'[for Bioconductor] OR 'ensembl_gene_id'/'ensembl_transcript_id' [for ENSEMBL]
+            --Annotation_db:              # Bioconductor Annotation Data Base Name from https://bioconductor.org/packages/release/BiocViews.html#___OrgDb  
+            --Species:            '{Vars.DeSeq2.Species}'        # Species Name to Retrieve Annotation Data from ENSEMBL
+            --KEGG_KAAS:                  # Gene to KO file from KEGG KAAS [first column gene id, second column KO number]
+            --Trinotate:                  # Path to a Trinotate annotation file in which the first column is the genes names
+            --FILTER_SAMPLES:             # Filter Samples with Low Number of expressed genes OR with Small Library size using 'scater' package 
+            --FILTER_GENES:               # Filter Low-Abundance Genes using 'scater' package
+            --DESIGN:                     # The Main DeSeq2 Design [ ~ Group ]
+            --LRT:                        # The LRT DeSeq2 Design
+            --NORMALIZATION_TYPE:  'RLOG'  # The DeSeq2 Normalization Type To Use [VSD , RLOG] The Default is VSD            
+            --ALPHA: 0.05                 # Significant Level Cutoff, The Default is 0.05
+            --FoldChange: 1               # Fold change Cutoff [testing for fold changes greater in absolute value], The Default is 1
+            --CONTRAST:                   # The DeSeq Contrast Design [Group,Treatment,Control] [Not For LTR] .
+            --modelMatrixType: standard   # How the DeSeq model matrix of the GLM formula is formed [standard or expanded] ,The Default is standard
+            --GENES_PLOT:                 # Genes Id To Plot count Data [separated by ','] 
+            --X_AXIS:                     # The Filed In the Sample Data To Use as X Axis
+            --GROUP:                      # The Filed In the Sample Data To Group By [can be two fields separated by ',']
+            --SPLIT_BY:                   # The Filed In the Sample Data To Split the Analysis By.
+            --FUNcluster: hclust          # A clustering function including [kmeans,pam,clara,fanny,hclust,agnes,diana]. The default is hclust
+            --hc_metric: pearson          # Hierarchical clustering metric to be used for calculating dissimilarities between observations. The default is pearson
+            --hc_method: ward.D2          # Hierarchical clustering agglomeration method to be used. The default is ward.D2
+            --k.max: 20                   # The maximum number of clusters to consider, must be at least two. The default is 20
+            --nboot: 10                   # Number of Monte Carlo (bootstrap) samples for determining the number of clusters [Not For Mclust]. The default is 10 
+            --stand:                      # The Data will be Standardized Before Clustering.
+            --Mclust:                     # Use Mclust for determining the number of clusters.
+            --PCA_COLOR:                  # The Filed In the Sample Data To Determine Color In The PCA Plot
+            --PCA_SHAPE:                  # The Filed In the Sample Data To Determine Shape In The PCA Plot
+            --PCA_SIZE:                   # The Filed In the Sample Data To Determine Size In The PCA Plot. The default is Library Size
+            --CLICK_HOMOGENEITY:          # The HOMOGENEITY [0-1] of clusters using CLICK program (Shamir et al. 2000). The default is 0.5 
+            --Enriched_terms_overlap:     # Test for genes overlap in enriched terms
+
+
+
+
+            
 STAR_Mapper(external-index):      
     STAR_Mapper:                  
         module:                   STAR_mapper
