@@ -126,6 +126,26 @@ RSEM_Transcriptome_Bowtie2:
         script_path:                              '{Vars.Programs.RSEM.calculate_expression}'
         annotation:                               Trinity
         from_Trinity_to_gene_map_script_path:     '{Vars.Programs.RSEM.transcript2gene_map_from_trinity}'
+        mapper:                                   star
+        mapper_path:                              '{Vars.Programs.star}'
+        mode:                                     transcriptome
+        plot_stat:                                
+        plot_stat_script_path:                    '{Vars.Programs.RSEM.plot}' 
+        reference:                                '{Vars.Genome.reference}'
+        rsem_generate_data_matrix_script_path:    '{Vars.Programs.RSEM.generate_data_matrix}'
+        rsem_prepare_reference_script_path:       '{Vars.Programs.RSEM.prepare_reference}'
+        redirects:                                
+            --append-names:                       
+            --estimate-rspd:                      
+            -p:                                   1
+
+RSEM_Transcriptome_STAR:                       
+    RSRM_Transcriptome_Bowtie2:                   
+        module:                                   RSEM
+        base:                                     
+        script_path:                              '{Vars.Programs.RSEM.calculate_expression}'
+        annotation:                               Trinity
+        from_Trinity_to_gene_map_script_path:     '{Vars.Programs.RSEM.transcript2gene_map_from_trinity}'
         mapper:                                   bowtie2
         mapper_path:                              '{Vars.Programs.bowtie2}'
         mode:                                     transcriptome
@@ -138,7 +158,6 @@ RSEM_Transcriptome_Bowtie2:
             --append-names:                       
             --estimate-rspd:                      
             -p:                                   1
-
 
 DeSeq2_Simple(Using_Conda):
     DeSeq2:                               # Name of this step
@@ -165,7 +184,7 @@ DeSeq2_Simple(Using_Conda):
             --PCA_COLOR:                  # The Filed In the Sample Data To Determine Color In The PCA Plot
             --PCA_SHAPE:                  # The Filed In the Sample Data To Determine Shape In The PCA Plot
             --Enriched_terms_overlap:     # Test for genes overlap in enriched terms
-            
+
 DeSeq2_Extended(Using_Conda):
     DeSeq2:                               # Name of this step                               # Name of this step
         conda:
@@ -208,10 +227,6 @@ DeSeq2_Extended(Using_Conda):
             --CLICK_HOMOGENEITY:          # The HOMOGENEITY [0-1] of clusters using CLICK program (Shamir et al. 2000). The default is 0.5 
             --Enriched_terms_overlap:     # Test for genes overlap in enriched terms
 
-
-
-
-            
 STAR_Mapper(external-index):      
     STAR_Mapper:                  
         module:                   STAR_mapper
@@ -220,6 +235,16 @@ STAR_Mapper(external-index):
         redirects:                
             --readMapNumber:      1000
             --genomeDir:          '{Vars.Genome.STAR_index}'
+
+STAR_builder:  
+    STAR_Mapper:                  
+        module:                   STAR_builder
+        base:                     
+        script_path:              '{Vars.Programs.star}'
+        scope:                    project
+        redirects:                
+            --genomeSAindexNbases:  12
+            --genomeChrBinNbits:    10
 
 STAR_Mapper(after-STAR_builder):  
     STAR_Mapper:                  
@@ -230,7 +255,6 @@ STAR_Mapper(after-STAR_builder):
         redirects:                
             --readMapNumber:      1000
             
-
 
 BWA_Index_Builder:          
     BWA_Index_Builder:      
