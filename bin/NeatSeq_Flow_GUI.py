@@ -28,7 +28,7 @@ COLORS = ('#eee', '#999', '#555', '#111',
 
 CLUSTER = {'Executor': 'Local',
            'Default_wait': '10',
-           'Qsub_opts': '-V -cwd',
+           'Qsub_opts': '-cwd',
            'Qsub_path': '/path/to/qstat',
            'Qsub_q': 'queue.q',
            'module_path': '/path/to/modules',
