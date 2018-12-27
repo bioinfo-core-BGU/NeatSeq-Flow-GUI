@@ -177,7 +177,6 @@ DeSeq2_Simple(Using_Conda):
             --ALPHA: 0.05                 # Significant Level Cutoff, The Default is 0.05
             --FoldChange: 1               # Fold change Cutoff [testing for fold changes greater in absolute value], The Default is 1
             --CONTRAST:                   # The DeSeq Contrast Design [Group,Treatment,Control] [Not For LTR] .
-            --GENES_PLOT:                 # Genes Id To Plot count Data [separated by ','] 
             --X_AXIS:                     # The Filed In the Sample Data To Use as X Axis
             --GROUP:                      # The Filed In the Sample Data To Group By [can be two fields separated by ',']
             --stand:                      # The Data will be Standardized Before Clustering.
