@@ -306,8 +306,8 @@ class nsfgm:
             
             # Set the lines colour mode
             self.rowmode=logpiv["#Started"]-logpiv["#Finished"]  
-            self.rowmode=[2 if x > 0 else 1 for x in self.rowmode]
-            self.rowmode=list(map(lambda x,y: 3 if (y >0)&(x==2) else x,self.rowmode, self.items["#Running"]))
+            self.rowmode=[5 if x > 0 else 1 for x in self.rowmode]
+            self.rowmode=list(map(lambda x,y: 3 if (y >0)&(x>=2) else x,self.rowmode, self.items["#Running"]))
             
             # If there is a Status column: Display the steps status error count
             if "Status" in runlog_Data.columns:
