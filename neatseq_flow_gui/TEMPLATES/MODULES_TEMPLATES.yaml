@@ -161,6 +161,7 @@ RSEM_Transcriptome_STAR:
 
 DeSeq2_Simple(Using_Conda):
     DeSeq2:                               # Name of this step
+        setenv: R_LIBS=''
         conda:
             env: '{Vars.DeSeq2.conda_env}'
         module: DeSeq2                    # Name of the used module
@@ -185,7 +186,8 @@ DeSeq2_Simple(Using_Conda):
             --Enriched_terms_overlap:     # Test for genes overlap in enriched terms
 
 DeSeq2_Extended(Using_Conda):
-    DeSeq2:                               # Name of this step                               # Name of this step
+    DeSeq2:                               # Name of this step
+        setenv: R_LIBS=''
         conda:
             env: '{Vars.DeSeq2.conda_env}'
         module: DeSeq2                    # Name of the used module
