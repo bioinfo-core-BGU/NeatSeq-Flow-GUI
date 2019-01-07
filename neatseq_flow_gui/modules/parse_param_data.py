@@ -63,7 +63,7 @@ def parse_param_file(filename):
         if not os.path.isfile(filename):
             sys.exit("Parameter file %s does not exist.\n" % filename)
 
-        with open(filename) as fileh:
+        with open(filename,errors='ignore') as fileh:
             file_conts += fileh.readlines()
            
     check_newlines(file_conts)
