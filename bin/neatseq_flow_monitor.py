@@ -156,7 +156,14 @@ class nsfgm:
             # extract the jobs status  
             qstat["State"]=[x.strip('job_list state="') for x in re.findall('job_list state="\w+',xml)]
         return qstat
-
+        
+    #Function for getting PID information          
+    def get_PID(self):
+        PID=pd.DataFrame()
+        PID["Job ID"]   = list(map(lambda x: str(int(x.strip('\n'))),os.popen('ps -ae -o pid=').readlines()))
+        PID["PID_State"] = 'running'
+        return PID
+        
     # function for generating the progress bar
     def gen_bar(self,Bar_len,Bar_Marker,Bar_Spacer):
         char_value=float(self.logpiv["Finished"].max().total_seconds())/Bar_len
@@ -170,13 +177,13 @@ class nsfgm:
         try:
             # read log file to a Data-Frame
             if read_from_disk:
-                runlog_Data=pd.read_table(runlog_file,header =4)
+                runlog_Data=pd.read_table(runlog_file,header =4,dtype={'Job ID':str})
                 self.LogData=runlog_Data.copy()
             else:
                 runlog_Data=self.LogData.copy()
             # If there is a level column: Remove information about high level scripts runs
             if "Level" in runlog_Data.columns:
-                runlog_Data=runlog_Data.loc[runlog_Data["Level"]!="high",]
+                runlog_Data=runlog_Data.loc[runlog_Data["Level"]=="low",]
             # If there is a Status column: Convert to OK or ERROR
             if "Status" in runlog_Data.columns:
                 runlog_Data['Status']=['OK' if 'OK' in x else 'ERROR' for x in runlog_Data['Status']]
@@ -195,7 +202,7 @@ class nsfgm:
                 pre_logpiv=pre_logpiv.loc[~pre_logpiv["Finished"].isnull(),]
                 log=list(map( lambda x,y: (x in pre_logpiv[pre_logpiv["Finished"]<pre_logpiv["Started"]].index)&(y=="Finished")==False , runlog_Data["Job name"],runlog_Data["Event"] ))
                 runlog_Data=runlog_Data[log].copy()
-
+            
             # for the main window information:    
             if Instance==True:
                 args_pivot=['Instance','Event','Timestamp']
@@ -208,6 +215,14 @@ class nsfgm:
                     runlog_Data.loc[runlog_Data["State"].isnull(),"State"]=''
                 else:
                     runlog_Data["State"]=''
+                
+                if 'Job ID' in runlog_Data.columns:
+                    PID = self.get_PID()
+                    if len(PID)>0:
+                        runlog_Data = runlog_Data.merge(PID,how='left',on='Job ID')
+                        runlog_Data.loc[~runlog_Data["PID_State"].isnull(),"State"]='running'
+                        runlog_Data = runlog_Data.drop('PID_State',axis=1)
+                    
                 # get only the data for the chosen step
                 runlog_Data=runlog_Data.loc[runlog_Data["Instance"]==Instance,].copy()
                 # change the names of the jobs to the samples names
@@ -267,6 +282,15 @@ class nsfgm:
                 runlog_Data.loc[runlog_Data["State"].isnull(),"State"]=''
             else:
                 runlog_Data["State"]=''
+                
+            
+            if 'Job ID' in runlog_Data.columns:
+                PID = self.get_PID()
+                if len(PID)>0:
+                    runlog_Data = runlog_Data.merge(PID,how='left',on='Job ID')
+                    runlog_Data.loc[~runlog_Data["PID_State"].isnull(),"State"]='running'
+                    runlog_Data = runlog_Data.drop('PID_State',axis=1)
+                
             logpiv=logpiv.join(runlog_Data.groupby("Instance")["State"].apply(lambda x:list(x).count("running")),how="left", rsuffix='running')            
 
             # set the Timestamps of instances with no Finished jobs and are still running to the current time [for calculating the progress bar]

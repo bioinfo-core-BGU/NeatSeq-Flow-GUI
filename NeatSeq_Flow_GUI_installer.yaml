@@ -5,10 +5,10 @@ channels:
 dependencies:
 # Deps of Neatseq_Flow
   - python=3.6.5 
-  - wxpython
-  - pyyaml
-  - munch
-  - pandas
+  - wxpython=4.0.1
+  - pyyaml=3.12
+  - munch=2.3.2
+  - pandas=0.23.1
   
 # Software
   - curl
