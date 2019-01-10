@@ -130,7 +130,7 @@
         
         
 ## Load a Work-Flow Parameter File
-   1. **Load a Sample file:**
+   1. **Load a Parameter file:**
    
       <img src="https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/doc/Load_WorkFlow_parameter_file.gif" width="650">
       
