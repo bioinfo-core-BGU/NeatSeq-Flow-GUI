@@ -1253,6 +1253,7 @@ class Run_NeatSeq_Flow(ui.Widget):
             self.Generate_scripts_b = ui.Button(text='Generate scripts', style='max-height: 35px; max-width: 200px;')
             self.Run_scripts_b      = ui.Button(text='Run scripts', style='max-height: 35px; max-width: 200px;')
             self.Run_Monitor_b      = ui.Button(text='Run Monitor', style='max-height: 35px; max-width: 200px;')
+            self.Kill_Run_b         = ui.Button(text='Kill Run', style='max-height: 35px; max-width: 200px;')
             with ui.VSplit(): 
                 ui.Label(flex=0.005,text='Terminal:',style='padding-left: 0px; padding-top: 20px; font-size: 120% ;min-height: 10px;')
                 self.label = ui.Label(flex=0.02 ,style='padding: 20px ; border: 1px solid gray; border-radius: 10px;   overflow-y: auto; overflow-x: auto;')
@@ -1286,8 +1287,13 @@ class Run_NeatSeq_Flow(ui.Widget):
         for ev in events:
             self.set_command(['Run_scripts',self.Project_dir_L.text])
     
+    @event.reaction('Kill_Run_b.pointer_click')
+    def on_Kill_Run_b_click(self, *events):
+        for ev in events:
+            self.set_command(['Kill_Run',self.Project_dir_L.text])
+    
     @event.reaction('Run_Monitor_b.pointer_click')
-    def on_Run_Monitor_b_b_click(self, *events):
+    def on_Run_Monitor_b_click(self, *events):
         for ev in events:
             self.set_command(['Run_Monitor',self.Project_dir_L.text])
     
@@ -1490,6 +1496,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
     Running_script               = event.IntProp(0, settable=True)
     Generating_scripts           = event.IntProp(0, settable=True)
     Running_Commands             = event.DictProp({}, settable=True)
+    Kill_Run                     = event.IntProp(0, settable=True)
     
     
     def init(self):
@@ -1549,6 +1556,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                    'Generate_scripts': lambda: self.Generate_scripts_command(key[1], key[2], key[3], key[4], key[5],
                                                                              key[6]),
                    'Run_scripts': lambda: self.Run_scripts_command(key[1]),
+                   'Kill_Run': lambda: self.Kill_Run_command(key[1]),
                    'Run_Monitor': lambda: self.Run_Monitor_command(key[1]),
                    
                    }
@@ -1697,6 +1705,43 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         else:
             self.Run.set_Terminal(Error)
 
+    def Kill_Run_command(self,Project_dir):
+        import os
+        from subprocess import Popen, PIPE, STDOUT, TimeoutExpired
+        
+        if len(Project_dir) == 0:
+            Project_dir=os.getcwd()
+        
+        Error = ''
+        temp_command = ''
+        if len(Project_dir) > 0:
+            fname = os.path.join(Project_dir,'scripts', '99.kill_all.sh')
+            if os.path.isfile(fname): 
+                temp_command = 'bash ' + fname 
+            else:
+                Error = Error + 'Error:\n You first need to generate and run the scripts \n'
+        else:
+            Error = Error + 'Error:\n No Project directory \n'
+        
+        #if self.Running_Commands['Running_script'].proc.poll() is None:
+        try:
+            self.Running_Commands['Running_script'].proc.kill()
+            self.Run.set_Terminal('Stop Running Scripts')
+        except :
+            pass
+                
+        if len(Error) == 0:
+            
+            if self.Kill_Run == 0:
+                try:
+                    self.Running_Commands['Kill_Run'] =  Run_command_in_thread(temp_command)
+                    self.Running_Commands['Kill_Run'].Run()
+                except :
+                    pass
+                self.set_Kill_Run(1)
+        else:
+            self.Run.set_Terminal(Error)
+
     
     
     def Run_Monitor_command(self,Project_dir):
@@ -1746,7 +1791,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
     def change_value(self,obj,prop_name,value):
         obj._mutate(prop_name,value)
     
-    @event.reaction('Running_script') #,'Generating_scripts')
+    @event.reaction('Running_script','Kill_Run') #,'Generating_scripts')
     def update_Terminal(self, *events):
             for ev in events:
                 if ev.new_value>0:
@@ -2061,8 +2106,4 @@ if __name__ == '__main__':
     #icon = app.assets.add_shared_data('ico.icon', open(icon, 'rb').read())
     m = app.App(NeatSeq_Flow_GUI).launch(runtime ='app',size=(1200, 650),title='NeatSeq-Flow GUI',icon=icon)
     app.run()
-
-
-
-
 
