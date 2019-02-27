@@ -2,8 +2,8 @@
 
 ## In this Tutorial we will:
  - [Install Conda](#install-conda)
+ - [Setup the Tutorial Work-Flow](#setup-the-tutorial-work-flow)
  - [Install NeatSeq-Flow](#install-neatseq-flow)
- - [Install NeatSeq-Flow-GUI](#install-neatseq-flow-gui)
  - [Learn How to Create a Work-Flow](#learn-how-to-create-a-work-flow)
  - [Configure the Used Variables in the Work-Flow](#configure-the-used-variables-in-the-work-flow)
  - [Load a Work-Flow Parameter File](#load-a-work-flow-parameter-file)
@@ -28,7 +28,7 @@
     
     For different operating system go to [Conda](https://conda.io/miniconda.html) 
     
-## Install NeatSeq-Flow 
+## Setup the Tutorial Work-Flow 
   1. Create New Directory for the Tutorial
        ```Bash
          mkdir Tutorial
@@ -36,7 +36,7 @@
        ```
   2. Download the **NeatSeq Flow Tutorial** installer file:
         ```Bash
-          wget https://raw.githubusercontent.com/bioinfo-core-BGU/neatseq-flow-tutorial/master/NeatSeq_Flow_Tutorial_Install.yaml
+          curl https://raw.githubusercontent.com/bioinfo-core-BGU/neatseq-flow-tutorial/master/NeatSeq_Flow_Tutorial_Install.yaml > NeatSeq_Flow_Tutorial_Install.yaml
         ```
   3. Create the **NeatSeq_Flow_Tutorial** conda environment:
         ```Bash
@@ -44,26 +44,26 @@
         ```  
   4. Download the **Tutorial Work-Flow Parameter file**
         ```Bash
-           wget https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/doc/Tutorial_Parameter_file.yaml
+           curl https://raw.githubusercontent.com/bioinfo-core-BGU/neatseq-flow-tutorial/master/Example_WF_conda_env.yaml > Tutorial_Parameter_file.yaml
         ```  
   5. Download the **Tutorial Work-Flow Sample file**
         ```Bash
-           wget https://raw.githubusercontent.com/bioinfo-core-BGU/neatseq-flow-tutorial/master/Samples_conda.nsfs
+           curl https://raw.githubusercontent.com/bioinfo-core-BGU/neatseq-flow-tutorial/master/Samples_conda.nsfs > Tutorial_Samples_file.nsfs
         ```   
 
-## Install NeatSeq-Flow-GUI
-  1. Download the **NeatSeq-Flow-GUI** installer file:
+## Install NeatSeq-Flow
+  1. Download the **NeatSeq-Flow** installer file:
         ```Bash
-          wget https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/NeatSeq_Flow_GUI_installer.yaml
+          curl https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/NeatSeq_Flow_GUI_installer.yaml > NeatSeq_Flow_installer.yaml
         ```
-  2. Create the **NeatSeq_Flow_GUI** conda environment:
+  2. Create the **NeatSeq_Flow** conda environment:
         ```Bash
-          conda env create -f NeatSeq_Flow_GUI_installer.yaml
+          conda env create -f NeatSeq_Flow_installer.yaml
         ```  
-  3. Activate the **NeatSeq_Flow_GUI** conda environment:
+  3. Activate the **NeatSeq_Flow** conda environment:
         ```Bash
           bash
-          source activate NeatSeq_Flow_GUI
+          source activate NeatSeq_Flow
         ```
   4. Run **NeatSeq_Flow_GUI**:
         ```Bash 
@@ -107,7 +107,13 @@
           They will appear in the form of {Vars.some_field.some_sub_field} to indicate the value found in the 'Vars' Tab in the some_sub_field field ( which is a sub field of 'some_field' ).  
         - It is possible to choose file location as a value to the 'Value' field by clicking on the 'Browse' button. 
         - Click the 'Edit' button to set the changes.        
-   6. **Remove field or step:**
+   6. **Duplicate field or step:**
+    
+        <img  src="https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/doc/Duplicate_field_or_step.gif" width="650">    
+        
+        - Click on the step's name (to duplicate the step) or on a step's option name (to duplicate the option and it's sub fields)
+        - Click the 'Duplicate' button
+   7. **Remove field or step:**
     
         <img  src="https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/doc/Remove_field_or_step.gif" width="650">    
         
@@ -193,6 +199,7 @@
    **It is possible to monitor the Work-Flow progress by clicking the 'Run Monitor' button**
    <img src="https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/doc/Run_Monitor.gif" width="650">
    
+   **It is possible to terminate the current run by clicking on the 'Kill Run' button.**
    
 # Contact
 Please contact Liron Levin at: [levinl@post.bgu.ac.il](mailto:levinl@post.bgu.ac.il)
