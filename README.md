@@ -51,7 +51,7 @@ For more information about **"NeatSeq-Flow"** see the full documentation on **[R
     ```Bash
       curl https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/NeatSeq_Flow_GUI_installer.yaml > NeatSeq_Flow_installer.yaml
     ```
-    2. Create the **NeatSeq_Flow_GUI** conda environment:
+    2. Create the **NeatSeq_Flow** conda environment:
     ```Bash
       conda env create -f NeatSeq_Flow_installer.yaml
     ```  
