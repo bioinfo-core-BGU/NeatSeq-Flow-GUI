@@ -194,11 +194,10 @@
    4. Click on the 'Generate scripts' button.
 
    **To run the Work-Flow click on the 'Run scripts' button**
-   <img src="https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/doc/Run_scripts.gif" width="650">  
-   
-   **It is possible to monitor the Work-Flow progress by clicking the 'Run Monitor' button**
    <img src="https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/doc/Run_Monitor.gif" width="650">
    
+   **It is possible to monitor the Work-Flow progress by clicking the 'Run Monitor' button**
+
    **It is possible to terminate the current run by clicking on the 'Kill Run' button.**
    
 # Contact
