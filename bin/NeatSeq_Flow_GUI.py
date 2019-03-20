@@ -1617,8 +1617,11 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 else:
                     temp_command = temp_command + 'activate' + ' ' + conda_env + ';'
                     temp_command = temp_command + 'export CONDA_BASE=$(conda  info --root); '
+            elif 'CONDA_PREFIX' in os.environ.keys():
+                temp_command = temp_command + 'export CONDA_BASE=$(conda  info --root); '
+                
             if NeatSeq_bin.startswith(os.sep):
-                temp_command = temp_command + ' python2 ' + NeatSeq_bin
+                temp_command = temp_command + ' python ' + NeatSeq_bin
             else:
                 temp_command = temp_command + ' ' + NeatSeq_bin
 
