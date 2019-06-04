@@ -3,7 +3,7 @@
 
 
 __author__ = "Liron Levin"
-__version__ = "1.0"
+__version__ = "2.0"
 
 
 __affiliation__ = "Bioinformatics Core Unit, NIBN, Ben Gurion University"
@@ -12,6 +12,9 @@ __affiliation__ = "Bioinformatics Core Unit, NIBN, Ben Gurion University"
 
 from flexx import app, event, ui
 import os,sys
+from collections import OrderedDict
+
+Base_Help_URL = 'https://neatseq-flow.readthedocs.io/projects/neatseq-flow-modules/en/devel/'
 
 sys.path.append(os.path.realpath(os.path.expanduser(os.path.dirname(os.path.abspath(__file__))+os.sep+"..")))
 
@@ -21,9 +24,14 @@ STEPS = {'Merge': {'module': 'merge', 'script_path': None  },
 
          }
 
-COLORS = ('#eee', '#999', '#555', '#111',
-          '#f00', '#0f0', '#00f', '#ff0', '#f0f', '#0ff',
-          '#a44', '#4a4', '#44a', '#aa4', '#afa', '#4aa',
+COLORS = ('#ffffff','#8DD3C7','#BEBADA','#FB8072',
+          '#80B1D3','#FDB462','#B3DE69','#CCEBC5',
+          '#BC80BD','#FCCDE5','#FFFFB3','#66C2A5',
+          '#FC8D62','#8DA0CB','#E78AC3','#A6D854',
+          '#FFD92F','#E5C494','#A6CEE3','#1F78B4',
+          '#B2DF8A','#33A02C','#FB9A99','#E31A1C',
+          '#FDBF6F','#FF7F00','#CAB2D6','#6A3D9A',
+          '#FFFF99'
           )
 
 CLUSTER = {'Executor': 'Local',
@@ -51,6 +59,17 @@ FILE_TYPES_SLOTS = ['fastq.S', 'fastq.F', 'fastq.R', 'fasta.nucl', 'fasta.prot',
 
 FIELDS2SPLIT = ['base'] 
 
+Documentation = '''
+WorkFlow's Documentation
+=========================
+Here you can document your workflow and add notes.
+---------------------------------------------------
+* **important:** 
+
+    1.  **DON'T** use the hash **#** symbol!!!
+        2. Don't forget to **save** the workflow at the Design tab!!!
+'''
+
 html_cite='''
     <p class=MsoNormal dir=LTR style='margin-top:0cm;margin-bottom:0cm;margin-bottom:.0000pt;
     text-align:left;line-height:normal;direction:ltr;unicode-bidi:embed'><b>NeatSeq-Flow
@@ -72,10 +91,11 @@ html_cite='''
 
 
 class Graphical_panel(ui.CanvasWidget):
-    Selected_step = event.StringProp('', settable=True)
-    Steps_Data = event.DictProp(STEPS, settable=True)
-    refresh_flag = event.BoolProp(False, settable=True)
-
+    Selected_step   = event.StringProp('', settable=True)
+    Steps_Data      = event.DictProp(STEPS, settable=True)
+    refresh_flag    = event.BoolProp(False, settable=True)
+    Module_Colors   = event.DictProp({}, settable=True)
+    
     def init(self):
 
         super().init()
@@ -92,7 +112,15 @@ class Graphical_panel(ui.CanvasWidget):
                 if 'SKIP' in self.steps[step].keys():
                     self.create_Button(step, self, [50, 50],'gray')
                 else:
-                    self.create_Button(step, self, [50, 50])
+                    if 'module' in self.steps[step].keys():
+                        if self.steps[step]['module']!=None:
+                            if self.steps[step]['module'] not in self.Module_Colors.keys():
+                                 self.Module_Colors[self.steps[step]['module']] = COLORS[len(self.Module_Colors.keys())]
+                            self.create_Button(step, self, [50, 50],self.Module_Colors[self.steps[step]['module']])        
+                        else:
+                            self.create_Button(step, self, [50, 50])
+                    else:
+                        self.create_Button(step, self, [50, 50])
 
     def get_Button_by_name(self, name):
         Button = None
@@ -311,49 +339,56 @@ class Graphical_panel(ui.CanvasWidget):
 
 
 class Step_Tree_Class(ui.Widget):
-    flag = event.BoolProp(False, settable=True)
-    open_filepicker = event.StringProp('', settable=True)
-    file_path = event.ListProp([], settable=True)
-    workflow_file = event.ListProp([], settable=True)
+    flag               = event.BoolProp(False, settable=True)
+    open_filepicker    = event.StringProp('', settable=True)
+    file_path          = event.ListProp([], settable=True)
+    workflow_file      = event.ListProp([], settable=True)
     save_workflow_file = event.ListProp([], settable=True)
-    Steps_Data_update = event.BoolProp(False, settable=True)
-    Steps_Data = event.DictProp({}, settable=True)
-    Data = event.DictProp({}, settable=True)
-    converter = event.DictProp({}, settable=True)
-    options = event.ListProp([], settable=True)
-    Vars_data = event.DictProp({}, settable=True)
-
+    Steps_Data_update  = event.BoolProp(False, settable=True)
+    Steps_Data         = event.DictProp({}, settable=True)
+    Data               = event.DictProp({}, settable=True)
+    converter          = event.DictProp({}, settable=True)
+    options            = event.ListProp([], settable=True)
+    Vars_data          = event.DictProp({}, settable=True)
+    Go2Help            = event.StringProp('', settable=True)
+    
     def init(self):
         self.current_selected = None
         with ui.HSplit() as self.main_lay:
             with ui.VSplit(flex=0.25) as self.tree_lay:
-                with ui.HSplit(flex=0.08, style='min-height: 190px; max-height: 190px;'):
-                    with ui.FormLayout(flex=0.01) as self.form:
-                        self.tree_key_b = ui.LineEdit(title='Key:', text='')
-                        self.tree_value_b = ui.LineEdit(title='Value:', text='')
+                with ui.GroupWidget(title='Step Editing Panel'):
+                    with ui.HSplit(flex=0.08, style='min-height: 190px; max-height: 190px;'):
+                        with ui.FormLayout(flex=0.01) as self.form:
+                            self.tree_key_b = ui.LineEdit(title='Key:', text='')
+                            self.tree_value_b = ui.LineEdit(title='Value:', text='')
 
-                        self.tree_value_options_b = ui.ComboBox(title='Value options:', editable=False, text='',
-                                                                placeholder_text='Value options:')
-                        self.tree_add_option_b = ui.Button(text='Add')
-                    with ui.VSplit(flex=0.0035,style='min-width: 90px; max-width: 90px;'):
-                        self.tree_submit_b      = ui.Button(text='Edit')
-                        self.tree_new_b         = ui.Button(text='New')
-                        self.file_path_b        = ui.Button(text='Browse')
-                        self.tree_duplicate_b   = ui.Button(text='Duplicate')
-                        self.tree_remove_b      = ui.Button(text='Remove')
+                            self.tree_value_options_b = ui.ComboBox(title='Value options:', editable=False, text='',
+                                                                    placeholder_text='Value options:')
+                            self.tree_add_option_b = ui.Button(text='Add')
+                        with ui.VSplit(flex=0.0035,style='min-width: 90px; max-width: 90px;'):
+                            self.tree_submit_b      = ui.Button(text='Apply')
+                            self.tree_new_b         = ui.Button(text='New')
+                            self.file_path_b        = ui.Button(text='Browse')
+                            self.tree_duplicate_b   = ui.Button(text='Duplicate')
+                            self.tree_remove_b      = ui.Button(text='Remove')
+               
                 self.tree = ui.TreeWidget(flex=0.2, max_selected=1)
                 self.tree.text = 'Top_level'
                 ui.Label(text='__________________')
             with ui.VSplit(flex=0.6) as self.canvas_lay:
-                with ui.layouts._form.BaseTableLayout(flex=0.03, style='min-height: 35px; max-height: 35px;'):
-                    with ui.HSplit(style='min-height: 30px; max-height: 30px;'):
-                        self.tree_module_b = ui.ComboBox(title='Use Module:', editable=False, text='Choose Module',
-                                                         style='min-width: 300px;',
-                                                         placeholder_text='Choose Module',
-                                                         options=MODULES_TEMPLATES.keys())
-                        self.tree_create_new_step_b = ui.Button(text='Create New Step')
-                        self.tree_Load_WorkFlow_b = ui.Button(text='Load WorkFlow')
-                        self.tree_save_WorkFlow_b = ui.Button(text='Save WorkFlow')
+                with ui.layouts._form.BaseTableLayout(flex=0.03, style='min-height: 70px; max-height: 75px;'):
+                    with ui.HSplit():#style='min-height: 30px; max-height: 30px;'):
+                        with ui.GroupWidget(title='Add New Step',style='min-width: 500px;border: 2px solid purple;'):
+                            with ui.HSplit():
+                                self.tree_module_b = ui.ComboBox(title='Use Module:', editable=True, #text='Choose a Step Template',
+                                                                 style='min-width: 400px;border: 1px solid red;',
+                                                                 placeholder_text='Choose a Step Template',
+                                                                 options=MODULES_TEMPLATES.keys())
+                                self.Help_b = ui.Button(text='About',style='color: blue; max-width: 80px;font-size: 100% ;')
+                                self.tree_create_new_step_b = ui.Button(text='Add',style='color: red; max-width: 80px;')
+                        with ui.VSplit():
+                            self.tree_Load_WorkFlow_b = ui.Button(text='Load WorkFlow',style='max-height: 30px; max-width: 150px;')
+                            self.tree_save_WorkFlow_b = ui.Button(text='Save WorkFlow',style='max-height: 30px; max-width: 150px;')
                 self.Graphical_panel = Graphical_panel(flex=0.5, style='min-height:600px; overflow-y: auto;')
                 with self.tree:
                     self.create_tree(self.Graphical_panel.Steps_Data)
@@ -394,6 +429,17 @@ class Step_Tree_Class(ui.Widget):
             self.Graphical_panel.set_Steps_Data(self.tree2dict(self.tree))
             self.set_Data(self.tree2dict_for_export(self.tree))
 
+    
+    
+    @event.reaction('Help_b.pointer_click')
+    def on_Help_click(self, *events):
+        for ev in events:
+            if self.tree_module_b.selected_index != -1:
+                step = MODULES_TEMPLATES[self.tree_module_b.selected_key]
+                if 'module' in step[step.keys()[0]].keys():
+                    self.set_Go2Help(step[step.keys()[0]]['module'])
+                    self.set_Go2Help('')
+                    
     @event.reaction('tree_Load_WorkFlow_b.pointer_click')
     def on_load_workflow_click(self, *events):
         for ev in events:
@@ -429,7 +475,7 @@ class Step_Tree_Class(ui.Widget):
 
     @event.reaction('tree_create_new_step_b.pointer_click')
     def tree_create_new_step_button_click(self, *events):
-        self.set_flag(True)
+        
         for ev in events:
             if self.tree_module_b.selected_index != -1:
                 if MODULES_TEMPLATES[
@@ -437,6 +483,23 @@ class Step_Tree_Class(ui.Widget):
                     self.set_Vars_data(MODULES_TEMPLATES[self.tree_module_b.selected_key])
                     with self.tree:
                         self.create_tree(MODULES_TEMPLATES[self.tree_module_b.selected_key])
+                
+    @event.reaction('tree_module_b.text')
+    def search_tree_module_b(self, *events):
+        #for ev in events:
+        
+        if (self.tree_module_b.selected_index == -1) and (len(self.tree_module_b.text)>0) and (self.tree_module_b.text!= self.tree_module_b.placeholder_text):
+            self.tree_module_b.set_options(list(
+                                                filter(
+                                                       lambda x: len(x.lower().split(self.tree_module_b.text.lower()))>1,
+                                                       MODULES_TEMPLATES.keys()
+                                                       )))
+            
+            self.set_flag(True)
+        elif (self.flag):
+            self.tree_module_b.set_options(MODULES_TEMPLATES.keys())
+            self.set_flag(False)
+
 
     def create_tree(self, current_level):
         for level in current_level.keys():
@@ -636,7 +699,9 @@ class Step_Tree_Class(ui.Widget):
                     if len(self.current_selected.title) > 0:
                         self.create_tree({self.current_selected.title:self.current_selected.text})
                     else:
-                        dict=self.tree2dict(self.current_selected)
+                        #dict=self.tree2dict(self.current_selected)
+                        dict=self.tree2dict_for_export(self.current_selected)
+                        
                         if self.current_selected.parent.text == 'Top_level':
                             new_name = self.current_selected.text+'_copy'
                             if new_name not in self.Graphical_panel.Steps_Data.keys():
@@ -932,22 +997,44 @@ class Samples_info(ui.Widget):
 
     def init(self):
         with ui.VSplit(flex=0.1, padding=20) as self.layout:
-            with ui.layouts._form.BaseTableLayout(flex=0.05, style='min-height: 35px; max-height: 35px;'):
-                with ui.HSplit(style='min-height: 30px; max-height: 30px;'):
-                    self.tree_title_b = ui.LineEdit(text='',
-                                                    placeholder_text='Project Title')
-                    self.add_project_file_b = ui.Button(text='Add Project File')
-                    self.add_sample_file_b  = ui.Button(text='Add Sample File')
-                    self.load_sample_file_b = ui.Button(text='Load Sample File')
-                    self.save_sample_file_b = ui.Button(text='Save Sample File')
+            with ui.layouts._form.BaseTableLayout(flex=0.05, style='min-height: 70px; max-height: 70px;'):
+                with ui.HSplit(style='min-height: 70px; max-height: 70px;'):
                     
-            ui.Label(text='Project Level:',style='padding-left: 20px; font-size: 120% ;')
-            with ui.Layout(flex=0.2,title='Project Level',style='overflow-y:auto;padding: 15px ;min-height:130px ;border: 1px solid gray; border-radius: 10px;'):
-                self.project = ui.VSplit()
-                
-            ui.Label(text='Sample Level:',style='padding-left: 20px; font-size: 120% ;')
-            with ui.Layout(flex=0.5, title='Sample Level',style='overflow-y:auto;padding: 15px ;min-height:250px ;border: 1px solid gray; border-radius: 10px;'):
-                self.sample = ui.VSplit()
+                    with ui.GroupWidget(title='Project Level File/s',style='border: 2px solid green;' ):
+                        self.add_project_file_b = ui.Button(text='Add',style='min-width: 150px;')
+                    with ui.GroupWidget(title='Sample Level File/s',style='border: 2px solid blue;' ):
+                        self.add_sample_file_b  = ui.Button(text='Add',style='min-width: 150px;')
+                    with ui.VSplit():
+                        self.load_sample_file_b = ui.Button(text='Load Sample File')
+                        self.save_sample_file_b = ui.Button(text='Save Sample File')
+            ui.Label(text='',style='min-height: 10px; max-height: 10px;') 
+            with ui.GroupWidget(title='Edit Project Title',style='font-size: 120%; border: 2px solid purple; min-height: 50px; max-height: 50px;' ):
+                self.tree_title_b = ui.LineEdit(text='', style = 'font-size: 80%; border: 1px solid red;max-height: 30px;',
+                                                placeholder_text='Project Title')        
+            #ui.Label(text='Project Level:',style='padding-left: 20px; font-size: 120% ;')
+            ui.Label(text='',style='min-height: 10px; max-height: 10px;') 
+            with ui.GroupWidget(title='Project Level',style='font-size: 120% ;padding: 10px ;min-height:135px ;max-height:135px ;border: 2px solid green; border-radius: 10px;'):
+                with ui.HSplit():
+                    ui.Label(text='File Type',style='text-align: center; padding-right: 22px;')
+                    ui.Label(text='Path',style='text-align: center;padding-left: 50px;')
+                    ui.Label(text='Remove Project File',style='text-align: center;padding-left: 40px;')
+                ui.Label(text='',style='padding: 5px ;')  
+                with ui.Layout(style='overflow-y:auto;min-height:135px ;max-height:135px ;'):
+                    self.project = ui.VSplit(style='font-size: 80%;')
+            
+            ui.Label(text='',style='min-height: 10px; max-height: 10px;') 
+            #ui.Label(text='Sample Level:',style='padding-left: 20px; font-size: 120% ;')
+            with ui.GroupWidget( title='Sample Level',style='font-size: 120% ;padding: 5px ;min-height:245px ;max-height:245px ; border: 3px solid blue; border-radius: 10px;'):
+                with ui.HSplit():
+                    #ui.Label(text='',style='max-width: 20px')
+                    ui.Label(text='Sample Name',style='text-align: center; padding-left: 30px;')
+                    ui.Label(text='File Type',style='text-align: center;padding-left: 70px;')
+                    ui.Label(text='Path',style='text-align: center;padding-left: 50px;')
+                    ui.Label(text='Remove Sample File',style='text-align: center;padding-left: 30px;')
+
+                ui.Label(text='',style='padding: 5px ;')    
+                with ui.Layout(style='overflow-y:auto;min-height:245px ;max-height:245px ; '):
+                    self.sample = ui.VSplit(style='font-size: 80%;')
 
             self.project.spacer = None
             self.sample.spacer = None
@@ -1208,56 +1295,68 @@ class Run_NeatSeq_Flow(ui.Widget):
 
     def init(self):
         with ui.Layout(style='padding: 30px;'):
-            with ui.HSplit():               
-                with ui.Layout(title='NeatSeq-Flow Information', style='min-height: 250px; max-height: 250px;'):
-                    with ui.VSplit():
-                       
-                        with ui.Layout(title='NeatSeq-Flow script location', style='min-height: 70px; max-height: 70px;'):
-                            ui.Label(text='NeatSeq-Flow script location:',style='padding-left: 0px; font-size: 120% ;')
-                            with ui.HSplit(style='min-height: 35px; max-height: 35px;'):
-                                self.NeatSeq_bin_L = ui.LineEdit(text='neatseq_flow.py')
-                                self.NeatSeq_bin_b = ui.Button(text='Browse', style='max-width: 100px; ')
+            with ui.HSplit(): 
+                with ui.VSplit():
+                    with ui.GroupWidget(title='Project Information', style='min-height: 230px; min-width: 250px; border: 2px solid blue; '):
+                        with ui.VSplit():
+                            with ui.Layout(title='Project Directory', style='min-height: 70px; max-height: 70px;'):
+                                ui.Label(text='Project Directory:',style='padding-left: 0px; font-size: 120% ;')
+                                with ui.HSplit(style='min-height: 35px; max-height: 35px;'):
+                                    self.Project_dir_L = ui.LineEdit(text='')
+                                    self.Project_dir_b = ui.Button(text='Browse', style='max-width: 100px; ')
 
-                        with ui.Layout(title='Conda bin location', style='min-height: 70px; max-height: 70px;'):
-                            ui.Label(text='Conda bin location:',style='padding-left: 0px; font-size: 120% ;')
-                            with ui.HSplit(style='min-height: 35px; max-height: 35px;'):
-                                self.conda_bin_L = ui.LineEdit(text='')
-                                self.conda_bin_b = ui.Button(text='Browse', style='max-width: 100px; ')
+                            with ui.Layout(title='Sample File', style='min-height: 70px; max-height: 70px;'):
+                                ui.Label(text='Sample File:',style='padding-left: 0px; font-size: 120% ;')
+                                with ui.HSplit(style='min-height: 35px; max-height: 35px;'):
+                                    self.sample_file_L = ui.LineEdit(text='')
+                                    self.sample_file_b = ui.Button(text='Browse', style='max-width: 100px;')
 
-                        with ui.Layout(title='Conda environment to use', style='min-height: 70px; max-height: 70px;'):
-                            ui.Label(text='Conda environment to use:',style='padding-left: 0px; font-size: 120% ;')
-                            with ui.HSplit(style='min-height: 35px; max-height: 35px;'):
-                                self.conda_env_L = ui.ComboBox(editable=True, text='',
-                                                               placeholder_text='Choose Conda Environment')
-                                self.conda_env_b = ui.Button(text='Search', style='max-width: 100px; ')
+                            with ui.Layout(title='Parameter File', style='min-height: 70px; max-height: 70px;'):
+                                ui.Label(text='Parameter File:',style='padding-left: 0px; font-size: 120% ;')
+                                with ui.HSplit(style='min-height: 35px; max-height: 35px;'):
+                                    self.parameter_file_L = ui.LineEdit(text='')
+                                    self.parameter_file_b = ui.Button(text='Browse', style='max-width: 100px;')
 
-                with ui.Layout(title='Project Information', style='min-height: 250px; max-height: 250px;'):
-                    with ui.VSplit():
-                        with ui.Layout(title='Project Directory', style='min-height: 70px; max-height: 70px;'):
-                            ui.Label(text='Project Directory:',style='padding-left: 0px; font-size: 120% ;')
-                            with ui.HSplit(style='min-height: 35px; max-height: 35px;'):
-                                self.Project_dir_L = ui.LineEdit(text='')
-                                self.Project_dir_b = ui.Button(text='Browse', style='max-width: 100px; ')
+                    ui.Label(style='padding: 0px ;max-height: 35px; ')
+                    with ui.GroupWidget(title='NeatSeq-Flow Information (For Advanced Users)', style='min-height: 230px; min-width: 250px; border: 2px solid green;'):
+                        with ui.VSplit():
+                           
+                            with ui.Layout(title='NeatSeq-Flow script location', style='min-height: 70px; max-height: 70px;'):
+                                ui.Label(text='NeatSeq-Flow script location:',style='padding-left: 0px; font-size: 120% ;')
+                                with ui.HSplit(style='min-height: 35px; max-height: 35px;'):
+                                    self.NeatSeq_bin_L = ui.LineEdit(text='neatseq_flow.py')
+                                    self.NeatSeq_bin_b = ui.Button(text='Browse', style='max-width: 100px; ')
 
-                        with ui.Layout(title='Sample File', style='min-height: 70px; max-height: 70px;'):
-                            ui.Label(text='Sample File:',style='padding-left: 0px; font-size: 120% ;')
-                            with ui.HSplit(style='min-height: 35px; max-height: 35px;'):
-                                self.sample_file_L = ui.LineEdit(text='')
-                                self.sample_file_b = ui.Button(text='Browse', style='max-width: 100px;')
+                            with ui.Layout(title='Conda bin location', style='min-height: 70px; max-height: 70px;'):
+                                ui.Label(text='Conda bin location:',style='padding-left: 0px; font-size: 120% ;')
+                                with ui.HSplit(style='min-height: 35px; max-height: 35px;'):
+                                    self.conda_bin_L = ui.LineEdit(text='')
+                                    self.conda_bin_b = ui.Button(text='Browse', style='max-width: 100px; ')
 
-                        with ui.Layout(title='Parameter File', style='min-height: 70px; max-height: 70px;'):
-                            ui.Label(text='Parameter File:',style='padding-left: 0px; font-size: 120% ;')
-                            with ui.HSplit(style='min-height: 35px; max-height: 35px;'):
-                                self.parameter_file_L = ui.LineEdit(text='')
-                                self.parameter_file_b = ui.Button(text='Browse', style='max-width: 100px;')
-            self.Generate_scripts_b = ui.Button(text='Generate scripts', style='max-height: 35px; max-width: 200px;')
-            self.Run_scripts_b      = ui.Button(text='Run scripts', style='max-height: 35px; max-width: 200px;')
-            self.Run_Monitor_b      = ui.Button(text='Run Monitor', style='max-height: 35px; max-width: 200px;')
-            self.Kill_Run_b         = ui.Button(text='Kill Run', style='max-height: 35px; max-width: 200px;')
-            with ui.VSplit(): 
-                ui.Label(flex=0.005,text='Terminal:',style='padding-left: 0px; padding-top: 20px; font-size: 120% ;min-height: 10px;')
-                self.label = ui.Label(flex=0.02 ,style='padding: 20px ; border: 1px solid gray; border-radius: 10px;   overflow-y: auto; overflow-x: auto;')
-                ui.Label(flex=0.03 ,style='padding: 0px ; ')
+                            with ui.Layout(title='Conda environment to use', style='min-height: 70px; max-height: 70px;'):
+                                ui.Label(text='Conda environment to use:',style='padding-left: 0px; font-size: 120% ;')
+                                with ui.HSplit(style='min-height: 35px; max-height: 35px;'):
+                                    self.conda_env_L = ui.ComboBox(editable=True, text='',
+                                                                   placeholder_text='Choose Conda Environment')
+                                    self.conda_env_b = ui.Button(text='Search', style='max-width: 100px; ')
+
+                
+                with ui.VSplit(): 
+                    
+                    with ui.HSplit():
+                        self.Generate_scripts_b = ui.Button(text='Generate scripts', style='max-height: 55px; min-width: 150px; ')
+                        self.Run_scripts_b      = ui.Button(text='Run scripts', style='max-height: 55px; min-width: 130px; ')
+                        self.Run_Monitor_b      = ui.Button(text='Run Monitor', style='max-height: 55px; min-width: 130px;')
+                        self.Kill_Run_b         = ui.Button(text='Kill Run', style='max-height: 55px; min-width: 100px;')
+                        with ui.VSplit():
+                            self.Locate_Failures_b  = ui.Button(text='Locate Failures', style='max-height: 20px; min-width: 150px;')
+                            self.Recovery_b         = ui.Button(text='Recover', style='max-height: 20px; min-width: 150px;')
+                    ui.Label(text='',style='max-height: 5px;')
+                    with ui.GroupWidget(title='Terminal:',style='font-size: 120% ;border: 2px solid red;'):
+                        with ui.Layout( style='min-height: 480px; padding: 10px ;overflow-y: auto; overflow-x: auto;'):
+                        #ui.Label(text='Terminal:',style='padding-left: 0px; padding-top: 10px; font-size: 120% ;max-height: 30px; min-height: 30px;')
+                            self.label = ui.Label(style='min-height: 480px; padding: 10px ; border: 0px solid gray; border-radius: 10px;   overflow-y: auto; overflow-x: auto;')
+                        #ui.Label(style='padding: 0px ; ')
 
     @event.reaction('conda_env')
     def conda_env_options(self, *events):
@@ -1291,6 +1390,17 @@ class Run_NeatSeq_Flow(ui.Widget):
     def on_Kill_Run_b_click(self, *events):
         for ev in events:
             self.set_command(['Kill_Run',self.Project_dir_L.text])
+    
+    @event.reaction('Recovery_b.pointer_click')
+    def on_Recovery_b_click(self, *events):
+        for ev in events:
+            self.set_command(['Recovery',self.Project_dir_L.text])
+    
+    @event.reaction('Locate_Failures_b.pointer_click')
+    def on_Recovery_b_click(self, *events):
+        for ev in events:
+            self.set_command(['Locate_Failures',self.Project_dir_L.text])
+    
     
     @event.reaction('Run_Monitor_b.pointer_click')
     def on_Run_Monitor_b_click(self, *events):
@@ -1363,7 +1473,105 @@ class Run_NeatSeq_Flow(ui.Widget):
                 self.set_parameter_file([])
 
 
+from flexx import flx
 
+# Associate CodeMirror's assets with this module so that Flexx will load
+# them when (things from) this module is used.
+
+
+#base_url = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.46.0/'
+base_url =  os.path.join(os.path.realpath(os.path.expanduser(os.path.dirname(os.path.abspath(__file__))+os.sep+"..")),'neatseq_flow_gui','Codemirror')
+# base_url =  '/gpfs0/bioinfo/apps/Miniconda2/Miniconda_v4.3.21/envs/NeatSeq_Flow_devel/neatseq_flow_gui/Codemirror/'
+# flx.assets.associate_asset(__name__, base_url + 'codemirror.css')
+# flx.assets.associate_asset(__name__, base_url + 'codemirror.js')
+# flx.assets.associate_asset(__name__, base_url + 'mode/markdown/markdown.js')
+# flx.assets.associate_asset(__name__, base_url + 'theme/solarized.css')
+# flx.assets.associate_asset(__name__, base_url + 'addon/selection/active-line.js')
+# flx.assets.associate_asset(__name__, base_url + 'addon/edit/matchbrackets.js')
+# flx.assets.associate_asset(__name__, base_url + 'addon/edit/continuelist.js')
+
+flx.assets.associate_asset(__name__,'codemirror.css', open(os.path.join(base_url , 'codemirror.css')).read())
+flx.assets.associate_asset(__name__,'codemirror.js' ,open(os.path.join(base_url ,'codemirror.js')).read())
+flx.assets.associate_asset(__name__,'markdown.js' ,open(os.path.join(base_url ,'mode/markdown/markdown.js')).read())
+flx.assets.associate_asset(__name__, 'solarized.css' ,open(os.path.join(base_url ,'theme/solarized.css')).read())
+flx.assets.associate_asset(__name__,'active-line.js', open(os.path.join(base_url , 'addon/selection/active-line.js')).read())
+flx.assets.associate_asset(__name__, 'matchbrackets.js' ,open(os.path.join(base_url , 'addon/edit/matchbrackets.js')).read())
+flx.assets.associate_asset(__name__, 'continuelist.js' ,open(os.path.join(base_url , 'addon/edit/continuelist.js')).read())
+
+
+
+
+
+class Documentation_Editor(flx.Widget):
+    """ A CodeEditor widget based on CodeMirror.
+    """
+
+    CSS = """
+    .flx-Documentation_Editor > .CodeMirror {
+        width: 100%;
+        height: 100%;
+        font-size: 100% ;
+        font-family: Calibri;
+       
+    }
+    .flx-Documentation_Editor  .cm-header { font-family: Calibri; }
+    .flx-Documentation_Editor  .cm-header-1 { font-size: 160%; color: purple;}
+    .flx-Documentation_Editor  .cm-header-2 { font-size: 150%; color: green;}
+    .flx-Documentation_Editor  .cm-header-3 { font-size: 140%; color: yellowy;}
+    .flx-Documentation_Editor  .cm-header-4 { font-size: 130%; color: blue;}
+    .flx-Documentation_Editor  .cm-header-5 { font-size: 120%; color: orange;}}
+    .flx-Documentation_Editor  .cm-header-6 { font-size: 110%; color: brown;}
+    .flx-Documentation_Editor  .cm-strong { font-size: 120%; }
+    }
+    
+    """
+    value = event.StringProp('', settable=True)
+    load_flag = event.BoolProp(False, settable=True)
+    
+    def init(self,value=Documentation):
+        global window
+        self.set_value(value)
+        # https://codemirror.net/doc/manual.html
+        options = dict(value=self.value,
+                        mode='markdown',
+                        theme='default',
+                        #theme='solarized dark',
+                        #highlightFormatting=True,
+                        maxBlockquoteDepth=True,
+                        fencedCodeBlockHighlighting=True,
+                        tokenTypeOverrides=True,
+                        allowAtxHeaderWithoutSpace=True,
+                        autofocus=True,
+                        styleActiveLine=True,
+                        matchBrackets=True,
+                        indentUnit=4,
+                        smartIndent=True,
+                        lineWrapping=True,
+                        lineNumbers=True,
+                        firstLineNumber=1,
+                        readOnly=False,
+                        )
+        self.cm = window.CodeMirror(self.node, options)
+        
+        
+    @flx.reaction('size')
+    def __on_size(self, *events):
+        self.cm.refresh()
+        
+    @flx.reaction('key_down')
+    def __update_text(self, *events):
+        self.cm.refresh()
+        self.set_value(self.cm.getValue())
+        
+    @flx.reaction('load_flag')
+    def __load_text(self, *events):
+        if self.load_flag:
+            self.cm.setValue(self.value)
+            self.cm.refresh()
+            self.set_value(self.cm.getValue())
+            self.set_load_flag(False)
+        
+        
 class NeatSeq_Flow_GUI(app.PyComponent):
     CSS = """
 
@@ -1489,7 +1697,11 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         }
 
 
-
+     .flx-TabLayout > .flx-tabbar > .flx-tab-item.flx-current {
+        background: #eaecff;
+        border-top: 8px solid #7bf;
+        margin-top: 0;
+    }
 
         """
 
@@ -1497,24 +1709,28 @@ class NeatSeq_Flow_GUI(app.PyComponent):
     Generating_scripts           = event.IntProp(0, settable=True)
     Running_Commands             = event.DictProp({}, settable=True)
     Kill_Run                     = event.IntProp(0, settable=True)
-    
+    Recovery                     = event.IntProp(0, settable=True)
+    Locate_Failures              = event.IntProp(0, settable=True)
     
     def init(self):
         with ui.VSplit():
-            with ui.TabLayout(flex=0.9) as self.TabLayout:
-                self.step_info = Step_Tree_Class(title='Work-Flow')
+            with ui.TabLayout(flex=0.9) as self.TabLayout2:
+                with ui.TabLayout(flex=0.9,title='Work-Flow',style='color: blue;') as self.TabLayout:
+                    self.step_info = Step_Tree_Class(title='Design', style='padding-top: 10px;color: black;')
+                    self.vars_info = Only_Tree_Class(VARS, title='Vars', style='padding-top: 10px;color: black;')
+                    self.cluster_info = Only_Tree_Class(CLUSTER, title='Cluster', style='padding-top: 10px;color: black;')
+                    self.Documentation = Documentation_Editor(title='Documentation', style='padding-top: 10px;color: black;')
                 self.samples_info = Samples_info(title='Samples')
-                self.vars_info = Only_Tree_Class(VARS, title='Vars')
-                self.cluster_info = Only_Tree_Class(CLUSTER, title='Cluster')
-                self.Run = Run_NeatSeq_Flow(title='Run')
-                ui.IFrame(url='http://neatseq-flow.readthedocs.io/projects/neatseq-flow-modules/en/latest/index.html',
-                          title='Help')
+                self.Run  = Run_NeatSeq_Flow(title='Run')
+                self.Help = ui.IFrame(url=Base_Help_URL,
+                                      title='Help')
             
             self.label = ui.Label(text='NeatSeq-Flow Graphical User Interface By Liron Levin',
                                   style='padding-left: 40px; background: #e8eaff; min-height: 15px; font-size:15px; transition: all 0.5s;')
             self.label.set_capture_mouse(2)
             self.label.set_html(html_cite)
             self.TabLayout.set_capture_mouse(2)
+            self.TabLayout2.set_capture_mouse(2)
             self.Terminal_string = ''
 
     # @event.reaction('label.pointer_move')
@@ -1524,11 +1740,15 @@ class NeatSeq_Flow_GUI(app.PyComponent):
     @event.reaction('label.pointer_click')
     def on_label_click(self, *events):
         self.label.set_flex(0.2)
+        
 
-    @event.reaction('TabLayout.pointer_move')
+    # @event.reaction('TabLayout.pointer_move')
+    # def on_label_after(self, *events):
+        # self.label.set_flex(0.02)
+        
+    @event.reaction('TabLayout2.pointer_move')
     def on_label_after(self, *events):
         self.label.set_flex(0.02)
-
 
     def filepicker_options(self, key):
         options = {'file_path': lambda: self.step_info.set_file_path(select_files('Single', 'Open')),
@@ -1552,12 +1772,14 @@ class NeatSeq_Flow_GUI(app.PyComponent):
             return None
 
     def command_pars(self, key):
-        options = {'conda_env': lambda: self.conda_env_options(key[1]),
+        options = {'conda_env':        lambda: self.conda_env_options(key[1]),
                    'Generate_scripts': lambda: self.Generate_scripts_command(key[1], key[2], key[3], key[4], key[5],
                                                                              key[6]),
-                   'Run_scripts': lambda: self.Run_scripts_command(key[1]),
-                   'Kill_Run': lambda: self.Kill_Run_command(key[1]),
-                   'Run_Monitor': lambda: self.Run_Monitor_command(key[1]),
+                   'Run_scripts':      lambda: self.Run_scripts_command(key[1]),
+                   'Kill_Run':         lambda: self.Kill_Run_command(key[1]),
+                   'Recovery':         lambda: self.Recovery_command(key[1]),
+                   'Locate_Failures':  lambda: self.Locate_Failures_command(key[1]),
+                   'Run_Monitor':      lambda: self.Run_Monitor_command(key[1]),
                    
                    }
         if key[0] in options.keys():
@@ -1598,7 +1820,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         self.Run.set_Terminal(self.Terminal_string)
 
     def Generate_scripts_command(self, NeatSeq_bin, conda_bin, conda_env, Project_dir, sample_file, parameter_file):
-        import os
+        import os,re
         from subprocess import Popen, PIPE, STDOUT, TimeoutExpired
         
         if len(Project_dir) == 0:
@@ -1639,6 +1861,13 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 temp_command = temp_command + ' -d ' + Project_dir
             else:
                 Error = Error + 'Error:\n No Project directory \n'
+                
+            if os.path.exists(os.path.join(Project_dir,'logs')):
+                logs_files = list(filter(lambda x: len(re.findall('log_[0-9]+.txt$',x))>0,
+                                    os.listdir(os.path.join(Project_dir,'logs') )))
+                if len(logs_files)>0:
+                    temp_command = temp_command + ' -r curr '
+            
             
             if len(Error) == 0:
                 err_flag = False
@@ -1646,7 +1875,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                     self.Run.set_Terminal(self.Terminal_string + '[Generating scripts]:  Generating...\n')
                     Generating_proc = Popen(temp_command, stdout=PIPE, stderr=PIPE, shell=True,
                                             universal_newlines=True , executable='/bin/bash')
-                    outs, errs = Generating_proc.communicate(timeout=15)
+                    outs, errs = Generating_proc.communicate(timeout=25)
 
                 except :
                     err_flag = True
@@ -1664,15 +1893,6 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 if err_flag:
                     self.Terminal_string = self.Terminal_string + '[Generating scripts]: Finished with Error!! \n'
                 self.Run.set_Terminal(self.Terminal_string)
-                
-                
-                # if self.Generating_scripts == 0:
-                    # try:
-                        # self.Running_Commands['Generating_scripts'] =  Run_command_in_thread(temp_command)
-                        # self.Running_Commands['Generating_scripts'].Run()
-                    # except :
-                        # pass
-                    # self.set_Generating_scripts(1)
 
             else:
                 self.Run.set_Terminal(Error)
@@ -1702,9 +1922,18 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 try:
                     self.Running_Commands['Running_script'] =  Run_command_in_thread(temp_command)
                     self.Running_Commands['Running_script'].Run()
+                    self.set_Running_script(self.Running_script+1)
                 except :
                     pass
-                self.set_Running_script(1)
+                
+            # elif self.Running_Commands['Running_script'].proc.poll() is not None:
+                # try:
+                    # self.Running_Commands['Running_script'] =  Run_command_in_thread(temp_command)
+                    # self.Running_Commands['Running_script'].Run()
+                    # self.set_Running_script(self.Running_script+1)
+                # except :
+                    # pass
+            
         else:
             self.Run.set_Terminal(Error)
 
@@ -1726,7 +1955,6 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         else:
             Error = Error + 'Error:\n No Project directory \n'
         
-        #if self.Running_Commands['Running_script'].proc.poll() is None:
         try:
             self.Running_Commands['Running_script'].proc.kill()
             self.Run.set_Terminal('Stop Running Scripts')
@@ -1739,14 +1967,118 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 try:
                     self.Running_Commands['Kill_Run'] =  Run_command_in_thread(temp_command)
                     self.Running_Commands['Kill_Run'].Run()
+                    self.set_Kill_Run(self.Kill_Run+1)
                 except :
                     pass
-                self.set_Kill_Run(1)
+                
+            # elif self.Running_Commands['Kill_Run'].proc.poll() is not None:
+                # try:
+                    # self.Running_Commands['Kill_Run'] =  Run_command_in_thread(temp_command)
+                    # self.Running_Commands['Kill_Run'].Run()
+                    # self.set_Kill_Run(self.Kill_Run+1)
+                # except :
+                    # pass
+                
         else:
             self.Run.set_Terminal(Error)
 
-    
-    
+    def Locate_Failures_command(self,Project_dir):
+        import os
+        from subprocess import Popen, PIPE, STDOUT, TimeoutExpired
+        
+        if len(Project_dir) == 0:
+            Project_dir=os.getcwd()
+        
+        Error = ''
+        temp_command = ''
+        if len(Project_dir) > 0:
+            fname = os.path.join(Project_dir,'scripts', 'DD.utilities.sh')
+            if os.path.isfile(fname): 
+                temp_command = '. ' + fname + ' ; recover_run ' 
+            else:
+                Error = Error + 'Error:\n You first need to generate and run the scripts \n'
+        else:
+            Error = Error + 'Error:\n No Project directory \n'
+
+                
+        if len(Error) == 0:
+            if self.Locate_Failures == 0:
+                try:
+                    self.Running_Commands['Locate_Failures'] =  Run_command_in_thread(temp_command)
+                    self.Running_Commands['Locate_Failures'].Run()
+                    self.Terminal_string = self.Terminal_string + '[ Locate Failures ]:   Searching for failures in the last run.. \n'
+                    self.Terminal_string = self.Terminal_string + '[ Locate Failures ]:   Click on the Recover button if you want to re-run these steps: \n'
+                    self.Run.set_Terminal(self.Terminal_string)
+                    self.set_Locate_Failures(self.Locate_Failures+1)
+
+                except :
+                    pass
+                
+            # elif self.Running_Commands['Locate_Failures'].proc.poll() is not None:
+                # try:
+                  # self.Running_Commands['Locate_Failures'] =  Run_command_in_thread(temp_command)
+                    # self.Running_Commands['Locate_Failures'].Run()
+                    # self.Terminal_string = self.Terminal_string + '[ Locate Failures ]:   Searching for failures in the last run.. \n'
+                    # self.Terminal_string = self.Terminal_string + '[ Locate Failures ]:   Click on the Recover button if you want to re-run these steps: \n'
+                    # self.Run.set_Terminal(self.Terminal_string)
+                    # self.set_Locate_Failures(self.Locate_Failures+1)
+                # except :
+                    # pass
+            
+        else:
+            self.Run.set_Terminal(Error)
+
+    def Recovery_command(self,Project_dir):
+        import os
+        from subprocess import Popen, PIPE, STDOUT, TimeoutExpired
+        
+        if len(Project_dir) == 0:
+            Project_dir=os.getcwd()
+        
+        Error = ''
+        temp_command = ''
+        if len(Project_dir) > 0:
+            fname = os.path.join(Project_dir,'scripts', 'DD.utilities.sh')
+            if os.path.isfile(fname): 
+                fname = os.path.join(Project_dir,'scripts', 'AA.Recovery_script.sh')
+                if os.path.isfile(fname): 
+                    temp_command = 'bash ' + fname 
+                else:
+                    Error = Error + 'Error:\n You first need to "Locate Failures" \n'
+            else:
+                Error = Error + 'Error:\n You first need to generate and run the scripts \n'
+        else:
+            Error = Error + 'Error:\n No Project directory \n'
+
+                
+        if len(Error) == 0:
+            
+            if self.Recovery == 0:
+                try:
+                    self.Running_Commands['Recovery'] =  Run_command_in_thread(temp_command)
+                    self.Running_Commands['Recovery'].Run()
+                    self.Terminal_string = self.Terminal_string + '[ Recovery ]:   Trying to Recover.. \n'
+                    self.Run.set_Terminal(self.Terminal_string)
+                    self.set_Recovery(self.Recovery+1)
+                    self.Terminal_string = self.Terminal_string + '[ Recovery ]:   Click on Run Monitor to See if it Worked \n'
+                    self.Run.set_Terminal(self.Terminal_string)
+                except :
+                    pass
+            # elif self.Running_Commands['Recovery'].proc.poll() is not None:
+                # try:
+                    # self.Running_Commands['Recovery'] =  Run_command_in_thread(temp_command)
+                    # self.Running_Commands['Recovery'].Run()
+                    # self.Terminal_string = self.Terminal_string + '[ Recovery ]:   Trying to Recover.. \n'
+                    # self.Run.set_Terminal(self.Terminal_string)
+                    # self.set_Recovery(self.Recovery+1)
+                    # self.Terminal_string = self.Terminal_string + '[ Recovery ]:   Click on Run Monitor to See if it Worked \n'
+                    # self.Run.set_Terminal(self.Terminal_string)
+                # except :
+                    # pass
+            
+        else:
+            self.Run.set_Terminal(Error)
+        
     def Run_Monitor_command(self,Project_dir):
         import os
         import curses, argparse
@@ -1794,44 +2126,59 @@ class NeatSeq_Flow_GUI(app.PyComponent):
     def change_value(self,obj,prop_name,value):
         obj._mutate(prop_name,value)
     
-    @event.reaction('Running_script','Kill_Run') #,'Generating_scripts')
+    @event.reaction('Running_script','Kill_Run','Recovery','Locate_Failures')
     def update_Terminal(self, *events):
-            for ev in events:
-                if ev.new_value>0:
-                    Task_End=False
-                    Title = ''
-                    stat=True
-                    outs = ''
-                    errs = ''
-                    try:
-                        if self.Running_Commands[ev.type].proc.poll() is None:
-                           outs, errs = self.Running_Commands[ev.type].output()
-                           self.change_value(ev.source,ev.type,ev.new_value + 1)
-                        else: 
-                            outs, errs = self.Running_Commands[ev.type].output()
-                            self.Running_Commands[ev.type].Stop()
-                            self.change_value(ev.source,ev.type,0)
-                            Task_End=True
-                    except Exception: 
-                        stat=False
-                        
-                    if stat:
-                        if len(outs) > 0:
-                            Title = Title + outs 
-                        if len(errs) > 0: 
-                            Title = Title  + errs 
-                        if Task_End:
-                            Title = Title + ' Finished!!'
-                        
-                        if len(Title) > 0:
-                            
-                            for line in Title.split('\n'):
-                                if len(line)>0:
-                                    self.Terminal_string = self.Terminal_string + '[ '+ ev.type.replace('_',' ') +' ] : ' + line + '\n'
-                            self.Run.set_Terminal(self.Terminal_string)
+        for ev in events:
+            if ev.new_value>0:
+                
+                Task_End=False
+                Title = ''
+                stat=True
+                outs = ''
+                errs = ''
+                try:
+                    if self.Running_Commands[ev.type].proc.poll() is None:
+                       outs, errs = self.Running_Commands[ev.type].output()
+                       self.change_value(ev.source,ev.type,ev.new_value + 1)
+                    else: 
+                        self.Running_Commands[ev.type].Stop()
+                        outs, errs = self.Running_Commands[ev.type].output()
+                        self.change_value(ev.source,ev.type,0)
+                        Task_End=True
+                except Exception: 
+                    stat=False
+                    print('dddd')
+                
+                if stat:
+                    if (len(outs+errs)==0) and Task_End:
+                        [outs, errs] = self.Running_Commands[ev.type].output()
+                        print(outs)
+                        print(len(outs))
+                    if len(outs) > 0:
+                        Title = Title + outs 
+                    if len(errs) > 0: 
+                        Title = Title  + errs 
                     
+                    if Task_End:
+                        Title = Title + ' Finished!!'
                     
-    
+                    if len(Title) > 0:
+                        
+                        for line in Title.split('\n'):
+                            if len(line)>0:
+                                self.Terminal_string = self.Terminal_string + '[ '+ ev.type.replace('_',' ') +' ] : ' + line + '\n'
+                        self.Run.set_Terminal(self.Terminal_string)
+
+
+                    
+    @event.reaction('step_info.Go2Help')
+    def Go2Help(self, *events):
+        for ev in events:
+            self.TabLayout2.set_current(self.Help)
+            if ev.source.Go2Help!='':
+                self.Help.set_url(Base_Help_URL)
+                self.Help.set_url(Base_Help_URL+'Module_docs/AllModules.html#'+ev.source.Go2Help.lower().replace('_','-'))
+                
     
     @event.reaction('!Run.open_filepicker', 'samples_info.open_filepicker', 'step_info.open_filepicker',
                     'cluster_info.open_filepicker', 'vars_info.open_filepicker')
@@ -1869,7 +2216,9 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                                 for sample_path in self.samples_info.samples_data[sample_name][sample_types]:
                                     sample_file.write(sample_name + '\t' + sample_types + '\t' + sample_path + '\n')
                     sample_file.close()
+                    self.Run.set_sample_file(self.samples_info.save_samples_file)
                     self.samples_info.set_save_samples_file([])
+                    
 
     @event.reaction('samples_info.load_samples_file')
     def load_sample_file(self, *events):
@@ -1884,6 +2233,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                     self.samples_info.set_load_samples_file([])
                 if len(samples_data) > 0:
                     self.update_samples_data(samples_data)
+                    self.Run.set_sample_file(self.samples_info.load_samples_file)
 
     @event.action
     def update_samples_data(self, samples_data):
@@ -1916,33 +2266,65 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                     if 'Vars' in param_data.keys():
                         if len(param_data['Vars']) > 0:
                             self.update_vars_data(param_data['Vars'])
-
+                            
+                    if 'Documentation' in param_data.keys():
+                        self.Documentation.set_value(param_data['Documentation'])
+                        self.Documentation.set_load_flag(True)
+                    
+                    self.Run.set_parameter_file(self.step_info.workflow_file)
+                    
+                    
     @event.reaction('step_info.save_workflow_file')
     def save_workflow_file(self, *events):
-        import yaml
+        import yaml,re
         from collections import OrderedDict
         setup_yaml(yaml, OrderedDict)
 
         for ev in events:
             if len(self.step_info.save_workflow_file) > 0:
+                err_flag=True
                 try:
-
+                    
                     with open(self.step_info.save_workflow_file[0][0], 'w') as outfile:
-                        param_data = {}
-                        param_data['Global_params'] = OrderedDict(self.cluster_info.Data)
-                        yaml.dump(param_data, outfile, default_flow_style=False,width=float("inf"))
-                        param_data = {}
-                        param_data['Vars'] = OrderedDict(self.vars_info.Data)
-                        yaml.dump(param_data, outfile, default_flow_style=False,width=float("inf"))
-                        param_data = {}
-                        param_data['Step_params'] = OrderedDict(self.step_info.Data)
-                        yaml.dump(param_data, outfile, default_flow_style=False,width=float("inf"))
+                        param_data = OrderedDict()
+                        param_data['Documentation'] = re.sub(string=self.Documentation.value.rstrip('\t').replace('\t',"    "),
+                                                             pattern=' +\n',
+                                                             repl='\n').rstrip(' ').rstrip('\n')
+                        yaml.dump(param_data, outfile,
+                                  default_flow_style=False,
+                                  width=float("inf"),
+                                  default_style="|" ,
+                                  explicit_start = False,
+                                  explicit_end   = False,
+                                  #version=(1,2),
+                                  indent=4)
+                        
+                        param_data = OrderedDict()
+                        param_data['Global_params'] = self.fix_order_dict(self.cluster_info.Data)
+                        yaml.dump(param_data, outfile, default_flow_style=False,width=float("inf"), indent=4)
+                        param_data = OrderedDict()
+                        param_data['Vars'] = self.fix_order_dict(self.vars_info.Data)
+                        yaml.dump(param_data, outfile, default_flow_style=False,width=float("inf"), indent=4)
+                        param_data = OrderedDict()
+                        param_data['Step_params'] = self.fix_order_dict(self.step_info.Data)
+                        yaml.dump(param_data, outfile, default_flow_style=False,width=float("inf"), indent=4)
 
 
                 except:
-                    pass
+                    err_flag=False
+                    
+                if err_flag:
+                    self.Run.set_parameter_file(self.step_info.save_workflow_file)
                 self.step_info.set_save_workflow_file([])
-
+                
+    def fix_order_dict(self, dic):
+        if isinstance(dic, dict):
+            dic = OrderedDict(dic)
+            dic_keys = list(dic.keys())
+            for key in dic_keys:
+                dic[key] = self.fix_order_dict(dic[key])
+        return dic
+        
     @event.reaction('vars_info.Data')
     def send_Vars_options(self, *events):
         for ev in events:
@@ -1952,7 +2334,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
 
     @event.action
     def update_steps_data(self, Steps_Data):
-        converer = {}
+        converer = OrderedDict()
         self.correct_dict(Steps_Data, 1, converer)
         self.step_info.set_Steps_Data(Steps_Data)
         self.step_info.set_converter(converer)
@@ -1960,7 +2342,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
 
     @event.action
     def update_cluster_data(self, Cluster_Data):
-        converer = {}
+        converer = OrderedDict()
         self.correct_dict(Cluster_Data, 1, converer)
         self.cluster_info.set_Data(Cluster_Data)
         self.cluster_info.set_converter(converer)
@@ -1968,7 +2350,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
 
     @event.action
     def update_vars_data(self, Vars_Data):
-        converer = {}
+        converer = OrderedDict()
         self.correct_dict(Vars_Data, 1, converer)
         self.vars_info.set_Data(Vars_Data)
         self.vars_info.set_converter(converer)
@@ -2107,6 +2489,7 @@ if __name__ == '__main__':
         MODULES_TEMPLATES = temp_MODULES_TEMPLATES
     icon=os.path.join(os.path.realpath(os.path.expanduser(os.path.dirname(os.path.abspath(__file__))+os.sep+"..")),'neatseq_flow_gui','NeatSeq_Flow.ico')
     #icon = app.assets.add_shared_data('ico.icon', open(icon, 'rb').read())
-    m = app.App(NeatSeq_Flow_GUI).launch(runtime ='app',size=(1200, 650),title='NeatSeq-Flow GUI',icon=icon)
+    m = app.App(NeatSeq_Flow_GUI).launch(runtime ='app',size=(1300, 750),title='NeatSeq-Flow GUI',icon=icon)
     app.run()
+
 
