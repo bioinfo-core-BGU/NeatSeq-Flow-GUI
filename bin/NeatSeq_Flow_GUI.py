@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 
-
 __author__ = "Liron Levin"
 __version__ = "2.0"
 
@@ -11,10 +10,10 @@ __affiliation__ = "Bioinformatics Core Unit, NIBN, Ben Gurion University"
 
 
 from flexx import app, event, ui
-import os,sys
+import os,sys,dialite
 from collections import OrderedDict
 
-Base_Help_URL = 'https://neatseq-flow.readthedocs.io/projects/neatseq-flow-modules/en/devel/'
+Base_Help_URL = 'https://neatseq-flow.readthedocs.io/projects/neatseq-flow-modules/en/latest/'
 
 sys.path.append(os.path.realpath(os.path.expanduser(os.path.dirname(os.path.abspath(__file__))+os.sep+"..")))
 
@@ -24,16 +23,18 @@ STEPS = {'Merge': {'module': 'merge', 'script_path': None  },
 
          }
 
-COLORS = ('#ffffff','#8DD3C7','#BEBADA','#FB8072',
-          '#80B1D3','#FDB462','#B3DE69','#CCEBC5',
+COLORS = ('#ffffff','#8DD3C7','#BEBADA','#FDBF6F',
           '#BC80BD','#FCCDE5','#FFFFB3','#66C2A5',
+          '#80B1D3','#FDB462','#B3DE69','#CCEBC5',
           '#FC8D62','#8DA0CB','#E78AC3','#A6D854',
           '#FFD92F','#E5C494','#A6CEE3','#1F78B4',
           '#B2DF8A','#33A02C','#FB9A99','#E31A1C',
-          '#FDBF6F','#FF7F00','#CAB2D6','#6A3D9A',
-          '#FFFF99'
+          '#FFFF99','#FF7F00','#CAB2D6','#6A3D9A',
+          '#FB8072'
           )
-
+          
+COLOR_BY = ['module','tag']
+          
 CLUSTER = {'Executor': 'Local',
            'Default_wait': '10',
            'Qsub_opts': '-cwd',
@@ -91,10 +92,11 @@ html_cite='''
 
 
 class Graphical_panel(ui.CanvasWidget):
-    Selected_step   = event.StringProp('', settable=True)
-    Steps_Data      = event.DictProp(STEPS, settable=True)
-    refresh_flag    = event.BoolProp(False, settable=True)
-    Module_Colors   = event.DictProp({}, settable=True)
+    Selected_step    = event.StringProp('', settable=True)
+    Steps_Data       = event.DictProp(STEPS, settable=True)
+    refresh_flag     = event.BoolProp(False, settable=True)
+    Step_Colors      = event.DictProp({}, settable=True)
+    color_by_option  = event.StringProp('', settable=True)
     
     def init(self):
 
@@ -112,15 +114,26 @@ class Graphical_panel(ui.CanvasWidget):
                 if 'SKIP' in self.steps[step].keys():
                     self.create_Button(step, self, [50, 50],'gray')
                 else:
-                    if 'module' in self.steps[step].keys():
-                        if self.steps[step]['module']!=None:
-                            if self.steps[step]['module'] not in self.Module_Colors.keys():
-                                 self.Module_Colors[self.steps[step]['module']] = COLORS[len(self.Module_Colors.keys())]
-                            self.create_Button(step, self, [50, 50],self.Module_Colors[self.steps[step]['module']])        
+                    if self.color_by_option in self.steps[step].keys():
+                        if self.steps[step][self.color_by_option]!=None:
+                            if self.steps[step][self.color_by_option] not in self.Step_Colors.keys():
+                                 self.Step_Colors[self.steps[step][self.color_by_option]] = COLORS[len(self.Step_Colors.keys())]
+                            self.create_Button(step, self, [50, 50],self.Step_Colors[self.steps[step][self.color_by_option]])        
                         else:
                             self.create_Button(step, self, [50, 50])
                     else:
                         self.create_Button(step, self, [50, 50])
+
+    @event.reaction('color_by_option')
+    def change_step_colors(self, *events):
+        for Button_id in self.Button_list:
+            getattr(self, Button_id).dispose()
+        if len(self.steps.keys()) > 0:
+            self.init()
+            self.set_refresh_flag(True)
+        else:
+            self.Button_list = []
+            self.Button_count = 0
 
     def get_Button_by_name(self, name):
         Button = None
@@ -371,21 +384,31 @@ class Step_Tree_Class(ui.Widget):
                             self.file_path_b        = ui.Button(text='Browse')
                             self.tree_duplicate_b   = ui.Button(text='Duplicate')
                             self.tree_remove_b      = ui.Button(text='Remove')
-               
+                          
+                
+                    
                 self.tree = ui.TreeWidget(flex=0.2, max_selected=1)
                 self.tree.text = 'Top_level'
-                ui.Label(text='__________________')
+                ui.Label(text='___________________')
+                #self.Documentation = Documentation_Editor(style='border: 1px solid red;min-height: 150px;min-width: 100px; ')
             with ui.VSplit(flex=0.6) as self.canvas_lay:
                 with ui.layouts._form.BaseTableLayout(flex=0.03, style='min-height: 70px; max-height: 75px;'):
-                    with ui.HSplit():#style='min-height: 30px; max-height: 30px;'):
+                    with ui.HSplit():
                         with ui.GroupWidget(title='Add New Step',style='min-width: 500px;border: 2px solid purple;'):
                             with ui.HSplit():
-                                self.tree_module_b = ui.ComboBox(title='Use Module:', editable=True, #text='Choose a Step Template',
-                                                                 style='min-width: 400px;border: 1px solid red;',
+                                self.tree_module_b = ui.ComboBox(title='Use Module:', editable=True, 
+                                                                 style='min-width: 380px;border: 1px solid red;',
                                                                  placeholder_text='Choose a Step Template',
                                                                  options=MODULES_TEMPLATES.keys())
-                                self.Help_b = ui.Button(text='About',style='color: blue; max-width: 80px;font-size: 100% ;')
-                                self.tree_create_new_step_b = ui.Button(text='Add',style='color: red; max-width: 80px;')
+                                self.Help_b = ui.Button(text='About',style='color: blue; min-width: 80px;max-width: 80px;font-size: 100% ;')
+                                self.tree_create_new_step_b = ui.Button(text='Add',style='color: red; min-width: 80px;max-width: 80px;')
+                        with ui.GroupWidget(title='Color Steps By',style='border: 2px solid pink;'):
+                            with ui.HSplit():
+                                self.Color_by_b = ui.ComboBox(title='Color by:', editable=False, 
+                                                                 style='max-width: 150px; border: 1px solid pink;',
+                                                                 placeholder_text='Color by:',
+                                                                 selected_index=0,
+                                                                 options=list(map(lambda x: x.capitalize(),COLOR_BY)) )
                         with ui.VSplit():
                             self.tree_Load_WorkFlow_b = ui.Button(text='Load WorkFlow',style='max-height: 30px; max-width: 150px;')
                             self.tree_save_WorkFlow_b = ui.Button(text='Save WorkFlow',style='max-height: 30px; max-width: 150px;')
@@ -393,8 +416,12 @@ class Step_Tree_Class(ui.Widget):
                 with self.tree:
                     self.create_tree(self.Graphical_panel.Steps_Data)
                     self.collapse_all_not_selectd(self.tree)
+                
+    @event.reaction('Color_by_b.selected_index')
+    def Color_Steps_by(self, *events):
+        if self.Color_by_b.selected_index!=-1:
+            self.Graphical_panel.set_color_by_option(COLOR_BY[self.Color_by_b.selected_index])
 
-        
     def uncorrect_dict(self, dic, converer):
         if isinstance(dic, dict):
             dic_keys = list(dic.keys())
@@ -473,9 +500,9 @@ class Step_Tree_Class(ui.Widget):
                 tree.set_selected(False)
         self.collapse_all_not_selectd(self.tree)
 
+
     @event.reaction('tree_create_new_step_b.pointer_click')
     def tree_create_new_step_button_click(self, *events):
-        
         for ev in events:
             if self.tree_module_b.selected_index != -1:
                 if MODULES_TEMPLATES[
@@ -486,8 +513,6 @@ class Step_Tree_Class(ui.Widget):
                 
     @event.reaction('tree_module_b.text')
     def search_tree_module_b(self, *events):
-        #for ev in events:
-        
         if (self.tree_module_b.selected_index == -1) and (len(self.tree_module_b.text)>0) and (self.tree_module_b.text!= self.tree_module_b.placeholder_text):
             self.tree_module_b.set_options(list(
                                                 filter(
@@ -507,7 +532,6 @@ class Step_Tree_Class(ui.Widget):
                 with ui.TreeItem(text=level, checked=None):
                     self.create_tree(current_level[level])
             else:
-               
                 if current_level[level] == None:
                     ui.TreeItem(text=level, checked=None)
                 elif ((len(str(current_level[level]).split(',')) > 1) and isinstance(current_level[level], list)):
@@ -524,7 +548,7 @@ class Step_Tree_Class(ui.Widget):
             else:
                 if len(tree.title) > 0:
                     if (len(tree.text.split(',')) > 1):
-                        if (tree.text.startswith('[') and tree.text.endswith(']') ): #(tree.title in FIELDS2SPLIT):
+                        if (tree.text.startswith('[') and tree.text.endswith(']') ): 
                             steps[tree.title] = tree.text.lstrip('[').rstrip(']').split(',')
                         else:
                             steps[tree.title] = tree.text
@@ -542,7 +566,7 @@ class Step_Tree_Class(ui.Widget):
             else:
                 if len(tree.title) > 0:
                     if (len(tree.text.split(',')) > 1):
-                        if (tree.text.startswith('[') and tree.text.endswith(']') ): #(tree.title in FIELDS2SPLIT):
+                        if (tree.text.startswith('[') and tree.text.endswith(']') ): 
                             steps[tree.title] = tree.text.lstrip('[').rstrip(']').split(',')
                         else:
                             steps[tree.title] = [tree.text]
@@ -713,7 +737,6 @@ class Step_Tree_Class(ui.Widget):
     @event.reaction('tree.children**.checked', 'tree.children**.selected',
                     'tree.children**.collapsed')
     def on_event(self, *events):
-
         for ev in events:
             if (ev.type == 'selected') & (ev.new_value):
                 self.current_selected = ev.source
@@ -730,7 +753,7 @@ class Step_Tree_Class(ui.Widget):
                             self.tree_value_options_b.set_editable(True)
                         else:
                             self.tree_value_options_b.set_editable(False)
-                            self.tree_value_options_b.set_options([])
+                            self.tree_value_options_b.set_options([''])
                             self.tree_value_options_b.set_selected_index(-1)
                             self.tree_value_options_b.set_text('')
 
@@ -741,7 +764,7 @@ class Step_Tree_Class(ui.Widget):
                     if len(self.current_selected.children) > 0:
                         self.tree_value_b.set_disabled(True)
                         self.tree_value_options_b.set_editable(False)
-                        self.tree_value_options_b.set_options([])
+                        self.tree_value_options_b.set_options([''])
                         self.tree_value_options_b.set_selected_index(-1)
                         self.tree_value_options_b.set_text('')
                     else:
@@ -755,11 +778,9 @@ class Step_Tree_Class(ui.Widget):
                                 self.tree_value_options_b.set_editable(True)
                             else:
                                 self.tree_value_options_b.set_editable(False)
-                                self.tree_value_options_b.set_options([])
+                                self.tree_value_options_b.set_options([''])
                                 self.tree_value_options_b.set_selected_index(-1)
                                 self.tree_value_options_b.set_text('')
-
-          
 
 
 class Only_Tree_Class(ui.Widget):
@@ -958,7 +979,7 @@ class Only_Tree_Class(ui.Widget):
                         self.tree_value_options_b.set_editable(True)
                     else:
                         self.tree_value_options_b.set_editable(False)
-                        self.tree_value_options_b.set_options([])
+                        self.tree_value_options_b.set_options([''])
                         self.tree_value_options_b.set_selected_index(-1)
                         self.tree_value_options_b.set_text('')
 
@@ -969,7 +990,7 @@ class Only_Tree_Class(ui.Widget):
                     if len(self.current_selected.children) > 0:
                         self.tree_value_b.set_disabled(True)
                         self.tree_value_options_b.set_editable(False)
-                        self.tree_value_options_b.set_options([])
+                        self.tree_value_options_b.set_options([''])
                         self.tree_value_options_b.set_selected_index(-1)
                         self.tree_value_options_b.set_text('')
                     else:
@@ -979,7 +1000,7 @@ class Only_Tree_Class(ui.Widget):
                             self.tree_value_options_b.set_editable(True)
                         else:
                             self.tree_value_options_b.set_editable(False)
-                            self.tree_value_options_b.set_options([])
+                            self.tree_value_options_b.set_options([''])
                             self.tree_value_options_b.set_selected_index(-1)
                             self.tree_value_options_b.set_text('')
 
@@ -1015,9 +1036,9 @@ class Samples_info(ui.Widget):
             ui.Label(text='',style='min-height: 10px; max-height: 10px;') 
             with ui.GroupWidget(title='Project Level',style='font-size: 120% ;padding: 10px ;min-height:135px ;max-height:135px ;border: 2px solid green; border-radius: 10px;'):
                 with ui.HSplit():
-                    ui.Label(text='File Type',style='text-align: center; padding-right: 22px;')
-                    ui.Label(text='Path',style='text-align: center;padding-left: 50px;')
-                    ui.Label(text='Remove Project File',style='text-align: center;padding-left: 40px;')
+                    ui.Label(text='File Type',style='text-align: center; padding-right: 22px;text-decoration: underline green;')
+                    ui.Label(text='Path',style='text-align: center;padding-left: 50px;text-decoration: underline green;')
+                    ui.Label(text='Remove Project File',style='text-align: center;padding-left: 50px;text-decoration: underline green;')
                 ui.Label(text='',style='padding: 5px ;')  
                 with ui.Layout(style='overflow-y:auto;min-height:135px ;max-height:135px ;'):
                     self.project = ui.VSplit(style='font-size: 80%;')
@@ -1027,10 +1048,10 @@ class Samples_info(ui.Widget):
             with ui.GroupWidget( title='Sample Level',style='font-size: 120% ;padding: 5px ;min-height:245px ;max-height:245px ; border: 3px solid blue; border-radius: 10px;'):
                 with ui.HSplit():
                     #ui.Label(text='',style='max-width: 20px')
-                    ui.Label(text='Sample Name',style='text-align: center; padding-left: 30px;')
-                    ui.Label(text='File Type',style='text-align: center;padding-left: 70px;')
-                    ui.Label(text='Path',style='text-align: center;padding-left: 50px;')
-                    ui.Label(text='Remove Sample File',style='text-align: center;padding-left: 30px;')
+                    ui.Label(text='Sample Name',style='text-align: center; padding-left: 30px; text-decoration: underline blue;')
+                    ui.Label(text='File Type',style='text-align: center;padding-left: 70px; text-decoration: underline blue;')
+                    ui.Label(text='Path',style='text-align: center;padding-left: 60px; text-decoration: underline blue;')
+                    ui.Label(text='Remove Sample File',style='text-align: center;padding-left: 40px; text-decoration: underline blue;')
 
                 ui.Label(text='',style='padding: 5px ;')    
                 with ui.Layout(style='overflow-y:auto;min-height:245px ;max-height:245px ; '):
@@ -1283,15 +1304,16 @@ def setup_yaml(yaml, OrderedDict):
 
 class Run_NeatSeq_Flow(ui.Widget):
     open_filepicker = event.StringProp('', settable=True)
-    NeatSeq_bin = event.ListProp([], settable=True)
-    conda_bin = event.ListProp([], settable=True)
-    conda_env = event.ListProp([], settable=True)
-    Project_dir = event.ListProp([], settable=True)
-    sample_file = event.ListProp([], settable=True)
-    parameter_file = event.ListProp([], settable=True)
-    command = event.ListProp([], settable=True)
-    Terminal = event.StringProp('', settable=True)
-    
+    NeatSeq_bin     = event.ListProp([], settable=True)
+    conda_bin       = event.ListProp([], settable=True)
+    conda_env       = event.ListProp([], settable=True)
+    Project_dir     = event.ListProp([], settable=True)
+    sample_file     = event.ListProp([], settable=True)
+    parameter_file  = event.ListProp([], settable=True)
+    command         = event.ListProp([], settable=True)
+    Terminal        = event.StringProp('', settable=True)
+    Tags            = event.ListProp(['Run All Work-Flow'], settable=True)
+    Tag_selected    = event.StringProp('', settable=True)
 
     def init(self):
         with ui.Layout(style='padding: 30px;'):
@@ -1317,7 +1339,7 @@ class Run_NeatSeq_Flow(ui.Widget):
                                     self.parameter_file_L = ui.LineEdit(text='')
                                     self.parameter_file_b = ui.Button(text='Browse', style='max-width: 100px;')
 
-                    ui.Label(style='padding: 0px ;max-height: 35px; ')
+                    ui.Label(style='padding: 0px ;min-height: 77px; max-height: 77px; ')
                     with ui.GroupWidget(title='NeatSeq-Flow Information (For Advanced Users)', style='min-height: 230px; min-width: 250px; border: 2px solid green;'):
                         with ui.VSplit():
                            
@@ -1345,7 +1367,13 @@ class Run_NeatSeq_Flow(ui.Widget):
                     
                     with ui.HSplit():
                         self.Generate_scripts_b = ui.Button(text='Generate scripts', style='max-height: 55px; min-width: 150px; ')
-                        self.Run_scripts_b      = ui.Button(text='Run scripts', style='max-height: 55px; min-width: 130px; ')
+                        with ui.VSplit():
+                            self.Run_Tag_b      = ui.ComboBox(editable=False,
+                                                              style='font-size: 90%; max-height: 20px; min-width: 150px;',
+                                                              placeholder_text='Select Tag',
+                                                              options=self.Tags,
+                                                              selected_index=0)
+                            self.Run_scripts_b  = ui.Button(text='Run scripts', style='max-height: 20px; min-width: 150px;')
                         self.Run_Monitor_b      = ui.Button(text='Run Monitor', style='max-height: 55px; min-width: 130px;')
                         self.Kill_Run_b         = ui.Button(text='Kill Run', style='max-height: 55px; min-width: 100px;')
                         with ui.VSplit():
@@ -1357,6 +1385,7 @@ class Run_NeatSeq_Flow(ui.Widget):
                         #ui.Label(text='Terminal:',style='padding-left: 0px; padding-top: 10px; font-size: 120% ;max-height: 30px; min-height: 30px;')
                             self.label = ui.Label(style='min-height: 480px; padding: 10px ; border: 0px solid gray; border-radius: 10px;   overflow-y: auto; overflow-x: auto;')
                         #ui.Label(style='padding: 0px ; ')
+
 
     @event.reaction('conda_env')
     def conda_env_options(self, *events):
@@ -1374,7 +1403,25 @@ class Run_NeatSeq_Flow(ui.Widget):
             temp.extend(['', ''])
             self.label.set_html('<br />'.join(temp))
             #self.set_Terminal('')
-
+            
+    @event.reaction('Run_Tag_b.pointer_click')
+    def Select_Tag(self, *events):
+        for ev in events:
+            self.set_command(['Tags',self.Project_dir_L.text])
+    
+    @event.reaction('Tags')
+    def set_Tags_options(self, *events):
+        options=self.Tags
+        #options.insert(0,self.Run_Tag_b.options[0])
+        self.Run_Tag_b.set_options(options)
+    
+    @event.reaction('Run_Tag_b.selected_index')
+    def Get_Selected_Tag(self, *events):
+        if self.Run_Tag_b.selected_index!=-1:
+            self.set_Tag_selected(self.Run_Tag_b.options[self.Run_Tag_b.selected_index][0])
+        else:
+            self.set_Tag_selected('')
+    
     @event.reaction('Generate_scripts_b.pointer_click')
     def on_Generate_scripts_b_click(self, *events):
         for ev in events:
@@ -1780,6 +1827,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                    'Recovery':         lambda: self.Recovery_command(key[1]),
                    'Locate_Failures':  lambda: self.Locate_Failures_command(key[1]),
                    'Run_Monitor':      lambda: self.Run_Monitor_command(key[1]),
+                   'Tags':             lambda: self.Search_Tags(key[1]),
                    
                    }
         if key[0] in options.keys():
@@ -1891,14 +1939,23 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                         if len(line)>0:
                             self.Terminal_string = self.Terminal_string + '[Generating scripts]:  ' + line + '\n'
                 if err_flag:
-                    self.Terminal_string = self.Terminal_string + '[Generating scripts]: Finished with Error!! \n'
+                    self.Terminal_string = self.Terminal_string + '[Generating scripts] : Finished with Error!! \n'
                 self.Run.set_Terminal(self.Terminal_string)
 
             else:
                 self.Run.set_Terminal(Error)
     
-    
-    
+    def Search_Tags(self,Project_dir):
+        import os
+        if len(Project_dir) == 0:
+            Project_dir=os.getcwd()
+        if len(Project_dir) > 0:
+            dname = os.path.join(Project_dir,'scripts', 'tags_scripts')
+            if os.path.isdir(dname): 
+                options=list(map(lambda y: y.strip('.sh') ,list(filter(lambda x: x.endswith('.sh'),os.listdir(dname)))))
+                options.insert(0,self.Run.Tags[0])
+                self.Run.set_Tags(options)
+            
     def Run_scripts_command(self,Project_dir):
         import os
         from subprocess import Popen, PIPE, STDOUT, TimeoutExpired
@@ -1909,7 +1966,10 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         Error = ''
         temp_command = ''
         if len(Project_dir) > 0:
-            fname = os.path.join(Project_dir,'scripts', '00.workflow.commands.sh')
+            if self.Run.Tag_selected!=self.Run.Tags[0]:
+                fname = os.path.join(Project_dir,'scripts', 'tags_scripts',self.Run.Tag_selected+'.sh')
+            else:
+                fname = os.path.join(Project_dir,'scripts', '00.workflow.commands.sh')
             if os.path.isfile(fname): 
                 temp_command = 'bash ' + fname 
             else:
@@ -2006,8 +2066,8 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 try:
                     self.Running_Commands['Locate_Failures'] =  Run_command_in_thread(temp_command)
                     self.Running_Commands['Locate_Failures'].Run()
-                    self.Terminal_string = self.Terminal_string + '[ Locate Failures ]:   Searching for failures in the last run.. \n'
-                    self.Terminal_string = self.Terminal_string + '[ Locate Failures ]:   Click on the Recover button if you want to re-run these steps: \n'
+                    self.Terminal_string = self.Terminal_string + '[Locate Failures]:   Searching for failures in the last run.. \n'
+                    self.Terminal_string = self.Terminal_string + '[Locate Failures]:   Click on the Recover button if you want to re-run these steps: \n'
                     self.Run.set_Terminal(self.Terminal_string)
                     self.set_Locate_Failures(self.Locate_Failures+1)
 
@@ -2057,10 +2117,10 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 try:
                     self.Running_Commands['Recovery'] =  Run_command_in_thread(temp_command)
                     self.Running_Commands['Recovery'].Run()
-                    self.Terminal_string = self.Terminal_string + '[ Recovery ]:   Trying to Recover.. \n'
+                    self.Terminal_string = self.Terminal_string + '[Recovery]:   Trying to Recover.. \n'
                     self.Run.set_Terminal(self.Terminal_string)
                     self.set_Recovery(self.Recovery+1)
-                    self.Terminal_string = self.Terminal_string + '[ Recovery ]:   Click on Run Monitor to See if it Worked \n'
+                    self.Terminal_string = self.Terminal_string + '[Recovery]:   Click on Run Monitor to See if it Worked \n'
                     self.Run.set_Terminal(self.Terminal_string)
                 except :
                     pass
@@ -2068,10 +2128,10 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 # try:
                     # self.Running_Commands['Recovery'] =  Run_command_in_thread(temp_command)
                     # self.Running_Commands['Recovery'].Run()
-                    # self.Terminal_string = self.Terminal_string + '[ Recovery ]:   Trying to Recover.. \n'
+                    # self.Terminal_string = self.Terminal_string + '[Recovery]:   Trying to Recover.. \n'
                     # self.Run.set_Terminal(self.Terminal_string)
                     # self.set_Recovery(self.Recovery+1)
-                    # self.Terminal_string = self.Terminal_string + '[ Recovery ]:   Click on Run Monitor to See if it Worked \n'
+                    # self.Terminal_string = self.Terminal_string + '[Recovery]:   Click on Run Monitor to See if it Worked \n'
                     # self.Run.set_Terminal(self.Terminal_string)
                 # except :
                     # pass
@@ -2147,13 +2207,12 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                         Task_End=True
                 except Exception: 
                     stat=False
-                    print('dddd')
+                 
                 
                 if stat:
                     if (len(outs+errs)==0) and Task_End:
                         [outs, errs] = self.Running_Commands[ev.type].output()
-                        print(outs)
-                        print(len(outs))
+
                     if len(outs) > 0:
                         Title = Title + outs 
                     if len(errs) > 0: 
@@ -2166,7 +2225,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                         
                         for line in Title.split('\n'):
                             if len(line)>0:
-                                self.Terminal_string = self.Terminal_string + '[ '+ ev.type.replace('_',' ') +' ] : ' + line + '\n'
+                                self.Terminal_string = self.Terminal_string + '['+ ev.type.replace('_',' ') +']: ' + line + '\n'
                         self.Run.set_Terminal(self.Terminal_string)
 
 
@@ -2231,6 +2290,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 except:
                     samples_data = []
                     self.samples_info.set_load_samples_file([])
+                    dialite.fail('Load Error', 'Error loading sample file')
                 if len(samples_data) > 0:
                     self.update_samples_data(samples_data)
                     self.Run.set_sample_file(self.samples_info.load_samples_file)
@@ -2253,6 +2313,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 except:
                     param_data = []
                     self.step_info.set_workflow_file([])
+                    dialite.fail('Load Error', 'Error loading workflow file')
                 if len(param_data) > 0:
 
                     if 'Step_params' in param_data.keys():
@@ -2312,6 +2373,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
 
                 except:
                     err_flag=False
+                    dialite.fail('Save Error', 'Error saving workflow file')
                     
                 if err_flag:
                     self.Run.set_parameter_file(self.step_info.save_workflow_file)
@@ -2491,5 +2553,4 @@ if __name__ == '__main__':
     #icon = app.assets.add_shared_data('ico.icon', open(icon, 'rb').read())
     m = app.App(NeatSeq_Flow_GUI).launch(runtime ='app',size=(1300, 750),title='NeatSeq-Flow GUI',icon=icon)
     app.run()
-
 
