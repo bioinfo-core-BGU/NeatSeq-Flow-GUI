@@ -5,7 +5,7 @@ def package_files(directory):
     paths = []
     for (path, directories, filenames) in os.walk(directory):
         for filename in filenames:
-            paths.append((path,os.path.join( path, filename)))
+            paths.append((directories , os.path.join( path, filename)))
     return paths
 
 extra_files = package_files("neatseq_flow_gui")
