@@ -20,6 +20,7 @@ setup(
                             'bin/NeatSeq_Flow_GUI.py',
                             ],
     data_files          = [('neatseq_flow_gui',[os.path.join('neatseq_flow_gui','NeatSeq_Flow.ico')]),
+                            ('neatseq_flow_gui',[os.path.join('neatseq_flow_gui','*.*')]),
                             (os.path.join('neatseq_flow_gui','TEMPLATES'),[os.path.join('neatseq_flow_gui','TEMPLATES','MODULES_TEMPLATES.yaml')])],
     install_requires    = [
                         "pyyaml >= 3.12",
