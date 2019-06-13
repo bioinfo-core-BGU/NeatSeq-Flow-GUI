@@ -21,7 +21,7 @@ setup(
                             'bin/NeatSeq_Flow_GUI.py',
                             ],
     data_files          = [('neatseq_flow_gui',[os.path.join('neatseq_flow_gui','NeatSeq_Flow.ico')]),
-                            ('neatseq_flow_gui',glob('neatseq_flow_gui/**')),
+                            (glob('neatseq_flow_gui/**'),glob('neatseq_flow_gui/**')),
                             ('neatseq_flow_gui',glob('neatseq_flow_gui/**/*', recursive=True)),
                             (os.path.join('neatseq_flow_gui','TEMPLATES'),[os.path.join('neatseq_flow_gui','TEMPLATES','MODULES_TEMPLATES.yaml')])],
     install_requires    = [
