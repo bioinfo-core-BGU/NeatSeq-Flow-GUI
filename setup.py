@@ -1,6 +1,14 @@
 #from distutils.core import setup
 from setuptools import find_packages, setup,os
-from glob import glob
+
+def package_files(directory):
+    paths = []
+    for (path, directories, filenames) in os.walk(directory):
+        for filename in filenames:
+            paths.append(os.path.join("..", path, filename))
+    return paths
+
+extra_files = package_files("neatseq_flow_gui")
 
 setup(
     name                = 'NeatSeq-Flow GUI',
@@ -21,8 +29,7 @@ setup(
                             'bin/NeatSeq_Flow_GUI.py',
                             ],
     data_files          = [('neatseq_flow_gui',[os.path.join('neatseq_flow_gui','NeatSeq_Flow.ico')]),
-                            (glob('neatseq_flow_gui/**'),glob('neatseq_flow_gui/**')),
-                            ('neatseq_flow_gui',glob('neatseq_flow_gui/**/*', recursive=True)),
+                            ('neatseq_flow_gui',extra_files),
                             (os.path.join('neatseq_flow_gui','TEMPLATES'),[os.path.join('neatseq_flow_gui','TEMPLATES','MODULES_TEMPLATES.yaml')])],
     install_requires    = [
                         "pyyaml >= 3.12",
