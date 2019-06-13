@@ -5,10 +5,13 @@ def package_files(directory):
     paths = []
     for (path, directories, filenames) in os.walk(directory):
         for filename in filenames:
-            paths.append(os.path.join( path, filename))
+            paths.append((path,os.path.join( path, filename)))
     return paths
 
 extra_files = package_files("neatseq_flow_gui")
+#extra_files.append(('neatseq_flow_gui',[os.path.join('neatseq_flow_gui','NeatSeq_Flow.ico')]))
+#extra_files.append((os.path.join('neatseq_flow_gui','TEMPLATES'),[os.path.join('neatseq_flow_gui','TEMPLATES','MODULES_TEMPLATES.yaml')]))
+
 
 setup(
     name                = 'NeatSeq-Flow GUI',
@@ -28,9 +31,8 @@ setup(
     scripts             = ['bin/neatseq_flow_monitor.py',
                             'bin/NeatSeq_Flow_GUI.py',
                             ],
-    data_files          = [('neatseq_flow_gui',[os.path.join('neatseq_flow_gui','NeatSeq_Flow.ico')]),
-                            ('neatseq_flow_gui',extra_files),
-                            (os.path.join('neatseq_flow_gui','TEMPLATES'),[os.path.join('neatseq_flow_gui','TEMPLATES','MODULES_TEMPLATES.yaml')])],
+    data_files          = [extra_files
+                                      ],
     install_requires    = [
                         "pyyaml >= 3.12",
                         "munch",
