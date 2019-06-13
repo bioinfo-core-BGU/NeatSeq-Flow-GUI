@@ -9,6 +9,7 @@ def package_files(directory):
     return paths
 
 extra_files = package_files("neatseq_flow_gui")
+print(extra_files)
 #extra_files.append(('neatseq_flow_gui',[os.path.join('neatseq_flow_gui','NeatSeq_Flow.ico')]))
 #extra_files.append((os.path.join('neatseq_flow_gui','TEMPLATES'),[os.path.join('neatseq_flow_gui','TEMPLATES','MODULES_TEMPLATES.yaml')]))
 
