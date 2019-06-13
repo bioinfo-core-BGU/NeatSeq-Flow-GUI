@@ -4,8 +4,8 @@ from setuptools import find_packages, setup,os
 def package_files(directory):
     paths = []
     for (path, directories, filenames) in os.walk(directory):
-        for (dir ,filename) in (directories,filenames):
-            paths.append((dir , os.path.join( path, filename)))
+        for filename in filenames:
+            paths.append((  os.path.join(directory,path.split(directory)[1]) , os.path.join( path, filename)))
     return paths
 
 extra_files = package_files("neatseq_flow_gui")
