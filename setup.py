@@ -31,8 +31,8 @@ setup(
     scripts             = ['bin/neatseq_flow_monitor.py',
                             'bin/NeatSeq_Flow_GUI.py',
                             ],
-    data_files          = [extra_files
-                                      ],
+    data_files          = extra_files,
+                                      
     install_requires    = [
                         "pyyaml >= 3.12",
                         "munch",
