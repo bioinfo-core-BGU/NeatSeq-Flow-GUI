@@ -17,7 +17,8 @@ Base_Help_URL = 'https://neatseq-flow.readthedocs.io/projects/neatseq-flow-modul
 
 sys.path.append(os.path.realpath(os.path.expanduser(os.path.dirname(os.path.abspath(__file__))+os.sep+"..")))
 
-MODULES_TEMPLATES_FILE= 'https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/neatseq_flow_gui/TEMPLATES/MODULES_TEMPLATES.yaml'
+MODULES_TEMPLATES_FILE = 'https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/neatseq_flow_gui/TEMPLATES/MODULES_TEMPLATES.yaml'
+
 
 STEPS = {'Merge': {'module': 'merge', 'script_path': None  },
 
@@ -35,7 +36,7 @@ COLORS = ('#ffffff','#8DD3C7','#BEBADA','#FDBF6F',
           
 COLOR_BY = ['module','tag']
           
-CLUSTER = {'Executor': 'Local',
+CLUSTER  = {'Executor': 'Local',
            'Default_wait': '10',
            'Qsub_opts': '-cwd',
            'Qsub_path': '/path/to/qstat',
@@ -54,6 +55,10 @@ Executor = ['SGE', 'SLURM', 'Local']
 MODULES_TEMPLATES = {'Basic': {'Basic_New_Step': {'base': None, 'module': None, 'script_path': None, }}
 
                      }
+                     
+MODULE_INFO = {}
+
+
 FILE_TYPES = ['Single', 'Forward', 'Reverse', 'Nucleotide', 'Protein', 'SAM', 'BAM', 'REFERENCE', 'VCF', 'G.VCF','genes.counts','HTSeq.counts','results']
 
 FILE_TYPES_SLOTS = ['fastq.S', 'fastq.F', 'fastq.R', 'fasta.nucl', 'fasta.prot', 'sam', 'bam', 'reference', 'vcf', 'g.vcf']
@@ -585,13 +590,25 @@ class Step_Tree_Class(ui.Widget):
                 tree.set_collapsed(True)
 
     def get_options(self, key):
+        module=''
         options = {'base': lambda: filter(lambda x: x != self.current_selected.parent.text,
                                           self.Graphical_panel.Steps_Data.keys()),
                    'scope': lambda: ['sample', 'project'],
                    'File_Type' : lambda:  self.get_file_type_options(self.Graphical_panel.Steps_Data,FILE_TYPES_SLOTS)
                    
                    }
-
+        
+        temp = self.current_selected
+        while temp.parent.text!='Top_level':
+            temp = temp.parent
+        for tree in temp.children:
+            if tree.title == 'module':
+                module = tree.text
+        if module in MODULE_INFO.keys():
+            if key in MODULE_INFO[module].keys():
+                if 'options' in MODULE_INFO[module][key].keys():
+                    if isinstance(MODULE_INFO[module][key]['options'],list):
+                        return(MODULE_INFO[module][key]['options'])
         if key in options.keys():
             return options[key]()
         else:
@@ -1339,7 +1356,7 @@ class Run_NeatSeq_Flow(ui.Widget):
                                     self.parameter_file_L = ui.LineEdit(text='')
                                     self.parameter_file_b = ui.Button(text='Browse', style='max-width: 100px;')
 
-                    ui.Label(style='padding: 0px ;min-height: 77px; max-height: 77px; ')
+                    ui.Label(style='padding: 0px ;min-height: 50px; max-height: 50px; ')
                     with ui.GroupWidget(title='NeatSeq-Flow Information (For Advanced Users)', style='min-height: 230px; min-width: 250px; border: 2px solid green;'):
                         with ui.VSplit():
                            
@@ -1946,13 +1963,13 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 self.Run.set_Terminal(Error)
     
     def Search_Tags(self,Project_dir):
-        import os
+        import os,re
         if len(Project_dir) == 0:
             Project_dir=os.getcwd()
         if len(Project_dir) > 0:
             dname = os.path.join(Project_dir,'scripts', 'tags_scripts')
             if os.path.isdir(dname): 
-                options=list(map(lambda y: y.strip('.sh') ,list(filter(lambda x: x.endswith('.sh'),os.listdir(dname)))))
+                options=list(map(lambda y: re.sub('.sh','',y) ,list(filter(lambda x: x.endswith('.sh'),os.listdir(dname)))))
                 options.insert(0,self.Run.Tags[0])
                 self.Run.set_Tags(options)
             
@@ -1970,6 +1987,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 fname = os.path.join(Project_dir,'scripts', 'tags_scripts',self.Run.Tag_selected+'.sh')
             else:
                 fname = os.path.join(Project_dir,'scripts', '00.workflow.commands.sh')
+            print(fname)
             if os.path.isfile(fname): 
                 temp_command = 'bash ' + fname 
             else:
