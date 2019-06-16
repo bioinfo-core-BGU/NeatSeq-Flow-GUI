@@ -1396,11 +1396,11 @@ class Run_NeatSeq_Flow(ui.Widget):
                         with ui.VSplit():
                             self.Locate_Failures_b  = ui.Button(text='Locate Failures', style='max-height: 20px; min-width: 150px;')
                             self.Recovery_b         = ui.Button(text='Recover', style='max-height: 20px; min-width: 150px;')
-                    ui.Label(text='',style='max-height: 5px;')
+                    ui.Label(text='',style='max-height: 5px; min-height: 5px;')
                     with ui.GroupWidget(title='Terminal:',style='font-size: 120% ;border: 2px solid red;'):
-                        with ui.Layout( style='min-height: 480px; padding: 10px ;overflow-y: auto; overflow-x: auto;'):
+                        with ui.Layout( style='min-height: 480px; max-height: 480px; padding: 10px ;'):
                         #ui.Label(text='Terminal:',style='padding-left: 0px; padding-top: 10px; font-size: 120% ;max-height: 30px; min-height: 30px;')
-                            self.label = ui.Label(style='min-height: 480px; padding: 10px ; border: 0px solid gray; border-radius: 10px;   overflow-y: auto; overflow-x: auto;')
+                            self.label = ui.Label(style='max-height: 460px; min-height: 460px; padding: 10px ; border: 0px solid gray; border-radius: 10px;   overflow-y: auto; overflow-x: auto;')
                         #ui.Label(style='padding: 0px ; ')
 
 
@@ -1969,7 +1969,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         if len(Project_dir) > 0:
             dname = os.path.join(Project_dir,'scripts', 'tags_scripts')
             if os.path.isdir(dname): 
-                options=list(map(lambda y: re.sub('.sh','',y) ,list(filter(lambda x: x.endswith('.sh'),os.listdir(dname)))))
+                options=list(map(lambda y: re.sub('\.sh$','',y) ,list(filter(lambda x: x.endswith('.sh'),os.listdir(dname)))))
                 options.insert(0,self.Run.Tags[0])
                 self.Run.set_Tags(options)
             
@@ -1987,7 +1987,6 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 fname = os.path.join(Project_dir,'scripts', 'tags_scripts',self.Run.Tag_selected+'.sh')
             else:
                 fname = os.path.join(Project_dir,'scripts', '00.workflow.commands.sh')
-            print(fname)
             if os.path.isfile(fname): 
                 temp_command = 'bash ' + fname 
             else:
