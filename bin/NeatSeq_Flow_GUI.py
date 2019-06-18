@@ -17,7 +17,8 @@ Base_Help_URL = 'https://neatseq-flow.readthedocs.io/projects/neatseq-flow-modul
 
 sys.path.append(os.path.realpath(os.path.expanduser(os.path.dirname(os.path.abspath(__file__))+os.sep+"..")))
 
-MODULES_TEMPLATES_FILE= 'https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/neatseq_flow_gui/TEMPLATES/MODULES_TEMPLATES.yaml'
+MODULES_TEMPLATES_FILE = 'https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/neatseq_flow_gui/TEMPLATES/MODULES_TEMPLATES.yaml'
+
 
 STEPS = {'Merge': {'module': 'merge', 'script_path': None  },
 
@@ -35,7 +36,7 @@ COLORS = ('#ffffff','#8DD3C7','#BEBADA','#FDBF6F',
           
 COLOR_BY = ['module','tag']
           
-CLUSTER = {'Executor': 'Local',
+CLUSTER  = {'Executor': 'Local',
            'Default_wait': '10',
            'Qsub_opts': '-cwd',
            'Qsub_path': '/path/to/qstat',
@@ -54,6 +55,15 @@ Executor = ['SGE', 'SLURM', 'Local']
 MODULES_TEMPLATES = {'Basic': {'Basic_New_Step': {'base': None, 'module': None, 'script_path': None, }}
 
                      }
+                     
+MODULE_INFO = {}
+
+DEFAULT_HELP_BOX_TEXT='''This is the Help Box!
+======================
+Information about modules and module's options will be displayed here.
+-
+'''
+
 FILE_TYPES = ['Single', 'Forward', 'Reverse', 'Nucleotide', 'Protein', 'SAM', 'BAM', 'REFERENCE', 'VCF', 'G.VCF','genes.counts','HTSeq.counts','results']
 
 FILE_TYPES_SLOTS = ['fastq.S', 'fastq.F', 'fastq.R', 'fasta.nucl', 'fasta.prot', 'sam', 'bam', 'reference', 'vcf', 'g.vcf']
@@ -369,8 +379,8 @@ class Step_Tree_Class(ui.Widget):
         self.current_selected = None
         with ui.HSplit() as self.main_lay:
             with ui.VSplit(flex=0.25) as self.tree_lay:
-                with ui.GroupWidget(title='Step Editing Panel'):
-                    with ui.HSplit(flex=0.08, style='min-height: 190px; max-height: 190px;'):
+                with ui.GroupWidget(flex=0.1,title='Step Editing Panel'):
+                    with ui.HSplit(flex=0.1):
                         with ui.FormLayout(flex=0.01) as self.form:
                             self.tree_key_b = ui.LineEdit(title='Key:', text='')
                             self.tree_value_b = ui.LineEdit(title='Value:', text='')
@@ -385,12 +395,11 @@ class Step_Tree_Class(ui.Widget):
                             self.tree_duplicate_b   = ui.Button(text='Duplicate')
                             self.tree_remove_b      = ui.Button(text='Remove')
                           
-                
-                    
                 self.tree = ui.TreeWidget(flex=0.2, max_selected=1)
                 self.tree.text = 'Top_level'
-                ui.Label(text='___________________')
-                #self.Documentation = Documentation_Editor(style='border: 1px solid red;min-height: 150px;min-width: 100px; ')
+                ui.Label(text='Help box:',style='max-height: 20px; min-height: 20px;')
+                self.info = Documentation_Editor(DEFAULT_HELP_BOX_TEXT,'nocursor',False,flex=0.15,style='border: 1px solid red;min-height: 130px;min-width: 100px; ')
+
             with ui.VSplit(flex=0.6) as self.canvas_lay:
                 with ui.layouts._form.BaseTableLayout(flex=0.03, style='min-height: 70px; max-height: 75px;'):
                     with ui.HSplit():
@@ -585,13 +594,40 @@ class Step_Tree_Class(ui.Widget):
                 tree.set_collapsed(True)
 
     def get_options(self, key):
+        module=''
+        flag=True
         options = {'base': lambda: filter(lambda x: x != self.current_selected.parent.text,
                                           self.Graphical_panel.Steps_Data.keys()),
                    'scope': lambda: ['sample', 'project'],
                    'File_Type' : lambda:  self.get_file_type_options(self.Graphical_panel.Steps_Data,FILE_TYPES_SLOTS)
                    
                    }
-
+        
+        temp = self.current_selected
+        while temp.parent.text!='Top_level':
+            temp = temp.parent
+        for tree in temp.children:
+            if tree.title == 'module':
+                module = tree.text
+        if module in MODULE_INFO.keys():
+            if key in MODULE_INFO[module].keys():
+                if 'info' in MODULE_INFO[module][key].keys():
+                    if isinstance(MODULE_INFO[module][key]['info'],str):
+                        self.info.set_value(MODULE_INFO[module][key]['info'])
+                        self.info.set_load_flag(True)
+                        flag = False
+                    else:
+                        self.info.set_value(DEFAULT_HELP_BOX_TEXT)
+                        self.info.set_load_flag(True)
+                else:
+                    self.info.set_value(DEFAULT_HELP_BOX_TEXT)
+                    self.info.set_load_flag(True)
+                if 'options' in MODULE_INFO[module][key].keys():
+                    if isinstance(MODULE_INFO[module][key]['options'],list):
+                        return(MODULE_INFO[module][key]['options'])
+        if flag:
+            self.info.set_value(DEFAULT_HELP_BOX_TEXT)
+            self.info.set_load_flag(True)
         if key in options.keys():
             return options[key]()
         else:
@@ -740,6 +776,8 @@ class Step_Tree_Class(ui.Widget):
         for ev in events:
             if (ev.type == 'selected') & (ev.new_value):
                 self.current_selected = ev.source
+                if self.current_selected.parent.text=='Top_level':
+                    self.get_options('__module_info__')
                 if len(self.current_selected.title) > 0:
                     self.tree_value_b.set_text(self.current_selected.text)
                     self.tree_key_b.set_text(self.current_selected.title)
@@ -1339,7 +1377,7 @@ class Run_NeatSeq_Flow(ui.Widget):
                                     self.parameter_file_L = ui.LineEdit(text='')
                                     self.parameter_file_b = ui.Button(text='Browse', style='max-width: 100px;')
 
-                    ui.Label(style='padding: 0px ;min-height: 77px; max-height: 77px; ')
+                    ui.Label(style='padding: 0px ;min-height: 50px; max-height: 50px; ')
                     with ui.GroupWidget(title='NeatSeq-Flow Information (For Advanced Users)', style='min-height: 230px; min-width: 250px; border: 2px solid green;'):
                         with ui.VSplit():
                            
@@ -1379,11 +1417,11 @@ class Run_NeatSeq_Flow(ui.Widget):
                         with ui.VSplit():
                             self.Locate_Failures_b  = ui.Button(text='Locate Failures', style='max-height: 20px; min-width: 150px;')
                             self.Recovery_b         = ui.Button(text='Recover', style='max-height: 20px; min-width: 150px;')
-                    ui.Label(text='',style='max-height: 5px;')
+                    ui.Label(text='',style='max-height: 5px; min-height: 5px;')
                     with ui.GroupWidget(title='Terminal:',style='font-size: 120% ;border: 2px solid red;'):
-                        with ui.Layout( style='min-height: 480px; padding: 10px ;overflow-y: auto; overflow-x: auto;'):
+                        with ui.Layout( style='min-height: 480px; max-height: 480px; padding: 10px ;'):
                         #ui.Label(text='Terminal:',style='padding-left: 0px; padding-top: 10px; font-size: 120% ;max-height: 30px; min-height: 30px;')
-                            self.label = ui.Label(style='min-height: 480px; padding: 10px ; border: 0px solid gray; border-radius: 10px;   overflow-y: auto; overflow-x: auto;')
+                            self.label = ui.Label(style='max-height: 460px; min-height: 460px; padding: 10px ; border: 0px solid gray; border-radius: 10px;   overflow-y: auto; overflow-x: auto;')
                         #ui.Label(style='padding: 0px ; ')
 
 
@@ -1575,7 +1613,7 @@ class Documentation_Editor(flx.Widget):
     value = event.StringProp('', settable=True)
     load_flag = event.BoolProp(False, settable=True)
     
-    def init(self,value=Documentation):
+    def init(self,value=Documentation,readOnly=False,lineNumbers=True):
         global window
         self.set_value(value)
         # https://codemirror.net/doc/manual.html
@@ -1594,9 +1632,9 @@ class Documentation_Editor(flx.Widget):
                         indentUnit=4,
                         smartIndent=True,
                         lineWrapping=True,
-                        lineNumbers=True,
+                        lineNumbers=lineNumbers,
                         firstLineNumber=1,
-                        readOnly=False,
+                        readOnly=readOnly,
                         )
         self.cm = window.CodeMirror(self.node, options)
         
@@ -1946,13 +1984,13 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 self.Run.set_Terminal(Error)
     
     def Search_Tags(self,Project_dir):
-        import os
+        import os,re
         if len(Project_dir) == 0:
             Project_dir=os.getcwd()
         if len(Project_dir) > 0:
             dname = os.path.join(Project_dir,'scripts', 'tags_scripts')
             if os.path.isdir(dname): 
-                options=list(map(lambda y: y.strip('.sh') ,list(filter(lambda x: x.endswith('.sh'),os.listdir(dname)))))
+                options=list(map(lambda y: re.sub('\.sh$','',y) ,list(filter(lambda x: x.endswith('.sh'),os.listdir(dname)))))
                 options.insert(0,self.Run.Tags[0])
                 self.Run.set_Tags(options)
             
