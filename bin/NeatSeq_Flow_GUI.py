@@ -20,7 +20,7 @@ sys.path.append(os.path.realpath(os.path.expanduser(os.path.dirname(os.path.absp
 MODULES_TEMPLATES_FILE = 'https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/neatseq_flow_gui/TEMPLATES/MODULES_TEMPLATES.yaml'
 
 
-STEPS = {'Merge': {'module': 'merge', 'script_path': None  },
+STEPS = {'Import': {'module': 'Import', 'script_path': None  },
 
          }
 
@@ -57,6 +57,7 @@ MODULES_TEMPLATES = {'Basic': {'Basic_New_Step': {'base': None, 'module': None, 
                      }
                      
 MODULE_INFO = {}
+
 
 DEFAULT_HELP_BOX_TEXT='''This is the Help Box!
 ======================
@@ -382,9 +383,10 @@ class Step_Tree_Class(ui.Widget):
                 with ui.GroupWidget(flex=0.1,title='Step Editing Panel'):
                     with ui.HSplit(flex=0.1):
                         with ui.FormLayout(flex=0.01) as self.form:
-                            self.tree_key_b = ui.LineEdit(title='Key:', text='')
-                            self.tree_value_b = ui.LineEdit(title='Value:', text='')
-
+                            self.tree_key_b           = ui.LineEdit(title='Key:', text='')
+                            #self.tree_value_b         = ui.LineEdit(title='Value:', text='')
+                            with ui.VSplit(title='Value:',flex=0.0001):
+                                self.tree_value_b     = Documentation_Editor('',False,False,False,style='border: 1px solid gray; min-height: 50px;min-width: 100px;overflow-y: auto; ')
                             self.tree_value_options_b = ui.ComboBox(title='Value options:', editable=False, text='',
                                                                     placeholder_text='Value options:')
                             self.tree_add_option_b = ui.Button(text='Add')
@@ -398,7 +400,7 @@ class Step_Tree_Class(ui.Widget):
                 self.tree = ui.TreeWidget(flex=0.2, max_selected=1)
                 self.tree.text = 'Top_level'
                 ui.Label(text='Help box:',style='max-height: 20px; min-height: 20px;')
-                self.info = Documentation_Editor(DEFAULT_HELP_BOX_TEXT,'nocursor',False,flex=0.15,style='border: 1px solid red;min-height: 130px;min-width: 100px; ')
+                self.info = Documentation_Editor(DEFAULT_HELP_BOX_TEXT,True,False,True,flex=0.1,style='border: 1px solid red;min-height: 130px;min-width: 100px; ')
 
             with ui.VSplit(flex=0.6) as self.canvas_lay:
                 with ui.layouts._form.BaseTableLayout(flex=0.03, style='min-height: 70px; max-height: 75px;'):
@@ -495,7 +497,9 @@ class Step_Tree_Class(ui.Widget):
     def on_file_path_value_change(self, *events):
         for ev in events:
             if len(self.file_path) > 0:
-                self.tree_value_b.set_text(self.file_path[0][0])
+                self.tree_value_b.set_value(self.file_path[0][0])
+                #self.tree_value_b2.set_text(self.file_path[0][0])
+                self.tree_value_b.set_load_flag(True)
                 self.set_file_path([])
 
     @event.reaction('Graphical_panel.Selected_step')
@@ -703,8 +707,8 @@ class Step_Tree_Class(ui.Widget):
                     if self.current_selected.parent.text == 'Top_level':
                         self.update_bases(self.current_selected.text, self.tree_key_b.text)
                     if self.tree_value_b.disabled != True:
-                        if self.tree_value_b.text != '':
-                            self.current_selected.set_text(self.tree_value_b.text)
+                        if self.tree_value_b.value != '':
+                            self.current_selected.set_text(self.tree_value_b.value)
                             self.current_selected.set_title(self.tree_key_b.text)
                         else:
                             self.current_selected.set_text(self.tree_key_b.text)
@@ -719,17 +723,26 @@ class Step_Tree_Class(ui.Widget):
             if self.current_selected != None:
                 if self.tree_value_b.disabled != True:
                     if self.tree_value_options_b.text != '':
-                        if self.tree_value_b.text.lstrip('[').rstrip(']') != '':
-                            if (self.current_selected.title == 'base') or (len(self.current_selected.title) ==0 and self.current_selected.text=='base') or (self.tree_value_b.text.startswith('[') and self.tree_value_b.text.endswith(']')):
-                                self.tree_value_b.set_text('['+self.tree_value_b.text.lstrip('[').rstrip(']') + ',' + self.tree_value_options_b.text+']')
+                        if self.tree_value_b.value.lstrip('[').rstrip(']') != '':
+                            if (self.current_selected.title == 'base') or (len(self.current_selected.title) ==0 and self.current_selected.text=='base') or (self.tree_value_b.value.startswith('[') and self.tree_value_b.value.endswith(']')):
+                                self.tree_value_b.set_value('['+self.tree_value_b.value.lstrip('[').rstrip(']') + ',' + self.tree_value_options_b.text+']')
+                                self.tree_value_b.set_load_flag(True)
+                                
                             elif (self.current_selected.title == 'File_Type') or (len(self.current_selected.title) ==0 and self.current_selected.text=='File_Type'):
-                                self.tree_value_b.set_text(self.tree_value_b.text + ',' + self.tree_value_options_b.text)
+                                self.tree_value_b.set_value(self.tree_value_b.value + ',' + self.tree_value_options_b.text)
+                                self.tree_value_b.set_load_flag(True)
                             else:
-                                self.tree_value_b.set_text(self.tree_value_b.text + ' ' + self.tree_value_options_b.text)
-                        elif self.tree_value_b.text.startswith('[') and self.tree_value_b.text.endswith(']'):
-                            self.tree_value_b.set_text('['+self.tree_value_options_b.text+']')
+                                self.tree_value_b.set_value(self.tree_value_b.value + ' ' + self.tree_value_options_b.text)
+                                self.tree_value_b.set_load_flag(True)
+                                
+                        elif self.tree_value_b.value.startswith('[') and self.tree_value_b.value.endswith(']'):
+                            self.tree_value_b.set_value('['+self.tree_value_options_b.text+']')
+                            self.tree_value_b.set_load_flag(True)
+                            
                         else:
-                            self.tree_value_b.set_text(self.tree_value_options_b.text)
+                            self.tree_value_b.set_value(self.tree_value_options_b.text)
+                            self.tree_value_b.set_load_flag(True)
+                            
     @event.reaction('tree_new_b.pointer_click')
     def tree_new_button_click(self, *events):
         for ev in events:
@@ -774,12 +787,13 @@ class Step_Tree_Class(ui.Widget):
                     'tree.children**.collapsed')
     def on_event(self, *events):
         for ev in events:
-            if (ev.type == 'selected') & (ev.new_value):
+            if (ev.type == 'selected') :#& (ev.new_value):
                 self.current_selected = ev.source
                 if self.current_selected.parent.text=='Top_level':
                     self.get_options('__module_info__')
                 if len(self.current_selected.title) > 0:
-                    self.tree_value_b.set_text(self.current_selected.text)
+                    self.tree_value_b.set_value(self.current_selected.text)
+                    self.tree_value_b.set_load_flag(True)
                     self.tree_key_b.set_text(self.current_selected.title)
                     self.tree_value_b.set_disabled(False)
                     if self.get_options(self.current_selected.title) != None:
@@ -798,7 +812,10 @@ class Step_Tree_Class(ui.Widget):
 
                 else:
                     self.tree_key_b.set_text(self.current_selected.text)
-                    self.tree_value_b.set_text('')
+                    self.tree_value_b.set_value('')
+                    self.tree_value_b.set_load_flag(True)
+
+                    
                     if len(self.current_selected.children) > 0:
                         self.tree_value_b.set_disabled(True)
                         self.tree_value_options_b.set_editable(False)
@@ -1332,6 +1349,29 @@ def Load_MODULES_TEMPLATES():
     except:
         return {}
 
+def Update_Yaml_Data(remote_file,local_directory, file,Message=''):
+    import yaml, os, inspect
+    import urllib.request
+
+    location = os.path.dirname(os.path.abspath(inspect.getsourcefile(lambda: 0)))
+    location = os.path.expanduser(location+os.sep+"..")
+    
+    local_FILE = os.path.abspath(os.path.join(location, 'neatseq_flow_gui', local_directory, file))
+    try:
+        urllib.request.urlretrieve(remote_file,local_FILE)
+        print( Message +" File was Updated Successfully!")
+    except:
+        print( Message +" File could not be Updated")
+    
+    try:
+
+        with open(local_FILE, 'rb') as infile:
+            Yaml_Data = yaml.load(infile, yaml.SafeLoader)
+            return Yaml_Data
+
+    except:
+        return {}
+
 
 def setup_yaml(yaml, OrderedDict):
     """ http://stackoverflow.com/a/8661021 """
@@ -1610,12 +1650,18 @@ class Documentation_Editor(flx.Widget):
     }
     
     """
-    value = event.StringProp('', settable=True)
+    value     = event.StringProp('', settable=True)
     load_flag = event.BoolProp(False, settable=True)
+    text      = event.StringProp('', settable=True)
+    multiline = event.BoolProp(True, settable=True)
+    disabled  = event.BoolProp(False, settable=True)
+    readOnly  = event.BoolProp(False, settable=True)
     
-    def init(self,value=Documentation,readOnly=False,lineNumbers=True):
+    def init(self,value=Documentation,readOnly=False,lineNumbers=True,multiline=True):
         global window
         self.set_value(value)
+        self.set_multiline(multiline)
+        self.set_readOnly(readOnly)
         # https://codemirror.net/doc/manual.html
         options = dict(value=self.value,
                         mode='markdown',
@@ -1637,7 +1683,7 @@ class Documentation_Editor(flx.Widget):
                         readOnly=readOnly,
                         )
         self.cm = window.CodeMirror(self.node, options)
-        
+        self.set_load_flag(True)
         
     @flx.reaction('size')
     def __on_size(self, *events):
@@ -1645,17 +1691,40 @@ class Documentation_Editor(flx.Widget):
         
     @flx.reaction('key_down')
     def __update_text(self, *events):
-        self.cm.refresh()
-        self.set_value(self.cm.getValue())
+        if self.multiline:
+            self.cm.refresh()
+            self.set_value(self.cm.getValue())
+        else:
+            if events[0].key=='Enter':
+                pos=self.cm.getCursor()
+                self.cm.setValue(self.value)
+                self.cm.setCursor(pos)
+                self.cm.refresh()
+            else:
+                self.cm.refresh()
+                self.set_value(self.cm.getValue())
         
     @flx.reaction('load_flag')
     def __load_text(self, *events):
         if self.load_flag:
             self.cm.setValue(self.value)
             self.cm.refresh()
-            self.set_value(self.cm.getValue())
             self.set_load_flag(False)
-        
+            
+    
+    @flx.reaction('disabled')
+    def disable(self, *events):
+        if self.disabled:
+            self.cm.setOption('readOnly',self.disabled)
+            self.cm.setOption('theme','solarized dark')
+            self.cm.setOption('styleActiveLine',False)
+            self.set_value('')
+            self.set_load_flag(True)
+        else:
+            if self.readOnly==False:
+                self.cm.setOption('readOnly',self.disabled)
+            self.cm.setOption('theme','default')
+            self.cm.setOption('styleActiveLine',True)
         
 class NeatSeq_Flow_GUI(app.PyComponent):
     CSS = """
@@ -1817,7 +1886,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
             self.TabLayout.set_capture_mouse(2)
             self.TabLayout2.set_capture_mouse(2)
             self.Terminal_string = ''
-
+            
     # @event.reaction('label.pointer_move')
     # def on_label_move(self, *events):
         # self.label.set_flex(0.2)
@@ -2584,11 +2653,13 @@ class Run_command_in_thread(object):
         return [ out , err]
     
 if __name__ == '__main__':
-    temp_MODULES_TEMPLATES = Load_MODULES_TEMPLATES()
+    #temp_MODULES_TEMPLATES = Load_MODULES_TEMPLATES()
+    temp_MODULES_TEMPLATES = Update_Yaml_Data(MODULES_TEMPLATES_FILE,'TEMPLATES', 'MODULES_TEMPLATES.yaml',"Modules Templates")
     if len(temp_MODULES_TEMPLATES) > 0:
         MODULES_TEMPLATES = temp_MODULES_TEMPLATES
     icon=os.path.join(os.path.realpath(os.path.expanduser(os.path.dirname(os.path.abspath(__file__))+os.sep+"..")),'neatseq_flow_gui','NeatSeq_Flow.ico')
     #icon = app.assets.add_shared_data('ico.icon', open(icon, 'rb').read())
     m = app.App(NeatSeq_Flow_GUI).launch(runtime ='app',size=(1300, 750),title='NeatSeq-Flow GUI',icon=icon)
     app.run()
+
 
