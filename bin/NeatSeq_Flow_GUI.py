@@ -58,7 +58,6 @@ MODULES_TEMPLATES = {'Basic': {'Basic_New_Step': {'base': None, 'module': None, 
                      
 MODULE_INFO = {}
 
-
 DEFAULT_HELP_BOX_TEXT='''This is the Help Box!
 ======================
 Information about modules and module's options will be displayed here.
@@ -1522,7 +1521,7 @@ class Run_NeatSeq_Flow(ui.Widget):
             self.set_command(['Recovery',self.Project_dir_L.text])
     
     @event.reaction('Locate_Failures_b.pointer_click')
-    def on_Recovery_b_click(self, *events):
+    def on_Locate_Failures_click(self, *events):
         for ev in events:
             self.set_command(['Locate_Failures',self.Project_dir_L.text])
     
@@ -2661,5 +2660,4 @@ if __name__ == '__main__':
     #icon = app.assets.add_shared_data('ico.icon', open(icon, 'rb').read())
     m = app.App(NeatSeq_Flow_GUI).launch(runtime ='app',size=(1300, 750),title='NeatSeq-Flow GUI',icon=icon)
     app.run()
-
 
