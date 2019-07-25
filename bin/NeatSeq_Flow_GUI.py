@@ -399,7 +399,7 @@ class Step_Tree_Class(ui.Widget):
                 self.tree = ui.TreeWidget(flex=0.2, max_selected=1)
                 self.tree.text = 'Top_level'
                 ui.Label(text='Help box:',style='max-height: 20px; min-height: 20px;')
-                self.info = Documentation_Editor(DEFAULT_HELP_BOX_TEXT,True,False,True,flex=0.1,style='border: 1px solid red;min-height: 130px;min-width: 100px; ')
+                self.info = Documentation_Editor(DEFAULT_HELP_BOX_TEXT,True,False,True,flex=0.01,style='border: 1px solid red;min-height: 50px;min-width: 100px; ')
 
             with ui.VSplit(flex=0.6) as self.canvas_lay:
                 with ui.layouts._form.BaseTableLayout(flex=0.03, style='min-height: 70px; max-height: 75px;'):
