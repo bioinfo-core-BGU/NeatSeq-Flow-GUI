@@ -216,12 +216,12 @@ class nsfgm:
                 else:
                     runlog_Data["State"]=''
                 
-                if 'Job ID' in runlog_Data.columns:
-                    PID = self.get_PID()
-                    if len(PID)>0:
-                        runlog_Data = runlog_Data.merge(PID,how='left',on='Job ID')
-                        runlog_Data.loc[~runlog_Data["PID_State"].isnull(),"State"]='running'
-                        runlog_Data = runlog_Data.drop('PID_State',axis=1)
+                    if 'Job ID' in runlog_Data.columns:
+                        PID = self.get_PID()
+                        if len(PID)>0:
+                            runlog_Data = runlog_Data.merge(PID,how='left',on='Job ID')
+                            runlog_Data.loc[~runlog_Data["PID_State"].isnull(),"State"]='running'
+                            runlog_Data = runlog_Data.drop('PID_State',axis=1)
                     
                 # get only the data for the chosen step
                 runlog_Data=runlog_Data.loc[runlog_Data["Instance"]==Instance,].copy()
@@ -284,12 +284,12 @@ class nsfgm:
                 runlog_Data["State"]=''
                 
             
-            if 'Job ID' in runlog_Data.columns:
-                PID = self.get_PID()
-                if len(PID)>0:
-                    runlog_Data = runlog_Data.merge(PID,how='left',on='Job ID')
-                    runlog_Data.loc[~runlog_Data["PID_State"].isnull(),"State"]='running'
-                    runlog_Data = runlog_Data.drop('PID_State',axis=1)
+                if 'Job ID' in runlog_Data.columns:
+                    PID = self.get_PID()
+                    if len(PID)>0:
+                        runlog_Data = runlog_Data.merge(PID,how='left',on='Job ID')
+                        runlog_Data.loc[~runlog_Data["PID_State"].isnull(),"State"]='running'
+                        runlog_Data = runlog_Data.drop('PID_State',axis=1)
                 
             logpiv=logpiv.join(runlog_Data.groupby("Instance")["State"].apply(lambda x:list(x).count("running")),how="left", rsuffix='running')            
 
