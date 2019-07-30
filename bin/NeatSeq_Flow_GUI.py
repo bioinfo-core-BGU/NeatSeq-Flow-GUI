@@ -2652,11 +2652,27 @@ class Run_command_in_thread(object):
         return [ out , err]
 
 if __name__ == '__main__':
+    #getting arguments from the user 
+    import argparse
+    parser = argparse.ArgumentParser(description='NeatSeq-Flow GUI By Liron Levin ')
+    parser.add_argument('--Server',dest='Server',action='store_true',
+                        help='Run as Server')
+    args = parser.parse_args()
+    
+    
     #temp_MODULES_TEMPLATES = Load_MODULES_TEMPLATES()
     temp_MODULES_TEMPLATES = Update_Yaml_Data(MODULES_TEMPLATES_FILE,'TEMPLATES', 'MODULES_TEMPLATES.yaml',"Modules Templates")
     if len(temp_MODULES_TEMPLATES) > 0:
         MODULES_TEMPLATES = temp_MODULES_TEMPLATES
     icon=os.path.join(os.path.realpath(os.path.expanduser(os.path.dirname(os.path.abspath(__file__))+os.sep+"..")),'neatseq_flow_gui','NeatSeq_Flow.ico')
     #icon = app.assets.add_shared_data('ico.icon', open(icon, 'rb').read())
-    m = app.App(NeatSeq_Flow_GUI).launch(runtime ='app',size=(1300, 750),title='NeatSeq-Flow GUI',icon=icon)
-    app.run()
+    if args.Server:
+        import socket
+        m = app.App(NeatSeq_Flow_GUI)
+        app.create_server(host=socket.gethostbyname(socket.gethostname()))
+        m.serve('')
+        flx.start()
+    else:
+        m = app.App(NeatSeq_Flow_GUI).launch(runtime ='app',size=(1300, 750),title='NeatSeq-Flow GUI',icon=icon)
+        app.run()
+
