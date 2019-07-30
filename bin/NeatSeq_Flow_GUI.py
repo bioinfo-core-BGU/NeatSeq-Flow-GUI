@@ -2271,6 +2271,8 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                             help='Progress Bar Spacer [default=Space]')
         parser.add_argument('--Bar_len',metavar="INT",type=int,dest='Bar_len',default=40,
                             help='Progress Bar Total Length [in chars] [default=40]')
+        parser.add_argument('--Server',dest='Server',action='store_true',
+                            help='Run as Server')
         args = parser.parse_args()
         if len(Project_dir) > 0:
             self.Terminal_string = self.Terminal_string + 'Running Monitor...\n'
@@ -2675,4 +2677,3 @@ if __name__ == '__main__':
     else:
         m = app.App(NeatSeq_Flow_GUI).launch(runtime ='app',size=(1300, 750),title='NeatSeq-Flow GUI',icon=icon)
         app.run()
-
