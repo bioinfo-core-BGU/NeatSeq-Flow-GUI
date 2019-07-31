@@ -104,7 +104,7 @@ import pandas as pd
 import sys, time, os ,re
 from datetime import datetime
 from multiprocessing import Process, Queue
-
+import socket
 
 SCREEN_W     = 200
 SCREEN_H     = 100
@@ -112,6 +112,8 @@ VERSION      = "v1.3"
 PARAM_LIST   = ["Dir"]
 __author__   = "Liron Levin"
 jid_name_sep = '..'
+LOCAL_HOST   = socket.gethostname()
+
 class nsfgm:
 #  Main class for neatseq-flow Log file parser
     #Function for setting the main directory [the pipeline run location]
@@ -217,11 +219,13 @@ class nsfgm:
                     runlog_Data["State"]=''
                 
                     if 'Job ID' in runlog_Data.columns:
-                        PID = self.get_PID()
-                        if len(PID)>0:
-                            runlog_Data = runlog_Data.merge(PID,how='left',on='Job ID')
-                            runlog_Data.loc[~runlog_Data["PID_State"].isnull(),"State"]='running'
-                            runlog_Data = runlog_Data.drop('PID_State',axis=1)
+                        if len(set(runlog_Data["Host"]))==1:
+                            if list(set(runlog_Data["Host"]))[0]==LOCAL_HOST:
+                                PID = self.get_PID()
+                                if len(PID)>0:
+                                    runlog_Data = runlog_Data.merge(PID,how='left',on='Job ID')
+                                    runlog_Data.loc[~runlog_Data["PID_State"].isnull(),"State"]='running'
+                                    runlog_Data = runlog_Data.drop('PID_State',axis=1)
                     
                 # get only the data for the chosen step
                 runlog_Data=runlog_Data.loc[runlog_Data["Instance"]==Instance,].copy()
@@ -283,13 +287,15 @@ class nsfgm:
             else:
                 runlog_Data["State"]=''
                 
-            
+                
                 if 'Job ID' in runlog_Data.columns:
-                    PID = self.get_PID()
-                    if len(PID)>0:
-                        runlog_Data = runlog_Data.merge(PID,how='left',on='Job ID')
-                        runlog_Data.loc[~runlog_Data["PID_State"].isnull(),"State"]='running'
-                        runlog_Data = runlog_Data.drop('PID_State',axis=1)
+                    if len(set(runlog_Data["Host"]))==1:
+                        if list(set(runlog_Data["Host"]))[0]==LOCAL_HOST:
+                            PID = self.get_PID()
+                            if len(PID)>0:
+                                runlog_Data = runlog_Data.merge(PID,how='left',on='Job ID')
+                                runlog_Data.loc[~runlog_Data["PID_State"].isnull(),"State"]='running'
+                                runlog_Data = runlog_Data.drop('PID_State',axis=1)
                 
             logpiv=logpiv.join(runlog_Data.groupby("Instance")["State"].apply(lambda x:list(x).count("running")),how="left", rsuffix='running')            
 
