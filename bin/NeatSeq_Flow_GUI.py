@@ -1605,7 +1605,6 @@ from flexx import flx
 
 #base_url = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.46.0/'
 base_url =  os.path.join(os.path.realpath(os.path.expanduser(os.path.dirname(os.path.abspath(__file__))+os.sep+"..")),'neatseq_flow_gui','Codemirror')
-# base_url =  '/gpfs0/bioinfo/apps/Miniconda2/Miniconda_v4.3.21/envs/NeatSeq_Flow_devel/neatseq_flow_gui/Codemirror/'
 # flx.assets.associate_asset(__name__, base_url + 'codemirror.css')
 # flx.assets.associate_asset(__name__, base_url + 'codemirror.js')
 # flx.assets.associate_asset(__name__, base_url + 'mode/markdown/markdown.js')
