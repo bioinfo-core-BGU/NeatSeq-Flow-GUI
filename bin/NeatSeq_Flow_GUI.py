@@ -1060,6 +1060,7 @@ class Only_Tree_Class(ui.Widget):
 
 
 
+
 class Samples_info(ui.Widget):
     open_filepicker = event.StringProp('', settable=True)
     project_files = event.ListProp([], settable=True)
@@ -1082,34 +1083,55 @@ class Samples_info(ui.Widget):
                     with ui.VSplit():
                         self.load_sample_file_b = ui.Button(text='Load Sample File')
                         self.save_sample_file_b = ui.Button(text='Save Sample File')
-            ui.Label(text='',style='min-height: 10px; max-height: 10px;')
-            with ui.GroupWidget(title='Edit Project Title',style='font-size: 120%; border: 2px solid purple; min-height: 50px; max-height: 50px;' ):
+            ui.Label(text='',style='min-height: 5px; max-height: 5px;')
+            with ui.GroupWidget(title='Edit Project Title',style='font-size: 120%; border: 2px solid purple; min-height: 40px; max-height: 40px;' ):
                 self.tree_title_b = ui.LineEdit(text='', style = 'font-size: 80%; border: 1px solid red;max-height: 30px;',
                                                 placeholder_text='Project Title')
-            #ui.Label(text='Project Level:',style='padding-left: 20px; font-size: 120% ;')
-            ui.Label(text='',style='min-height: 10px; max-height: 10px;')
+            
+            ui.Label(text='',style='min-height: 5px; max-height: 5px;')
             with ui.GroupWidget(title='Project Level',style='font-size: 120% ;padding: 10px ;min-height:135px ;max-height:135px ;border: 2px solid green; border-radius: 10px;'):
-                with ui.HSplit():
-                    ui.Label(text='File Type',style='text-align: center; padding-right: 22px;text-decoration: underline green;')
-                    ui.Label(text='Path',style='text-align: center;padding-left: 50px;text-decoration: underline green;')
-                    ui.Label(text='Remove Project File',style='text-align: center;padding-left: 50px;text-decoration: underline green;')
-                ui.Label(text='',style='padding: 5px ;')
-                with ui.Layout(style='overflow-y:auto;min-height:135px ;max-height:135px ;'):
-                    self.project = ui.VSplit(style='font-size: 80%;')
+                 with ui.VSplit():
+                    with ui.HFix():
+                        ui.LineEdit(text='File Type',
+                                    disabled=True,
+                                    style='background: SeaShell  ; text-align: center;border-radius: 0px; text-decoration: max-height:30px;')
+                        ui.LineEdit(text='Path',
+                                    disabled=True,
+                                    style='background: SeaShell  ; text-align: center;border-radius: 0px; text-decoration: max-height:30px;')
+                        ui.LineEdit(text='Remove Project File',
+                                    disabled=True,
+                                    style='background: SeaShell  ; text-align: center;border-radius: 0px; text-decoration: max-height:30px;')
+                        ui.LineEdit(text='',
+                                    disabled=True,
+                                    style='background: SeaShell  ; text-align: center;border-radius: 0px; text-decoration: max-height:30px; max-width:7px;')
 
-            ui.Label(text='',style='min-height: 10px; max-height: 10px;')
-            #ui.Label(text='Sample Level:',style='padding-left: 20px; font-size: 120% ;')
-            with ui.GroupWidget( title='Sample Level',style='font-size: 120% ;padding: 5px ;min-height:245px ;max-height:245px ; border: 3px solid blue; border-radius: 10px;'):
-                with ui.HSplit():
-                    #ui.Label(text='',style='max-width: 20px')
-                    ui.Label(text='Sample Name',style='text-align: center; padding-left: 30px; text-decoration: underline blue;')
-                    ui.Label(text='File Type',style='text-align: center;padding-left: 70px; text-decoration: underline blue;')
-                    ui.Label(text='Path',style='text-align: center;padding-left: 60px; text-decoration: underline blue;')
-                    ui.Label(text='Remove Sample File',style='text-align: center;padding-left: 40px; text-decoration: underline blue;')
+                    #ui.Label(text='',style='padding: 5px ;')
+                    with ui.Layout(style='overflow-y:scroll;min-height:135px ;max-height:135px ;'):
+                        self.project = ui.VSplit(style='font-size: 80%;')
 
-                ui.Label(text='',style='padding: 5px ;')
-                with ui.Layout(style='overflow-y:auto;min-height:245px ;max-height:245px ; '):
-                    self.sample = ui.VSplit(style='font-size: 80%;')
+            ui.Label(text='',style='min-height: 5px; max-height: 5px;')
+            with ui.GroupWidget( title='Sample Level',style=' font-size: 120% ;padding: 5px ;min-height:180px ;max-height:180px ; border: 3px solid blue; border-radius: 10px;'):
+                with ui.VSplit():
+                    with ui.HFix():
+                        ui.LineEdit(text='Sample Name',
+                                    disabled=True,
+                                    style='background: Lavender  ; text-align: center;border-radius: 0px; text-decoration: max-height:30px;')
+                        ui.LineEdit(text='File Type',
+                                    disabled=True,
+                                    style='background: Lavender  ; text-align: center;border-radius: 0px; text-decoration: max-height:30px;')
+                        ui.LineEdit(text='Path',
+                                    disabled=True,
+                                    style='background: Lavender  ; text-align: center;border-radius: 0px; text-decoration: max-height:30px;')
+                        ui.LineEdit(text='Remove Sample File',
+                                    disabled=True,
+                                    style='background: Lavender  ; text-align: center;border-radius: 0px; text-decoration: max-height:30px;')
+                        ui.LineEdit(text='',
+                                    disabled=True,
+                                    style='background: Lavender  ; text-align: center;border-radius: 0px; text-decoration: max-height:30px; max-width:7px;')
+
+                    
+                    with ui.Layout(style='overflow-y:scroll;min-height:180px ;max-height:180px ; '):
+                        self.sample = ui.VSplit(style='font-size: 80%;')
 
             self.project.spacer = None
             self.sample.spacer = None
@@ -1164,7 +1186,7 @@ class Samples_info(ui.Widget):
         sample_data = {'Title': self.tree_title_b.text,
                        'project_data': {}}
         for project in self.project.children:
-            if project.id.startswith('HBox'):
+            if project.id.startswith('HFix'):
                 project_file_type = project.file_type.text
                 project_file_path = project.file_path.text
                 if project_file_type != '':
@@ -1173,7 +1195,7 @@ class Samples_info(ui.Widget):
                     else:
                         sample_data['project_data'][project_file_type] = [project_file_path]
         for samples in self.sample.children:
-            if samples.id.startswith('HBox'):
+            if samples.id.startswith('HFix'):
                 sample_name = samples.sample_name.text
                 sample_file_type = samples.sample_file_type.text
                 sample_file_path = samples.sample_file_path.text
@@ -1192,23 +1214,23 @@ class Samples_info(ui.Widget):
         with self.sample:
             if self.sample.spacer != None:
                 self.sample.spacer.dispose()
-            with ui.HBox(padding=0) as sample:
-                sample.sample_name = ui.LineEdit(placeholder_text='Sample Name', text=sample_name)
+            with ui.HFix(padding=3,spacing=5) as sample:
+                sample.sample_name      = ui.LineEdit(placeholder_text='Sample Name', text=sample_name)
                 sample.sample_file_type = ui.ComboBox(placeholder_text='File Type', editable=True, text=file_type,
                                                       options=FILE_TYPES)
                 sample.sample_file_path = ui.LineEdit(placeholder_text='File Path', text=file_path)
-                ui.Button(text='Remove')
+                ui.Button(text='Remove',style='border-radius: 0px;')
             self.sample.spacer = ui.Label(flex=0.1, text='_')
 
     def add_project_file(self, file_path='', file_type=''):
         with self.project:
             if self.project.spacer != None:
                 self.project.spacer.dispose()
-            with ui.HBox(padding=0) as project:
+            with ui.HFix(padding=3,spacing=5) as project:
                 project.file_type = ui.ComboBox(placeholder_text='File Type', editable=True, text=file_type,
                                                 options=FILE_TYPES)
                 project.file_path = ui.LineEdit(placeholder_text='File Path', text=file_path)
-                ui.Button(text='Remove')
+                ui.Button(text='Remove',style='border-radius: 0px;')
 
             self.project.spacer = ui.Label(flex=0.1, text='_')
 
