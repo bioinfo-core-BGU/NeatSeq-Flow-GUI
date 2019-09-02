@@ -107,6 +107,7 @@ class Graphical_panel(ui.CanvasWidget):
     refresh_flag     = event.BoolProp(False, settable=True)
     Step_Colors      = event.DictProp({}, settable=True)
     color_by_option  = event.StringProp('', settable=True)
+    Steps_Order      = event.DictProp({},settable=True)
 
     def init(self):
 
@@ -267,6 +268,7 @@ class Graphical_panel(ui.CanvasWidget):
         self.step_order = self.calculate_steps_order(steps_conections, first, 0, step_order)
         self.steps_conections = steps_conections
         self.first_step = first
+        self.set_Steps_Order(self.step_order)
 
     def create_Button(self, Button_name, parent, pos, color='white'):
         Button_id = 'Button' + str(self.Button_count)
@@ -398,6 +400,7 @@ class Step_Tree_Class(ui.Widget):
 
                 self.tree = ui.TreeWidget(flex=0.2, max_selected=1)
                 self.tree.text = 'Top_level'
+                self.Order_Steps_b  = ui.Button(text='Order Steps',style='font-size: 80%;')
                 ui.Label(text='Help box:',style='max-height: 20px; min-height: 20px;')
                 self.info = Documentation_Editor(DEFAULT_HELP_BOX_TEXT,True,False,True,flex=0.01,style='border: 1px solid red;min-height: 50px;min-width: 100px; ')
 
@@ -426,6 +429,25 @@ class Step_Tree_Class(ui.Widget):
                 with self.tree:
                     self.create_tree(self.Graphical_panel.Steps_Data)
                     self.collapse_all_not_selectd(self.tree)
+
+    @event.reaction('Order_Steps_b.pointer_click')
+    def change_order(self):
+        order=list()
+        new_Dict={}
+        if len(self.Graphical_panel.Steps_Order.keys())>0:
+            data=self.tree2dict_for_export(self.tree)
+            for key in self.Graphical_panel.Steps_Order.keys():
+                order.extend(self.Graphical_panel.Steps_Order[key])
+            for key in order:
+                if isinstance(data[key], dict):
+                    new_Dict[key]=dict(data[key])
+                else:
+                    new_Dict[key]=data[key]
+                
+            self.clean_steps_tree_info_Widget()
+            with self.tree:
+                self.create_tree(new_Dict)
+                self.collapse_all_not_selectd(self.tree)
 
     @event.reaction('Color_by_b.selected_index')
     def Color_Steps_by(self, *events):
@@ -1072,8 +1094,8 @@ class Samples_info(ui.Widget):
     converter = event.DictProp({}, settable=True)
 
     def init(self):
-        with ui.VSplit(flex=0.1, padding=20) as self.layout:
-            with ui.layouts._form.BaseTableLayout(flex=0.05, style='min-height: 70px; max-height: 70px;'):
+        with ui.VSplit( padding=20,spacing=20) as self.layout:
+            with ui.layouts._form.BaseTableLayout( style='min-height: 70px; max-height: 70px;'):
                 with ui.HSplit(style='min-height: 70px; max-height: 70px;'):
 
                     with ui.GroupWidget(title='Project Level File/s',style='border: 2px solid green;' ):
@@ -1083,15 +1105,15 @@ class Samples_info(ui.Widget):
                     with ui.VSplit():
                         self.load_sample_file_b = ui.Button(text='Load Sample File')
                         self.save_sample_file_b = ui.Button(text='Save Sample File')
-            ui.Label(text='',style='min-height: 5px; max-height: 5px;')
+            #ui.Label(text='',style='min-height: 5px; max-height: 5px;')
             with ui.GroupWidget(title='Edit Project Title',style='font-size: 120%; border: 2px solid purple; min-height: 40px; max-height: 40px;' ):
                 self.tree_title_b = ui.LineEdit(text='', style = 'font-size: 80%; border: 1px solid red;max-height: 30px;',
                                                 placeholder_text='Project Title')
             
             ui.Label(text='',style='min-height: 5px; max-height: 5px;')
-            with ui.GroupWidget(title='Project Level',style='font-size: 120% ;padding: 10px ;min-height:135px ;max-height:135px ;border: 2px solid green; border-radius: 10px;'):
+            with ui.GroupWidget(title='Project Level',style='font-size: 120% ;padding: 10px ;border: 2px solid green; border-radius: 10px;'):
                  with ui.VSplit():
-                    with ui.HFix():
+                    with ui.HFix(style='max-height:30px;overflow-y:scroll;'):
                         ui.LineEdit(text='File Type',
                                     disabled=True,
                                     style='background: SeaShell  ; text-align: center;border-radius: 0px; text-decoration: max-height:30px;')
@@ -1101,18 +1123,18 @@ class Samples_info(ui.Widget):
                         ui.LineEdit(text='Remove Project File',
                                     disabled=True,
                                     style='background: SeaShell  ; text-align: center;border-radius: 0px; text-decoration: max-height:30px;')
-                        ui.LineEdit(text='',
-                                    disabled=True,
-                                    style='background: SeaShell  ; text-align: center;border-radius: 0px; text-decoration: max-height:30px; max-width:7px;')
+                        # ui.LineEdit(text='',
+                                    # disabled=True,
+                                    # style='background: SeaShell  ; text-align: center;border-radius: 0px; text-decoration: max-height:30px; max-width:7px;')
 
                     #ui.Label(text='',style='padding: 5px ;')
-                    with ui.Layout(style='overflow-y:scroll;min-height:135px ;max-height:135px ;'):
-                        self.project = ui.VSplit(style='font-size: 80%;')
+                    with ui.Layout(style='overflow-y:scroll;'):#min-height:135px ;max-height:135px ;'):
+                        self.project = ui.VFix(style='font-size: 80%;')
 
-            ui.Label(text='',style='min-height: 5px; max-height: 5px;')
-            with ui.GroupWidget( title='Sample Level',style=' font-size: 120% ;padding: 5px ;min-height:180px ;max-height:180px ; border: 3px solid blue; border-radius: 10px;'):
+            #ui.Label(text='',style='min-height: 5px; max-height: 5px;')
+            with ui.GroupWidget( title='Sample Level',style=' font-size: 120% ;padding: 5px ; border: 3px solid blue; border-radius: 10px;'):
                 with ui.VSplit():
-                    with ui.HFix():
+                    with ui.HFix(style='max-height:30px;overflow-y:scroll;'):
                         ui.LineEdit(text='Sample Name',
                                     disabled=True,
                                     style='background: Lavender  ; text-align: center;border-radius: 0px; text-decoration: max-height:30px;')
@@ -1125,17 +1147,17 @@ class Samples_info(ui.Widget):
                         ui.LineEdit(text='Remove Sample File',
                                     disabled=True,
                                     style='background: Lavender  ; text-align: center;border-radius: 0px; text-decoration: max-height:30px;')
-                        ui.LineEdit(text='',
-                                    disabled=True,
-                                    style='background: Lavender  ; text-align: center;border-radius: 0px; text-decoration: max-height:30px; max-width:7px;')
+                        # ui.LineEdit(text='',
+                                    # disabled=True,
+                                    # style='background: Lavender  ; text-align: center;border-radius: 0px; text-decoration: max-height:30px; max-width:7px;')
 
                     
-                    with ui.Layout(style='overflow-y:scroll;min-height:180px ;max-height:180px ; '):
-                        self.sample = ui.VSplit(style='font-size: 80%;')
+                    with ui.Layout(style='overflow-y:scroll;'):
+                        self.sample = ui.VFix(style='font-size: 80%;')
 
             self.project.spacer = None
             self.sample.spacer = None
-            ui.Label(flex=0.1, text='')
+            #ui.Label(flex=0.1, text='')
 
     def uncorrect_dict(self, dic, converer):
         if isinstance(dic, dict):
@@ -1413,8 +1435,10 @@ class Run_NeatSeq_Flow(ui.Widget):
     Terminal        = event.StringProp('', settable=True)
     Tags            = event.ListProp(['Run All Work-Flow'], settable=True)
     Tag_selected    = event.StringProp('', settable=True)
-
-    def init(self):
+    jump2monitortab = event.StringProp('None', settable=True)
+    
+    def init(self,Server):
+        self.Server = Server
         with ui.Layout(style='padding: 30px;'):
             with ui.HSplit():
                 with ui.VSplit():
@@ -1551,7 +1575,10 @@ class Run_NeatSeq_Flow(ui.Widget):
     @event.reaction('Run_Monitor_b.pointer_click')
     def on_Run_Monitor_b_click(self, *events):
         for ev in events:
-            self.set_command(['Run_Monitor',self.Project_dir_L.text])
+            if self.Server:
+                self.set_jump2monitortab(self.Project_dir_L.text)
+            else:
+                self.set_command(['Run_Monitor',self.Project_dir_L.text])
 
     @event.reaction('conda_env_b.pointer_click')
     def on_conda_env_b_click(self, *events):
@@ -1886,7 +1913,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
     Recovery                     = event.IntProp(0, settable=True)
     Locate_Failures              = event.IntProp(0, settable=True)
 
-    def init(self):
+    def init(self,Server):
         with ui.VSplit():
             with ui.TabLayout(flex=0.9) as self.TabLayout2:
                 with ui.TabLayout(flex=0.9,title='Work-Flow',style='color: blue;') as self.TabLayout:
@@ -1895,7 +1922,11 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                     self.cluster_info = Only_Tree_Class(CLUSTER, title='Cluster', style='padding-top: 10px;color: black;')
                     self.Documentation = Documentation_Editor(title='Documentation', style='padding-top: 10px;color: black;')
                 self.samples_info = Samples_info(title='Samples')
-                self.Run  = Run_NeatSeq_Flow(title='Run')
+                self.Run  = Run_NeatSeq_Flow(Server,title='Run')
+                if Server:
+                    import Monitor_GUI
+                    with ui.Widget(title='Monitor') as self.Monitor:
+                        self.monitor = Monitor_GUI.Monitor_GUI()
                 self.Help = ui.IFrame(url=Base_Help_URL,
                                       title='Help')
 
@@ -2367,7 +2398,17 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 self.Help.set_url(Base_Help_URL)
                 self.Help.set_url(Base_Help_URL+'Module_docs/AllModules.html#'+ev.source.Go2Help.lower().replace('_','-'))
 
-
+    @event.reaction('Run.jump2monitortab')
+    def jump2monitortab(self, *events):
+        for ev in events:
+            if ev.new_value!='None':
+                if os.path.isdir(ev.new_value):
+                    self.monitor.set_Dir(ev.new_value)
+                else:
+                    self.monitor.set_Dir(os.getcwd())
+                self.TabLayout2.set_current(self.Monitor)
+                self.Run.set_jump2monitortab('None')
+                
     @event.reaction('!Run.open_filepicker', 'samples_info.open_filepicker', 'step_info.open_filepicker',
                     'cluster_info.open_filepicker', 'vars_info.open_filepicker')
     def open_filepicker(self, *events):
@@ -2691,10 +2732,10 @@ if __name__ == '__main__':
     #icon = app.assets.add_shared_data('ico.icon', open(icon, 'rb').read())
     if args.Server:
         import socket
-        m = app.App(NeatSeq_Flow_GUI)
+        m = app.App(NeatSeq_Flow_GUI,args.Server)
         app.create_server(host=socket.gethostbyname(socket.gethostname()))
         m.serve('')
         flx.start()
     else:
-        m = app.App(NeatSeq_Flow_GUI).launch(runtime ='app',size=(1300, 750),title='NeatSeq-Flow GUI',icon=icon)
+        m = app.App(NeatSeq_Flow_GUI,args.Server).launch(runtime ='app',size=(1300, 750),title='NeatSeq-Flow GUI',icon=icon)
         app.run()
