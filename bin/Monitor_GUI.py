@@ -587,6 +587,14 @@ if __name__ == '__main__':
         m.serve('')
         flx.start()
     else:
-        m = app.App(Monitor_GUI).launch(runtime ='app')
+        m = app.App(Monitor_GUI,
+                    args.directory,
+                    args.Regular,
+                    args.Monitor_RF,
+                    args.File_browser_RF,
+                    args.Sample_RF,
+                    args.Bar_Marker,
+                    args.Bar_Spacer,
+                    args.Bar_len).launch(runtime ='app')
         app.run()
     
