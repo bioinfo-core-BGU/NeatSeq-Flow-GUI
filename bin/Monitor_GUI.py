@@ -27,6 +27,8 @@ class Table(flx.GroupWidget):
         self.num_of_col            = 0
         self.ROWMODE               = []
         self.Heder_Backgroun_Color = Heder_Backgroun_Color
+        self.MaxRows               = 30
+        self.Show_MaxRows          = 5
         with flx.Layout(style='overflow-x:scroll;') as self.table:
             self.Drow_window()
         self.set_Current_Highlite(self.Highlite)
@@ -55,9 +57,13 @@ class Table(flx.GroupWidget):
                 if self.num_of_rows>0:
                     if len(self.ROWMODE)!=self.num_of_rows:
                         self.ROWMODE=[0]*self.num_of_rows
-
+                    if self.num_of_rows > self.MaxRows:
+                        num_of_rows = self.Show_MaxRows
+                    else:
+                        num_of_rows = self.num_of_rows
+                        
                     with flx.Layout(style='overflow-y:scroll; ') as self.ROW_LAYOUT:
-                        for row_num in range(len(self.items[self.items.keys()[0]])):
+                        for row_num in range(num_of_rows):
                             self.Rows[row_num]={}
                             self.Rows[row_num]['handle'] = flx.HFix(padding=3,spacing=3)
                             with self.Rows[row_num]['handle']:
@@ -76,7 +82,7 @@ class Table(flx.GroupWidget):
     def update_Data(self):
         self.ROWMODE  = self.rowmode
         if len(self.items.keys())>0:
-            if (self.num_of_col !=len(self.items.keys())) or (self.num_of_rows !=len(self.items.keys()[0])) :
+            if (self.num_of_col !=len(self.items.keys())) or (self.num_of_rows !=len(self.items[self.items.keys()[0]])) :
                 self.content.dispose()
                 with self.table:
                     self.Drow_window()
@@ -87,20 +93,32 @@ class Table(flx.GroupWidget):
             self.content.dispose()
 
     def Re_Drow_window(self):
+        
         count=0
+        if len(self.items[self.items.keys()[0]])> self.MaxRows:
+            Extra = int(int(self.Highlite)/self.Show_MaxRows) * self.Show_MaxRows
+        else:
+            Extra = 0
         for row in self.Rows.keys():
             if row!='heder':
-                if row!=self.Highlite:
-                    for col in self.Rows[row].keys():
-                        if col!='handle':
-                            self.Rows[row][col].apply_style('background:white; color: ' +Text_COLORS[self.ROWMODE[int(row)]]+ '; border-radius: 0px;max-height:30px;')
-                            self.Rows[row][col].set_text(str(self.items[self.items.keys()[int(col)]][int(row)]) )
+                if (int(row)+Extra)!=int(self.Highlite):
+                    if (int(row)+Extra) >= self.num_of_rows:
+                        for col in self.Rows[row].keys():
+                            if col!='handle':
+                                self.Rows[row][col].apply_style('background:white;')
+                                self.Rows[row][col].set_text('')
+                    else:
+                        for col in self.Rows[row].keys():
+                            if col!='handle':
+                                self.Rows[row][col].apply_style('background:white; color: ' +Text_COLORS[self.ROWMODE[int(row)+Extra]]+ '; border-radius: 0px;max-height:30px;')
+                                self.Rows[row][col].set_text(str(self.items[self.items.keys()[int(col)]][int(row)+Extra]) )
+                        count=count+1
                 else:
                     for col in self.Rows[row].keys():
                         if col!='handle':
-                            self.Rows[row][col].apply_style('background: yellow;color:' +Text_COLORS[self.ROWMODE[int(row)]]+ ';border-radius: 0px;')
-                            self.Rows[row][col].set_text(str(self.items[self.items.keys()[int(col)]][int(row)]))
-                count=count+1
+                            self.Rows[row][col].apply_style('background: yellow;color:' +Text_COLORS[self.ROWMODE[int(row)+Extra]]+ ';border-radius: 0px;')
+                            self.Rows[row][col].set_text(str(self.items[self.items.keys()[int(col)]][int(row)+Extra]))
+                    count=count+1
     @flx.emitter
     def key_down(self, e):
         """Overload key_down emitter to prevent browser scroll."""
@@ -144,8 +162,6 @@ class nsfgm(flx.PyComponent):
     
     def init(self,directory,
                   Regular,        
-                  Monitor_RF,     
-                  File_browser_RF,
                   Bar_Marker,     
                   Bar_Spacer ,    
                   Bar_len):
@@ -153,8 +169,6 @@ class nsfgm(flx.PyComponent):
         # Store input parameters
         
         self.Regular         = Regular
-        self.Monitor_RF      = Monitor_RF
-        self.File_browser_RF = File_browser_RF 
         self.Bar_Marker      = Bar_Marker
         self.Bar_Spacer      = Bar_Spacer
         self.Bar_len         = Bar_len
@@ -458,7 +472,8 @@ class Monitor_GUI(flx.PyComponent):
     def init(self,directory         = os.getcwd(),
                   Regular           = "log_[0-9]+.txt$",
                   Monitor_RF        = 1,
-                  File_browser_RF   = 1,
+                  File_browser_RF   = 2,
+                  Sample_RF         = 3,
                   Bar_Marker        = '#',
                   Bar_Spacer        = ' ',
                   Bar_len           = 40 ):
@@ -468,8 +483,6 @@ class Monitor_GUI(flx.PyComponent):
         #initializing the main monitor/qstat log file parser module
         self.mynsfgm = nsfgm(directory,
                              Regular,           
-                             Monitor_RF,        
-                             File_browser_RF,   
                              Bar_Marker,        
                              Bar_Spacer ,       
                              Bar_len)
@@ -483,13 +496,13 @@ class Monitor_GUI(flx.PyComponent):
         #with self:
         self.Relay_log    = Relay_log_files(self.mynsfgm,
                                             self.file_menu,
-                                            self.mynsfgm.File_browser_RF)
+                                            File_browser_RF)
         self.Relay_main   = Relay_main_menu(self.mynsfgm,
                                             self.main_menu,
-                                            self.mynsfgm.Monitor_RF)
+                                            Monitor_RF)
         self.Relay_sample = Relay_sample_menu(self.mynsfgm,
                                               self.sample_menu,
-                                              self.mynsfgm.Monitor_RF)
+                                              Sample_RF)
 
 
     @event.reaction('Dir')
@@ -545,9 +558,11 @@ if __name__ == '__main__':
     parser.add_argument('-R', dest='Regular',metavar="STR" , type=str,default="log_[0-9]+.txt$",
                         help='Log file Regular Expression [in ./logs/ ] [default=log_[0-9]+.txt$]')
     parser.add_argument('--Monitor_RF',metavar="FLOAT", type=float,dest='Monitor_RF',default=1,
-                        help='Monitor Refresh rate [default=1]')
-    parser.add_argument('--File_browser_RF',metavar="FLOAT", type=float,dest='File_browser_RF',default=1,
-                        help='File Browser Refresh rate [default=1]')
+                        help='Steps Monitor Refresh rate [default=1]')
+    parser.add_argument('--File_browser_RF',metavar="FLOAT", type=float,dest='File_browser_RF',default=2,
+                        help='File Browser Refresh rate [default=2]')
+    parser.add_argument('--Sample_RF',metavar="FLOAT", type=float,dest='Sample_RF',default=3,
+                        help='Samples Browser Refresh rate [default=3]')
     parser.add_argument('--Bar_Marker',metavar="CHAR",type=str,dest='Bar_Marker',default="#",
                         help='Progress Bar Marker [default=#]')
     parser.add_argument('--Bar_Spacer',metavar="CHAR",type=str,dest='Bar_Spacer',default=" ",
@@ -564,6 +579,7 @@ if __name__ == '__main__':
                     args.Regular,
                     args.Monitor_RF,
                     args.File_browser_RF,
+                    args.Sample_RF,
                     args.Bar_Marker,
                     args.Bar_Spacer,
                     args.Bar_len)
@@ -571,6 +587,6 @@ if __name__ == '__main__':
         m.serve('')
         flx.start()
     else:
-        m = app.App(Monitor_GUI)
+        m = app.App(Monitor_GUI).launch(runtime ='app')
         app.run()
     
