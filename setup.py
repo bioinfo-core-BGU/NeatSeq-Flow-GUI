@@ -30,7 +30,8 @@ setup(
     packages            = find_packages(),
     include_package_data= True,  # See  MANIFEST.in
     scripts             = ['bin/neatseq_flow_monitor.py',
-                            'bin/NeatSeq_Flow_GUI.py',
+                           'bin/Monitor_GUI.py',
+                           'bin/NeatSeq_Flow_GUI.py',
                             ],
     data_files          = extra_files,
                                       
