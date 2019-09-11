@@ -13,6 +13,8 @@ from flexx import app, event, ui
 import os,sys,dialite
 from collections import OrderedDict
 
+SERVE=False
+
 Base_Help_URL = 'https://neatseq-flow.readthedocs.io/projects/neatseq-flow-modules/en/latest/'
 
 sys.path.append(os.path.realpath(os.path.expanduser(os.path.dirname(os.path.abspath(__file__))+os.sep+"..")))
@@ -405,7 +407,7 @@ class Step_Tree_Class(ui.Widget):
                 self.info = Documentation_Editor(DEFAULT_HELP_BOX_TEXT,True,False,True,flex=0.01,style='border: 1px solid red;min-height: 50px;min-width: 100px; ')
 
             with ui.VSplit(flex=0.6) as self.canvas_lay:
-                with ui.layouts._form.BaseTableLayout(flex=0.03, style='min-height: 70px; max-height: 75px;'):
+                with ui.Layout(flex=0.03, style='min-height: 70px; max-height: 75px;'):
                     with ui.HSplit():
                         with ui.GroupWidget(title='Add New Step',style='min-width: 500px;border: 2px solid purple;'):
                             with ui.HSplit():
@@ -1081,8 +1083,6 @@ class Only_Tree_Class(ui.Widget):
                             self.tree_value_options_b.set_text('')
 
 
-
-
 class Samples_info(ui.Widget):
     open_filepicker = event.StringProp('', settable=True)
     project_files = event.ListProp([], settable=True)
@@ -1095,7 +1095,7 @@ class Samples_info(ui.Widget):
 
     def init(self):
         with ui.VSplit( padding=20,spacing=20) as self.layout:
-            with ui.layouts._form.BaseTableLayout( style='min-height: 70px; max-height: 70px;'):
+            with ui.Layout( style='min-height: 70px; max-height: 70px;'):
                 with ui.HSplit(style='min-height: 70px; max-height: 70px;'):
 
                     with ui.GroupWidget(title='Project Level File/s',style='border: 2px solid green;' ):
@@ -1122,17 +1122,17 @@ class Samples_info(ui.Widget):
                                     style='background: SeaShell  ; text-align: center;border-radius: 0px; text-decoration: max-height:30px;')
                         ui.LineEdit(text='Remove Project File',
                                     disabled=True,
-                                    style='background: SeaShell  ; text-align: center;border-radius: 0px; text-decoration: max-height:30px;')
+                                    style=' background: SeaShell  ; text-align: center;border-radius: 0px; text-decoration: max-height:30px;')
                         # ui.LineEdit(text='',
                                     # disabled=True,
-                                    # style='background: SeaShell  ; text-align: center;border-radius: 0px; text-decoration: max-height:30px; max-width:7px;')
+                                    # style='background: SeaShell  ; text-align: center;border-radius: 0px; text-decoration: max-height:30px; max-width:13px;')
 
-                    #ui.Label(text='',style='padding: 5px ;')
-                    with ui.Layout(style='overflow-y:scroll;'):#min-height:135px ;max-height:135px ;'):
+                    
+                    with ui.Layout(style='overflow-y:scroll;'):
                         self.project = ui.VFix(style='font-size: 80%;')
 
-            #ui.Label(text='',style='min-height: 5px; max-height: 5px;')
-            with ui.GroupWidget( title='Sample Level',style=' font-size: 120% ;padding: 5px ; border: 3px solid blue; border-radius: 10px;'):
+
+            with ui.GroupWidget( title='Sample Level',style='font-size: 120% ;padding: 5px ; border: 3px solid blue; border-radius: 10px;'):
                 with ui.VSplit():
                     with ui.HFix(style='max-height:30px;overflow-y:scroll;'):
                         ui.LineEdit(text='Sample Name',
@@ -1149,7 +1149,7 @@ class Samples_info(ui.Widget):
                                     style='background: Lavender  ; text-align: center;border-radius: 0px; text-decoration: max-height:30px;')
                         # ui.LineEdit(text='',
                                     # disabled=True,
-                                    # style='background: Lavender  ; text-align: center;border-radius: 0px; text-decoration: max-height:30px; max-width:7px;')
+                                    # style='background: Lavender  ; text-align: center;border-radius: 0px; text-decoration: max-height:30px; max-width:13px;')
 
                     
                     with ui.Layout(style='overflow-y:scroll;'):
@@ -1297,78 +1297,6 @@ class Samples_info(ui.Widget):
                     self.add_sample_file(file[1], file[0])
 
 
-def select_files(select_style='Single', select_type='Open', wildcard='*'):
-    try:
-        import wx, os
-        app = wx.App(None)
-
-        if select_type == 'Open':
-            style = wx.FD_OPEN | wx.FD_FILE_MUST_EXIST
-            if select_style != 'Single':
-                style = style | wx.FD_MULTIPLE
-        elif select_type == 'Dir':
-            style = wx.DD_DEFAULT_STYLE
-        else:
-            style = wx.FD_SAVE
-        if select_type == 'Dir':
-            dialog = wx.DirDialog(None, "Choose Directory", "", style=style)
-        else:
-            dialog = wx.FileDialog(None, select_type, wildcard=wildcard, style=style)
-        if dialog.ShowModal() == wx.ID_OK:
-            if select_type == 'Dir':
-                path = dialog.GetPath()
-                dialog.Destroy()
-                if len(path)>0:
-                    return [[path, path]]
-                else:
-                    return []
-            else:
-                path = dialog.GetPaths()
-            files = []
-            for file in path:
-                files.append([file, os.path.basename(file)])
-            if len(files) > 0:
-                path = files
-            else:
-                path = []
-
-        else:
-            path = []
-
-        dialog.Destroy()
-        return path
-    except:
-        import os
-        from tkinter import filedialog
-        from tkinter import Tk
-
-        Tk().withdraw()
-        path = []
-        if select_type == 'Open':
-            if select_style == 'Single':
-                path = [filedialog.askopenfilename(title='Choose a file')]
-            else:
-                path = list(filedialog.askopenfilenames(title='Choose files'))
-        elif select_type == 'Dir':
-            path = filedialog.askdirectory(title="Choose Directory")
-            if len(path)>0:
-                return [[path, path]]
-        else:
-            path = [filedialog.asksaveasfilename(title='Save')]
-
-        files = []
-        for file in path:
-            if len(file)>0:
-                files.append([file, os.path.basename(file)])
-        if len(files) > 0:
-            path = files
-        else:
-            path = []
-
-        return path
-
-
-
 def Load_MODULES_TEMPLATES():
     import yaml, os, inspect
     import urllib.request
@@ -1391,6 +1319,7 @@ def Load_MODULES_TEMPLATES():
 
     except:
         return {}
+
 
 def Update_Yaml_Data(remote_file,local_directory, file,Message=''):
     import yaml, os, inspect
@@ -1671,9 +1600,6 @@ flx.assets.associate_asset(__name__, 'matchbrackets.js' ,open(os.path.join(base_
 flx.assets.associate_asset(__name__, 'continuelist.js' ,open(os.path.join(base_url , 'addon/edit/continuelist.js')).read())
 
 
-
-
-
 class Documentation_Editor(flx.Widget):
     """ A CodeEditor widget based on CodeMirror.
     """
@@ -1772,6 +1698,209 @@ class Documentation_Editor(flx.Widget):
                 self.cm.setOption('readOnly',self.disabled)
             self.cm.setOption('theme','default')
             self.cm.setOption('styleActiveLine',True)
+
+
+class File_Browser(flx.GroupWidget):
+    Dir           = event.DictProp({}, settable=True)
+    update        = event.BoolProp(False, settable=True)
+    Path          = event.StringProp('', settable=True)
+    Change_Dir    = event.StringProp('', settable=True)
+    Browser_Type  = event.DictProp({'select_style':'Single','select_type':'Dir'}, settable=True)
+    Done          = event.BoolProp(False, settable=True)
+    Selected_Path = event.ListProp([],settable=True)
+    #main program
+    def init(self):
+        with ui.VFix():
+            with ui.HSplit(style='max-height: 30px;'):
+                self.Parent_Dir = ui.Button(text='..',style='max-width: 30px;')
+                self.Path_Label = ui.Label(text=self.Path)
+            with flx.Layout(style='overflow-y:scroll;') as self.Browser:
+                with ui.HSplit(style='background: white; border: 0px solid gray;') as self.Data:
+                    self.set_update(True)
+            self.File_Name_Edit = ui.LineEdit(style='max-height: 30px;',disabled=True)
+            if self.Browser_Type['select_type']=='Save':
+                self.File_Name_Edit.set_disabled(False)
+            with ui.HBox(style='max-height: 30px;'):
+                self.Cancel = ui.Button(text='Cancel')
+                self.OK     = ui.Button(text='OK')
+                if self.Browser_Type['select_type']=='Open':
+                    if self.Browser_Type['select_style']=='Single':
+                        self.OK.set_text('Open')
+                    else:
+                        self.OK.set_text('Select')
+                elif self.Browser_Type['select_type']=='Save':
+                    self.OK.set_text('Save')
+
+    @event.reaction('Path')
+    def update_path_label(self):
+        self.Path_Label.set_text(self.Path)
+
+    @event.reaction('Parent_Dir.pointer_click')
+    def update_path_up(self, *events):
+        self.set_Change_Dir('..')
+        if self.update:
+            self.set_update(False)
+        else:
+            self.set_update(True)
+
+    @event.reaction('OK.pointer_click')
+    def Ok_Button_click(self):
+        selected_path=[]
+        if self.Browser_Type['select_type']=='Save':
+                selected_path.append(self.File_Name_Edit.text)
+        elif self.Browser_Type['select_type']=='Open':
+            for button in self.Files.children:
+                if button.checked:
+                    selected_path.append(button.text)
+        else:
+            selected_path.append(self.Path)
+        self.set_Selected_Path(selected_path)
+        if self.Done:
+            self.set_Done(False)
+        else:
+            self.set_Done(True)
+            
+    @event.reaction('Cancel.pointer_click')
+    def Cancel_Button_click(self):
+        selected_path=[]
+        self.set_Selected_Path(selected_path)
+        if self.Done:
+            self.set_Done(False)
+        else:
+            self.set_Done(True)
+            
+    @event.reaction('!Browser.children**.pointer_click')
+    def update_path_in(self, *events):
+        for ev in events:
+            if isinstance(ev.source.text,str) and (ev.source.parent.title=='Directory'):
+                self.set_Change_Dir(ev.source.text)
+                if self.update:
+                    self.set_update(False)
+                else:
+                    self.set_update(True)
+
+
+    @event.reaction('Dir','Browser_Type','Done')
+    def update_Dir(self, *events):
+        self.Data.dispose()
+        if self.Browser_Type['select_type']=='Save':
+            self.File_Name_Edit.set_disabled(False)
+        else:
+            self.File_Name_Edit.set_disabled(True)
+        if self.Browser_Type['select_type']=='Open':
+            if self.Browser_Type['select_style']=='Single':
+                self.OK.set_text('Open')
+            else:
+                self.OK.set_text('Select')
+        elif self.Browser_Type['select_type']=='Save':
+            self.OK.set_text('Save')
+        
+        with self.Browser:
+            with ui.HFix(spacing=1,style='background: white; border: 0px solid gray;') as self.Data:
+                with ui.VFix(spacing=0,style='background: white; border: 0px solid gray;'):
+                    with ui.VFix(spacing=1,title='Directory'):
+                        if 'Directory' in  self.Dir.keys():
+                            for files in self.Dir['Directory'].keys():
+                                ui.Button(text=files,style='max-height: 30px;min-height: 30px;text-align:left;border: 1px solid gray;')
+                    with ui.VFix(spacing=1,title='Files') as self.Files:
+                        if 'File' in  self.Dir.keys():
+                            for files in self.Dir['File'].keys():
+                                if self.Browser_Type['select_type']=='Open':
+                                    if self.Browser_Type['select_style']=='Single':
+                                        ui.RadioButton(text=files,style='max-height: 30px;min-height: 30px;border: 0px solid gray;')
+                                    else:
+                                        ui.CheckBox(text=files,style='max-height: 30px;min-height: 30px;border: 0px solid gray;')
+                                else:
+                                    ui.Button(text=files,disabled=True,style='background: white;border: 0px solid gray;max-height: 30px;min-height: 30px;text-align:left;')
+                with ui.VFix(spacing=1,style='background: white; border: 0px solid gray;'):
+                    if 'Directory' in  self.Dir.keys():
+                        for files in self.Dir['Directory'].keys():
+                            ui.Button(text='Directory',disabled=True,style='background: white;border: 0px solid gray;max-height: 30px;min-height: 30px;max-width: 100px;')
+                    if 'File' in  self.Dir.keys():
+                        for files in self.Dir['File'].keys():
+                            ui.Button(text=self.Dir['File'][files],disabled=True,style='background: white;border: 0px solid gray;max-height: 30px;min-height: 30px;max-width: 100px;text-align:right;')
+
+
+class Run_File_Browser(flx.PyComponent):
+    Done          = event.BoolProp(False, settable=True)
+    Browser_Type  = event.DictProp({'select_style':'Single','select_type':'Dir'}, settable=True)
+    Selected_Path = event.ListProp([],settable=True)
+    
+    #main program
+    def init(self):
+        with ui.HSplit(spacing=1):
+            #flexx.ui.FileBrowserWidget()
+            ui.Layout(style='max-width: 400px;')
+            with ui.VSplit():
+                ui.Layout(style='max-height: 150px;')
+                self.File_Browser = File_Browser(title='File Browser')
+                ui.Layout(style='max-height: 150px;')
+            ui.Layout(style='max-width: 400px;')
+    
+    @event.reaction('File_Browser.Done')
+    def when_Done(self, *events):
+        import os
+        if len(self.File_Browser.Selected_Path)>0:
+            if self.Browser_Type['select_type']=='Dir':
+                self.set_Selected_Path([self.File_Browser.Selected_Path,self.File_Browser.Selected_Path])
+            else:
+                files = []
+                for file in self.File_Browser.Selected_Path:
+                
+                    files.append([os.path.join(self.File_Browser.Path,file), file])
+                self.set_Selected_Path(files)
+        else:
+            self.set_Selected_Path([])
+        if self.Done:
+            self.set_Done(False)
+        else:
+            self.set_Done(True)
+    
+    @event.reaction('File_Browser.update')
+    def update_file_sys(self, *events):
+        for ev in events:
+            Dir              = {}
+            Dir['Directory'] = {}
+            Dir['File']      = {}
+            import os
+            if self.File_Browser.Path=='':
+                Path = os.getcwd()
+            else:
+                Path = self.File_Browser.Path
+            if self.File_Browser.Change_Dir != '':
+                if self.File_Browser.Change_Dir == '..':
+                    self.File_Browser.set_Change_Dir = ''
+                    Path = os.path.split(Path)[0]
+                else:
+                    Path = os.path.join(Path,self.File_Browser.Change_Dir)
+                    self.File_Browser.set_Change_Dir = ''
+            try:
+                with os.scandir(Path) as it:
+                    for entry in it:
+                        if entry.is_dir():
+                            Dir['Directory'][entry.name]=''
+                        else:
+                            size = entry.stat().st_size
+                            if size>1000:
+                                if size>1000000:
+                                    if size>1000000000:
+                                        Dir['File'][entry.name]="{0:.2f}".format(round(size/1000000000,2))+'GB'
+                                    else:
+                                        Dir['File'][entry.name]="{0:.2f}".format(round(size/1000000,2))+'MB'
+                                else:
+                                    Dir['File'][entry.name]="{0:.2f}".format(round(size/1000,2))+'KB'
+                            else:
+                                Dir['File'][entry.name]=str(size)+'B'
+
+                self.File_Browser.set_Path(Path)
+                self.File_Browser.set_Dir(Dir)
+            except :     
+                pass
+    
+    @event.reaction('Browser_Type')
+    def update_Browser_Type(self,*events):
+        self.File_Browser.set_Browser_Type(self.Browser_Type)
+
 
 class NeatSeq_Flow_GUI(app.PyComponent):
     CSS = """
@@ -1905,77 +2034,192 @@ class NeatSeq_Flow_GUI(app.PyComponent):
     }
 
         """
-
+    
     Running_script               = event.IntProp(0, settable=True)
     Generating_scripts           = event.IntProp(0, settable=True)
     Running_Commands             = event.DictProp({}, settable=True)
     Kill_Run                     = event.IntProp(0, settable=True)
     Recovery                     = event.IntProp(0, settable=True)
     Locate_Failures              = event.IntProp(0, settable=True)
-
-    def init(self,Server):
-        with ui.VSplit():
-            with ui.TabLayout(flex=0.9) as self.TabLayout2:
-                with ui.TabLayout(flex=0.9,title='Work-Flow',style='color: blue;') as self.TabLayout:
-                    self.step_info = Step_Tree_Class(title='Design', style='padding-top: 10px;color: black;')
-                    self.vars_info = Only_Tree_Class(VARS, title='Vars', style='padding-top: 10px;color: black;')
-                    self.cluster_info = Only_Tree_Class(CLUSTER, title='Cluster', style='padding-top: 10px;color: black;')
-                    self.Documentation = Documentation_Editor(title='Documentation', style='padding-top: 10px;color: black;')
-                self.samples_info = Samples_info(title='Samples')
-                self.Run  = Run_NeatSeq_Flow(Server,title='Run')
-                if Server:
-                    import Monitor_GUI
-                    with ui.Widget(title='Monitor') as self.Monitor:
-                        self.monitor = Monitor_GUI.Monitor_GUI()
-                self.Help = ui.IFrame(url=Base_Help_URL,
-                                      title='Help')
-
-            self.label = ui.Label(text='NeatSeq-Flow Graphical User Interface By Liron Levin',
-                                  style='padding-left: 40px; background: #e8eaff; min-height: 15px; font-size:15px; transition: all 0.5s;')
-            self.label.set_capture_mouse(2)
-            self.label.set_html(html_cite)
-            self.TabLayout.set_capture_mouse(2)
-            self.TabLayout2.set_capture_mouse(2)
-            self.Terminal_string = ''
-
+    
+    def init(self):
+        self.filepicker_key = ''
+        with ui.StackLayout(flex=1) as self.stack:
+            with ui.VSplit() as self.MainStack:
+                with ui.TabLayout(flex=0.9) as self.TabLayout2:
+                    with ui.TabLayout(flex=0.9,title='Work-Flow',style='color: blue;') as self.TabLayout:
+                        self.step_info = Step_Tree_Class(title='Design', style='padding-top: 10px;color: black;')
+                        self.vars_info = Only_Tree_Class(VARS, title='Vars', style='padding-top: 10px;color: black;')
+                        self.cluster_info = Only_Tree_Class(CLUSTER, title='Cluster', style='padding-top: 10px;color: black;')
+                        self.Documentation = Documentation_Editor(title='Documentation', style='padding-top: 10px;color: black;')
+                    self.samples_info = Samples_info(title='Samples')
+                    self.Run  = Run_NeatSeq_Flow(SERVE,title='Run')
+                    if SERVE:
+                        import Monitor_GUI
+                        with ui.Widget(title='Monitor') as self.Monitor:
+                            self.monitor = Monitor_GUI.Monitor_GUI()
+                    self.Help = ui.IFrame(url=Base_Help_URL,
+                                          title='Help')
+                    
+                self.label = ui.Label(text='NeatSeq-Flow Graphical User Interface By Liron Levin',
+                                      style='padding-left: 40px; background: #e8eaff; min-height: 15px; font-size:15px; transition: all 0.5s;')
+                self.label.set_capture_mouse(2)
+                self.label.set_html(html_cite)
+                self.TabLayout.set_capture_mouse(2)
+                self.TabLayout2.set_capture_mouse(2)
+                self.Terminal_string = ''
+                
+            with  ui.Widget(flex=1) as self.Browser_W:
+                self.Browser = Run_File_Browser()
     # @event.reaction('label.pointer_move')
     # def on_label_move(self, *events):
         # self.label.set_flex(0.2)
-
+    
+    @event.reaction('Browser.Done')
+    def when_File_Browser_Done(self,*events):
+        if self.Browser.Done:
+            self.stack.set_current(self.MainStack)
+            self.Browser.set_Done(False)
+            self.set_filepicker_options()
+    
     @event.reaction('label.pointer_click')
     def on_label_click(self, *events):
         self.label.set_flex(0.2)
+    
+    def select_files(self,select_style='Single', select_type='Open', wildcard='*'):
+        if SERVE:
+            self.Browser.set_Browser_Type({'select_style':select_style,'select_type':select_type})
+            self.stack.set_current(self.Browser_W)
+        else:
+            try:
+                import wx, os
+                app = wx.App(None)
+                if select_type == 'Open':
+                    style = wx.FD_OPEN | wx.FD_FILE_MUST_EXIST
+                    if select_style != 'Single':
+                        style = style | wx.FD_MULTIPLE
+                elif select_type == 'Dir':
+                    style = wx.DD_DEFAULT_STYLE
+                else:
+                    style = wx.FD_SAVE
+                if select_type == 'Dir':
+                    dialog = wx.DirDialog(None, "Choose Directory", "", style=style)
+                else:
+                    dialog = wx.FileDialog(None, select_type, wildcard=wildcard, style=style)
+                if dialog.ShowModal() == wx.ID_OK:
+                    if select_type == 'Dir':
+                        path = dialog.GetPath()
+                        dialog.Destroy()
+                        if len(path)>0:
+                            self.Browser.set_Selected_Path([[path, path]])
+                            self.Browser.set_Done(True)
+                            return 
+                        else:
+                            self.Browser.set_Selected_Path([])
+                            self.Browser.set_Done(True)
+                            return 
+                    else:
+                        path = dialog.GetPaths()
+                    files = []
+                    for file in path:
+                        files.append([file, os.path.basename(file)])
+                    if len(files) > 0:
+                        path = files
+                    else:
+                        path = []
 
+                else:
+                    path = []
 
+                dialog.Destroy()
+                self.Browser.set_Selected_Path(path)
+                self.Browser.set_Done(True)
+                return 
+            except:
+                import os
+                from tkinter import filedialog
+                from tkinter import Tk
+
+                Tk().withdraw()
+                path = []
+                if select_type == 'Open':
+                    if select_style == 'Single':
+                        path = [filedialog.askopenfilename(title='Choose a file')]
+                    else:
+                        path = list(filedialog.askopenfilenames(title='Choose files'))
+                elif select_type == 'Dir':
+                    path = filedialog.askdirectory(title="Choose Directory")
+                    if len(path)>0:
+                        self.Browser.set_Selected_Path([[path, path]])
+                        self.Browser.set_Done(True)
+                        return 
+                else:
+                    path = [filedialog.asksaveasfilename(title='Save')]
+
+                files = []
+                for file in path:
+                    if len(file)>0:
+                        files.append([file, os.path.basename(file)])
+                if len(files) > 0:
+                    path = files
+                else:
+                    path = []
+                self.Browser.set_Selected_Path(path)
+                self.Browser.set_Done(True)
+                return 
+    
     # @event.reaction('TabLayout.pointer_move')
     # def on_label_after(self, *events):
         # self.label.set_flex(0.02)
-
+    
     @event.reaction('TabLayout2.pointer_move')
     def on_label_after(self, *events):
         self.label.set_flex(0.02)
-
+    
     def filepicker_options(self, key):
-        options = {'file_path': lambda: self.step_info.set_file_path(select_files('Single', 'Open')),
-                   'NeatSeq_bin': lambda: self.Run.set_NeatSeq_bin(select_files('Single', 'Open')),
-                   'conda_bin': lambda: self.Run.set_conda_bin(select_files('Single', 'Dir')),
-                   'Project_dir': lambda: self.Run.set_Project_dir(select_files('Single', 'Dir')),
-                   'sample_file_to_run': lambda: self.Run.set_sample_file(select_files('Single', 'Open')),
-                   'parameter_file_to_run': lambda: self.Run.set_parameter_file(select_files('Single', 'Open')),
-                   'Cluster_file_path': lambda: self.cluster_info.set_file_path(select_files('Single', 'Open')),
-                   'Vars_file_path': lambda: self.vars_info.set_file_path(select_files('Single', 'Open')),
-                   'workflow_file': lambda: self.step_info.set_workflow_file(select_files('Single', 'Open')),
-                   'save_workflow_file': lambda: self.step_info.set_save_workflow_file(select_files('Single', 'Save')),
-                   'project': lambda: self.samples_info.set_project_files(select_files(select_style='Multy')),
-                   'samples': lambda: self.samples_info.set_sample_files(select_files(select_style='Multy')),
-                   'load_samples_file': lambda: self.samples_info.set_load_samples_file(select_files('Single', 'Open')),
-                   'save_samples_file': lambda: self.samples_info.set_save_samples_file(select_files('Single', 'Save'))
+        options = {'file_path'            : lambda: self.select_files('Single', 'Open'),
+                   'NeatSeq_bin'          : lambda: self.select_files('Single', 'Open'),
+                   'conda_bin'            : lambda: self.select_files('Single', 'Dir'),
+                   'Project_dir'          : lambda: self.select_files('Single', 'Dir'),
+                   'sample_file_to_run'   : lambda: self.select_files('Single', 'Open'),
+                   'parameter_file_to_run': lambda: self.select_files('Single', 'Open'),
+                   'Cluster_file_path'    : lambda: self.select_files('Single', 'Open'),
+                   'Vars_file_path'       : lambda: self.select_files('Single', 'Open'),
+                   'workflow_file'        : lambda: self.select_files('Single', 'Open'),
+                   'save_workflow_file'   : lambda: self.select_files('Single', 'Save'),
+                   'project'              : lambda: self.select_files(select_style='Multy'),
+                   'samples'              : lambda: self.select_files(select_style='Multy'),
+                   'load_samples_file'    : lambda: self.select_files('Single', 'Open'),
+                   'save_samples_file'    : lambda: self.select_files('Single', 'Save')
                    }
         if key in options.keys():
+            self.filepicker_key = key
             return options[key]()
         else:
+            self.filepicker_key = ''
             return None
-
+    
+    def set_filepicker_options(self):
+        options = {'file_path': lambda: self.step_info.set_file_path(self.Browser.Selected_Path),
+                   'NeatSeq_bin': lambda: self.Run.set_NeatSeq_bin(self.Browser.Selected_Path),
+                   'conda_bin': lambda: self.Run.set_conda_bin(self.Browser.Selected_Path),
+                   'Project_dir': lambda: self.Run.set_Project_dir(self.Browser.Selected_Path),
+                   'sample_file_to_run': lambda: self.Run.set_sample_file(self.Browser.Selected_Path),
+                   'parameter_file_to_run': lambda: self.Run.set_parameter_file(self.Browser.Selected_Path),
+                   'Cluster_file_path': lambda: self.cluster_info.set_file_path(self.Browser.Selected_Path),
+                   'Vars_file_path': lambda: self.vars_info.set_file_path(self.Browser.Selected_Path),
+                   'workflow_file': lambda: self.step_info.set_workflow_file(self.Browser.Selected_Path),
+                   'save_workflow_file': lambda: self.step_info.set_save_workflow_file(self.Browser.Selected_Path),
+                   'project': lambda: self.samples_info.set_project_files(self.Browser.Selected_Path),
+                   'samples': lambda: self.samples_info.set_sample_files(self.Browser.Selected_Path),
+                   'load_samples_file': lambda: self.samples_info.set_load_samples_file(self.Browser.Selected_Path),
+                   'save_samples_file': lambda: self.samples_info.set_save_samples_file(self.Browser.Selected_Path)
+                   }
+        if self.filepicker_key in options.keys():
+            return options[self.filepicker_key]()
+        else:
+            return None
+    
     def command_pars(self, key):
         options = {'conda_env':        lambda: self.conda_env_options(key[1]),
                    'Generate_scripts': lambda: self.Generate_scripts_command(key[1], key[2], key[3], key[4], key[5],
@@ -1992,7 +2236,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
             return options[key[0]]()
         else:
             return None
-
+    
     def conda_env_options(self, conda_bin):
         import os
         from subprocess import Popen, PIPE, STDOUT
@@ -2024,7 +2268,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         if err_flag:
             self.Terminal_string = self.Terminal_string + '[Searching for Conda Environments]: Finished with Error!! \n'
         self.Run.set_Terminal(self.Terminal_string)
-
+    
     def Generate_scripts_command(self, NeatSeq_bin, conda_bin, conda_env, Project_dir, sample_file, parameter_file):
         import os,re
         from subprocess import Popen, PIPE, STDOUT, TimeoutExpired
@@ -2102,7 +2346,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
 
             else:
                 self.Run.set_Terminal(Error)
-
+    
     def Search_Tags(self,Project_dir):
         import os,re
         if len(Project_dir) == 0:
@@ -2113,7 +2357,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 options=list(map(lambda y: re.sub('\.sh$','',y) ,list(filter(lambda x: x.endswith('.sh'),os.listdir(dname)))))
                 options.insert(0,self.Run.Tags[0])
                 self.Run.set_Tags(options)
-
+    
     def Run_scripts_command(self,Project_dir):
         import os
         from subprocess import Popen, PIPE, STDOUT, TimeoutExpired
@@ -2154,7 +2398,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
 
         else:
             self.Run.set_Terminal(Error)
-
+    
     def Kill_Run_command(self,Project_dir):
         import os
         from subprocess import Popen, PIPE, STDOUT, TimeoutExpired
@@ -2199,7 +2443,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
 
         else:
             self.Run.set_Terminal(Error)
-
+    
     def Locate_Failures_command(self,Project_dir):
         import os
         from subprocess import Popen, PIPE, STDOUT, TimeoutExpired
@@ -2245,14 +2489,14 @@ class NeatSeq_Flow_GUI(app.PyComponent):
 
         else:
             self.Run.set_Terminal(Error)
-
+    
     def Recovery_command(self,Project_dir):
         import os
         from subprocess import Popen, PIPE, STDOUT, TimeoutExpired
-
+    
         if len(Project_dir) == 0:
             Project_dir=os.getcwd()
-
+    
         Error = ''
         temp_command = ''
         if len(Project_dir) > 0:
@@ -2296,7 +2540,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
 
         else:
             self.Run.set_Terminal(Error)
-
+    
     def Run_Monitor_command(self,Project_dir):
         import os
         import curses, argparse
@@ -2341,11 +2585,11 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         if len(Error) > 0:
             self.Terminal_string = self.Terminal_string +  '\n' + Error
             self.Run.set_Terminal(self.Terminal_string)
-
+    
     @event.action
     def change_value(self,obj,prop_name,value):
         obj._mutate(prop_name,value)
-
+    
     @event.reaction('Running_script','Kill_Run','Recovery','Locate_Failures')
     def update_Terminal(self, *events):
         for ev in events:
@@ -2387,9 +2631,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                             if len(line)>0:
                                 self.Terminal_string = self.Terminal_string + '['+ ev.type.replace('_',' ') +']: ' + line + '\n'
                         self.Run.set_Terminal(self.Terminal_string)
-
-
-
+    
     @event.reaction('step_info.Go2Help')
     def Go2Help(self, *events):
         for ev in events:
@@ -2397,7 +2639,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
             if ev.source.Go2Help!='':
                 self.Help.set_url(Base_Help_URL)
                 self.Help.set_url(Base_Help_URL+'Module_docs/AllModules.html#'+ev.source.Go2Help.lower().replace('_','-'))
-
+    
     @event.reaction('Run.jump2monitortab')
     def jump2monitortab(self, *events):
         for ev in events:
@@ -2408,7 +2650,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                     self.monitor.set_Dir(os.getcwd())
                 self.TabLayout2.set_current(self.Monitor)
                 self.Run.set_jump2monitortab('None')
-                
+    
     @event.reaction('!Run.open_filepicker', 'samples_info.open_filepicker', 'step_info.open_filepicker',
                     'cluster_info.open_filepicker', 'vars_info.open_filepicker')
     def open_filepicker(self, *events):
@@ -2416,14 +2658,14 @@ class NeatSeq_Flow_GUI(app.PyComponent):
             if ev.source.open_filepicker != '':
                 self.filepicker_options(ev.source.open_filepicker)
                 ev.source.set_open_filepicker('')
-
+    
     @event.reaction('!Run.command')
     def Run_command(self, *events):
         for ev in events:
             if len(ev.source.command) > 0:
                 self.command_pars(ev.source.command)
                 ev.source.set_command([])
-
+    
     @event.reaction('samples_info.save_samples_file')
     def save_sample_file(self, *events):
         for ev in events:
@@ -2447,8 +2689,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                     sample_file.close()
                     self.Run.set_sample_file(self.samples_info.save_samples_file)
                     self.samples_info.set_save_samples_file([])
-
-
+    
     @event.reaction('samples_info.load_samples_file')
     def load_sample_file(self, *events):
         from neatseq_flow_gui.modules.parse_sample_data import parse_sample_file
@@ -2464,7 +2705,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 if len(samples_data) > 0:
                     self.update_samples_data(samples_data)
                     self.Run.set_sample_file(self.samples_info.load_samples_file)
-
+    
     @event.action
     def update_samples_data(self, samples_data):
         converer = {}
@@ -2472,7 +2713,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         self.samples_info.set_samples_data(samples_data)
         self.samples_info.set_converter(converer)
         self.samples_info.set_samples_data_update(True)
-
+    
     @event.reaction('step_info.workflow_file')
     def load_workflow_file(self, *events):
         from neatseq_flow_gui.modules.parse_param_data import parse_param_file
@@ -2503,8 +2744,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                         self.Documentation.set_load_flag(True)
 
                     self.Run.set_parameter_file(self.step_info.workflow_file)
-
-
+    
     @event.reaction('step_info.save_workflow_file')
     def save_workflow_file(self, *events):
         import yaml,re
@@ -2548,7 +2788,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 if err_flag:
                     self.Run.set_parameter_file(self.step_info.save_workflow_file)
                 self.step_info.set_save_workflow_file([])
-
+    
     def fix_order_dict(self, dic):
         if isinstance(dic, dict):
             dic = OrderedDict(dic)
@@ -2556,14 +2796,14 @@ class NeatSeq_Flow_GUI(app.PyComponent):
             for key in dic_keys:
                 dic[key] = self.fix_order_dict(dic[key])
         return dic
-
+    
     @event.reaction('vars_info.Data')
     def send_Vars_options(self, *events):
         for ev in events:
             options = list()
             self.dic2list(self.vars_info.Data, options)
             self.step_info.set_options(options)
-
+    
     @event.action
     def update_steps_data(self, Steps_Data):
         converer = OrderedDict()
@@ -2571,7 +2811,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         self.step_info.set_Steps_Data(Steps_Data)
         self.step_info.set_converter(converer)
         self.step_info.set_Steps_Data_update(True)
-
+    
     @event.action
     def update_cluster_data(self, Cluster_Data):
         converer = OrderedDict()
@@ -2715,15 +2955,104 @@ class Run_command_in_thread(object):
         time.sleep(0.000001)
         return [ out , err]
 
+
+class Redirect(flx.JsComponent):
+
+    def init(self, dest):
+        super().init()
+        self.dest = dest
+
+    @flx.action
+    def go(self):
+        global window
+        window.location.href = self.dest
+
+
+class Login(flx.PyComponent):
+
+    def init(self):
+        self.redirect = Redirect('/')
+        with ui.HSplit(spacing=1):
+            ui.Layout(style='max-width: 500px;')
+            with ui.VSplit():
+                ui.Layout(style='max-height: 250px;')
+                with flx.GroupWidget(title='NeatSeq-Flow Log-In',style='font-size: 120%; border: 4px solid purple;'):
+                    with ui.VBox():
+                        ui.ImageWidget(style='min-height: 250px;',
+                                       stretch=True,
+                                       source='https://neatseq-flow.readthedocs.io/en/latest/_images/NeatSeq_Flow_logo.png')
+                        ui.Widget()  # Spacing
+                        with flx.FormLayout():
+                           
+                            self.input1 = flx.LineEdit(title='User Name')
+                            self.input2 = flx.LineEdit(title='Password',password_mode=True)
+                        ui.Widget()  # Spacing
+                        self.b1 = flx.Button(text='Login')
+                ui.Layout(style='max-height: 250px;')
+            ui.Layout(style='max-width: 500px;')
+
+    @flx.reaction('input1.submit', 'b1.pointer_click')
+    def login(self, *events):
+        self.session.set_cookie('ARG1', self.input1.text)
+        self.session.set_cookie('ARG2', self.input2.text)
+        self.redirect.go()
+
+class Run_NeatSeq_Flow_GUI(app.PyComponent):
+
+    def init(self,arg1,arg2):
+        super().init()
+        if SERVE:
+            self.redirect = Redirect('/Login')
+            try:
+                ARG1  = self.session.get_cookie('ARG1')
+                ARG2  = self.session.get_cookie('ARG2')
+            except:
+                self.session.set_cookie('ARG1', None)
+                self.session.set_cookie('ARG2', None)
+                self.redirect.go()
+                return
+            if (ARG1!=arg1) or (ARG2 != arg2):
+                 self.redirect.go()
+                 return
+            self.session.set_cookie('ARG1', None)
+            self.session.set_cookie('ARG2', None)
+            with flx.Layout():
+                NeatSeq_Flow_GUI()
+
+
+def get_random_string(length=24, allowed_chars=None):
+    import random
+    """ Produce a securely generated random string.
+    NOTE: secure random string generation implementation is adapted from the Django project.
+    With a length of 12 with the a-z, A-Z, 0-9 character set returns
+    a 71-bit value. log_2((26+26+10)^12) =~ 71 bits
+    """
+    allowed_chars = allowed_chars or ('abcdefghijklmnopqrstuvwxyz' +
+                                      'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789')
+    try:
+        srandom = random.SystemRandom()
+    except NotImplementedError:  # pragma: no cover
+        srandom = random
+        logger.warning('Falling back to less secure Mersenne Twister random string.')
+        bogus = "%s%s%s" % (random.getstate(), time.time(), 'sdkhfbsdkfbsdbhf')
+        random.seed(hashlib.sha256(bogus.encode()).digest())
+
+    return ''.join(srandom.choice(allowed_chars) for i in range(length))
+
 if __name__ == '__main__':
     #getting arguments from the user 
     import argparse
     parser = argparse.ArgumentParser(description='NeatSeq-Flow GUI By Liron Levin ')
     parser.add_argument('--Server',dest='Server',action='store_true',
                         help='Run as Server')
+    parser.add_argument('--SSL',dest='SSL',action='store_true',
+                        help='Use SSL (Only When --Server is set)')
+    parser.add_argument('--USER',dest='USER',metavar="CHAR",type=str,default="",
+                        help='User Name For This Serve (Only When --Server is set)')
+    parser.add_argument('--PASSW',dest='PASSW',metavar="CHAR",type=str,default="",
+                        help='Password For This Serve (Only When --Server is set)')
     args = parser.parse_args()
-    
-    
+    SERVE=args.Server
     #temp_MODULES_TEMPLATES = Load_MODULES_TEMPLATES()
     temp_MODULES_TEMPLATES = Update_Yaml_Data(MODULES_TEMPLATES_FILE,'TEMPLATES', 'MODULES_TEMPLATES.yaml',"Modules Templates")
     if len(temp_MODULES_TEMPLATES) > 0:
@@ -2731,11 +3060,31 @@ if __name__ == '__main__':
     icon=os.path.join(os.path.realpath(os.path.expanduser(os.path.dirname(os.path.abspath(__file__))+os.sep+"..")),'neatseq_flow_gui','NeatSeq_Flow.ico')
     #icon = app.assets.add_shared_data('ico.icon', open(icon, 'rb').read())
     if args.Server:
-        import socket
-        m = app.App(NeatSeq_Flow_GUI,args.Server)
+        import socket 
+        if args.SSL:
+            CERTFILE = 'self-signed.crt'
+            KEYFILE  = 'self-signed.key'
+            os.system('openssl req -x509 -nodes -days 1 -batch -newkey rsa:2048 -keyout %s -out %s' % (KEYFILE, CERTFILE))
+
+            # use the self-signed certificate as if specified in normal config
+            flx.config.ssl_certfile = CERTFILE
+            flx.config.ssl_keyfile  = KEYFILE
+        
+        Login_m = flx.App(Login)
+        Login_m.serve()
+        #,title='NeatSeq-Flow Login',icon=icon
+        #,title='NeatSeq-Flow GUI',icon=icon
+        if args.USER=='':
+            args.USER  = get_random_string(length=7)
+        if args.PASSW=='':
+            args.PASSW = get_random_string(length=7)
+        print('User Name: '+ args.USER)
+        print('Password: '+ args.PASSW)
+        flx.config.cookie_secret = get_random_string()
+        m = app.App(Run_NeatSeq_Flow_GUI,args.USER,args.PASSW)
         app.create_server(host=socket.gethostbyname(socket.gethostname()))
         m.serve('')
         flx.start()
     else:
-        m = app.App(NeatSeq_Flow_GUI,args.Server).launch(runtime ='app',size=(1300, 750),title='NeatSeq-Flow GUI',icon=icon)
+        m = app.App(NeatSeq_Flow_GUI).launch(runtime ='app',size=(1300, 750),title='NeatSeq-Flow GUI',icon=icon)
         app.run()

@@ -7,6 +7,7 @@ from datetime import datetime
 import socket
 import asyncio
 import argparse
+from multiprocessing import Process, Queue
 
 __author__   = "Liron Levin"
 jid_name_sep = '..'
@@ -87,7 +88,7 @@ class Table(flx.GroupWidget):
                 with self.table:
                     self.Drow_window()
             else:
-                self.Highlite=0
+                #self.Highlite=0
                 self.Re_Drow_window()
         else:
             self.content.dispose()
@@ -175,7 +176,7 @@ class nsfgm(flx.PyComponent):
         self.set_Dir(os.path.join(directory ,"logs"))
 
     #Function for gathering information about the available log files as Data-Frame
-    def file_browser(self,Regular):
+    def file_browser(self,Regular,q=None):
         try:
             file_sys=pd.DataFrame()
             # get the available log files names
@@ -191,6 +192,8 @@ class nsfgm(flx.PyComponent):
 
         except :
             file_sys=pd.DataFrame(columns=["Name","Created","Last Modified","Size"])
+        if q!=None:
+           q.put({'items':file_sys.to_dict('list'),'rowmode': len(file_sys)})
         return {'items':file_sys.to_dict('list'),'rowmode': len(file_sys)}
 
     #Function for getting information from qstat
@@ -312,7 +315,7 @@ class nsfgm(flx.PyComponent):
                     self.rowmode=list(map(lambda x,y: 2 if 'ERROR' in x else y, self.items['Status'],self.rowmode))
 
                 if q!=None:
-                    q.put(self)
+                    q.put({'items':self.items.to_dict('list'),'rowmode': self.rowmode})
                 return {'items':self.items.to_dict('list'),'rowmode': self.rowmode}
             # group all jobs by Instance and event to lists of Timestamps
             logpiv=runlog_Data.groupby([args_pivot[0],args_pivot[1]])[args_pivot[2]].apply(list).reset_index()
@@ -406,65 +409,104 @@ class nsfgm(flx.PyComponent):
 
         # if this function is running in a sub-process store the results in the queue
         if q!=None:
-           q.put(self)
+           q.put({'items':self.items.to_dict('list'),'rowmode': self.rowmode})
         return {'items':self.items.to_dict('list'),'rowmode': self.rowmode}
 
 class Relay_log_files(flx.PyComponent):
 
     def init(self,mynsfgm,Table_H,refreshrate=1):
+        self.q           = Queue()
+        self.running     = False
         self.mynsfgm     = mynsfgm
         self.Table_H     = Table_H
         self.refreshrate = refreshrate
         self.Refresh_log_files()
 
     def Refresh_log_files(self):
-        log=self.mynsfgm.file_browser(self.mynsfgm.Regular)
-        self.Table_H.set_items(log['items'])
-        self.Table_H.set_rowmode([1]*log['rowmode'])
+        if not self.running:
+            self.Process = Process(target=self.mynsfgm.file_browser, args=(self.mynsfgm.Regular,self.q))
+            self.Process.start()
+            self.running=True
+        elif self.q.empty()==False:
+            log=self.q.get(True)
+            self.Process.join()
+            self.running=False
+            self.Table_H.set_items(log['items'])
+            self.Table_H.set_rowmode([1]*log['rowmode'])
         if self.session.status:
             asyncio.get_event_loop().call_later(self.refreshrate, self.Refresh_log_files)
+        else:
+            if self.Process.is_alive():
+                self.q.get(True)
+                self.Process.join()
 
 class Relay_main_menu(flx.PyComponent):
     runlog_file   = event.StringProp('', settable=True)
 
     def init(self,mynsfgm,Table_H,refreshrate=1):
+        self.q           = Queue()
+        self.running     = False
         self.mynsfgm     = mynsfgm
         self.Table_H     = Table_H
         self.refreshrate = refreshrate
         self.Refresh_main_menu()
 
     def Refresh_main_menu(self):
-        steps=self.mynsfgm.read_run_log(self.runlog_file,
-                                        self.mynsfgm.Bar_len,
-                                        self.mynsfgm.Bar_Marker,
-                                        self.mynsfgm.Bar_Spacer)
-        self.Table_H.set_items(steps['items'])
-        self.Table_H.set_rowmode(steps['rowmode'])
+        if not self.running:
+            self.Process = Process(target=self.mynsfgm.read_run_log, args=(self.runlog_file,
+                                                                           self.mynsfgm.Bar_len,
+                                                                           self.mynsfgm.Bar_Marker,
+                                                                           self.mynsfgm.Bar_Spacer,
+                                                                           self.q))
+            self.Process.start()
+            self.running=True
+        elif self.q.empty()==False:
+            steps=self.q.get(True)
+            self.Process.join()
+            self.running=False
+            self.Table_H.set_items(steps['items'])
+            self.Table_H.set_rowmode(steps['rowmode'])
         if self.session.status:
             asyncio.get_event_loop().call_later(self.refreshrate, self.Refresh_main_menu)
-
+        else:
+            if self.Process.is_alive():
+                self.q.get(True)
+                self.Process.join()
+            
 class Relay_sample_menu(flx.PyComponent):
     instances   = event.StringProp('', settable=True)
     runlog_file = event.StringProp('', settable=True)
 
     def init(self,mynsfgm,Table_H,refreshrate=1):
+        self.q           = Queue()
+        self.running     = False
         self.mynsfgm     = mynsfgm
         self.Table_H     = Table_H
         self.refreshrate = refreshrate
         self.Refresh_sample_menu()
 
     def Refresh_sample_menu(self):
-        steps=self.mynsfgm.read_run_log(self.runlog_file,
-                                        self.mynsfgm.Bar_len,
-                                        self.mynsfgm.Bar_Marker,
-                                        self.mynsfgm.Bar_Spacer,
-                                        None,
-                                        self.instances)
-        self.Table_H.set_items(steps['items'])
-        self.Table_H.set_rowmode(steps['rowmode'])
+        if not self.running:
+            self.Process = Process(target=self.mynsfgm.read_run_log, args=(self.runlog_file,
+                                                                           self.mynsfgm.Bar_len,
+                                                                           self.mynsfgm.Bar_Marker,
+                                                                           self.mynsfgm.Bar_Spacer,
+                                                                           self.q,
+                                                                           self.instances))
+            self.Process.start()
+            self.running=True
+        elif self.q.empty()==False:
+            steps=self.q.get(True)
+            self.Process.join()
+            self.running=False
+            self.Table_H.set_items(steps['items'])
+            self.Table_H.set_rowmode(steps['rowmode'])
         if self.session.status:
             asyncio.get_event_loop().call_later(self.refreshrate, self.Refresh_sample_menu)
-
+        else:
+            if self.Process.is_alive():
+                self.q.get(True)
+                self.Process.join()
 
 class Monitor_GUI(flx.PyComponent):
     Dir = event.StringProp('', settable=True)
@@ -587,14 +629,6 @@ if __name__ == '__main__':
         m.serve('')
         flx.start()
     else:
-        m = app.App(Monitor_GUI,
-                    args.directory,
-                    args.Regular,
-                    args.Monitor_RF,
-                    args.File_browser_RF,
-                    args.Sample_RF,
-                    args.Bar_Marker,
-                    args.Bar_Spacer,
-                    args.Bar_len).launch(runtime ='app')
+        m = app.App(Monitor_GUI)
         app.run()
     
