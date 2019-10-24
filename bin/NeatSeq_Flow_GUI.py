@@ -586,10 +586,16 @@ class Step_Tree_Class(ui.Widget):
                     if (len(tree.text.split(',')) > 1):
                         if (tree.text.startswith('[') and tree.text.endswith(']') ):
                             steps[tree.title] = tree.text.lstrip('[').rstrip(']').split(',')
+                            steps[tree.title] = map(lambda x: int(x) if x.isnumeric() else x , steps[tree.title])
                         else:
-                            steps[tree.title] = tree.text
+                            if tree.text.isnumeric():
+                                steps[tree.title] = int(tree.text)
+                            else:
+                                steps[tree.title] = tree.text
                     else:
                         steps[tree.title] = tree.text.lstrip('[').rstrip(']')
+                        if steps[tree.title].isnumeric():
+                            steps[tree.title] = int(steps[tree.title])
                 else:
                     steps[tree.text] = None
         return steps
@@ -1122,7 +1128,7 @@ class Samples_info(ui.Widget):
                                     style='background: SeaShell  ; text-align: center;border-radius: 0px; text-decoration: max-height:30px;')
                         ui.LineEdit(text='Remove Project File',
                                     disabled=True,
-                                    style=' background: SeaShell  ; text-align: center;border-radius: 0px; text-decoration: max-height:30px;')
+                                    style='background: SeaShell  ; text-align: center;border-radius: 0px; text-decoration: max-height:30px;')
                         # ui.LineEdit(text='',
                                     # disabled=True,
                                     # style='background: SeaShell  ; text-align: center;border-radius: 0px; text-decoration: max-height:30px; max-width:13px;')
@@ -1580,25 +1586,24 @@ from flexx import flx
 # Associate CodeMirror's assets with this module so that Flexx will load
 # them when (things from) this module is used.
 
-
-#base_url = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.46.0/'
-base_url =  os.path.join(os.path.realpath(os.path.expanduser(os.path.dirname(os.path.abspath(__file__))+os.sep+"..")),'neatseq_flow_gui','Codemirror')
-# flx.assets.associate_asset(__name__, base_url + 'codemirror.css')
-# flx.assets.associate_asset(__name__, base_url + 'codemirror.js')
-# flx.assets.associate_asset(__name__, base_url + 'mode/markdown/markdown.js')
-# flx.assets.associate_asset(__name__, base_url + 'theme/solarized.css')
-# flx.assets.associate_asset(__name__, base_url + 'addon/selection/active-line.js')
-# flx.assets.associate_asset(__name__, base_url + 'addon/edit/matchbrackets.js')
-# flx.assets.associate_asset(__name__, base_url + 'addon/edit/continuelist.js')
-
-flx.assets.associate_asset(__name__,'codemirror.css', open(os.path.join(base_url , 'codemirror.css')).read())
-flx.assets.associate_asset(__name__,'codemirror.js' ,open(os.path.join(base_url ,'codemirror.js')).read())
-flx.assets.associate_asset(__name__,'markdown.js' ,open(os.path.join(base_url ,'mode/markdown/markdown.js')).read())
-flx.assets.associate_asset(__name__, 'solarized.css' ,open(os.path.join(base_url ,'theme/solarized.css')).read())
-flx.assets.associate_asset(__name__,'active-line.js', open(os.path.join(base_url , 'addon/selection/active-line.js')).read())
-flx.assets.associate_asset(__name__, 'matchbrackets.js' ,open(os.path.join(base_url , 'addon/edit/matchbrackets.js')).read())
-flx.assets.associate_asset(__name__, 'continuelist.js' ,open(os.path.join(base_url , 'addon/edit/continuelist.js')).read())
-
+try:
+    base_url =  os.path.join(os.path.realpath(os.path.expanduser(os.path.dirname(os.path.abspath(__file__))+os.sep+"..")),'neatseq_flow_gui','Codemirror')
+    flx.assets.associate_asset(__name__,'codemirror.css', open(os.path.join(base_url , 'codemirror.css'), encoding="utf-8").read())
+    flx.assets.associate_asset(__name__,'codemirror.js' ,open(os.path.join(base_url ,'codemirror.js'), encoding="utf-8").read())
+    flx.assets.associate_asset(__name__,'markdown.js' ,open(os.path.join(base_url ,'mode/markdown/markdown.js'), encoding="utf-8").read())
+    flx.assets.associate_asset(__name__, 'solarized.css' ,open(os.path.join(base_url ,'theme/solarized.css'), encoding="utf-8").read())
+    flx.assets.associate_asset(__name__,'active-line.js', open(os.path.join(base_url , 'addon/selection/active-line.js'), encoding="utf-8").read())
+    flx.assets.associate_asset(__name__, 'matchbrackets.js' ,open(os.path.join(base_url , 'addon/edit/matchbrackets.js'), encoding="utf-8").read())
+    flx.assets.associate_asset(__name__, 'continuelist.js' ,open(os.path.join(base_url , 'addon/edit/continuelist.js'), encoding="utf-8").read())
+except :
+    base_url = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.46.0/'
+    flx.assets.associate_asset(__name__, base_url + 'codemirror.css')
+    flx.assets.associate_asset(__name__, base_url + 'codemirror.js')
+    flx.assets.associate_asset(__name__, base_url + 'mode/markdown/markdown.js')
+    flx.assets.associate_asset(__name__, base_url + 'theme/solarized.css')
+    flx.assets.associate_asset(__name__, base_url + 'addon/selection/active-line.js')
+    flx.assets.associate_asset(__name__, base_url + 'addon/edit/matchbrackets.js')
+    flx.assets.associate_asset(__name__, base_url + 'addon/edit/continuelist.js')
 
 class Documentation_Editor(flx.Widget):
     """ A CodeEditor widget based on CodeMirror.
