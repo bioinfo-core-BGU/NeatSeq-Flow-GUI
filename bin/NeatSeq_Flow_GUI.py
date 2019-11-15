@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 
+
 __author__ = "Liron Levin"
 __version__ = "2.0"
 
@@ -593,7 +594,12 @@ class Step_Tree_Class(ui.Widget):
                             else:
                                 steps[tree.title] = tree.text
                     else:
-                        steps[tree.title] = tree.text.lstrip('[').rstrip(']')
+                        if (tree.text.startswith('[') and tree.text.endswith(']') ):
+                            steps[tree.title] = tree.text.lstrip('[').rstrip(']')
+                        # elif (tree.text.startswith('[') or tree.text.endswith(']') ):
+                            # steps[tree.title] = '"'+tree.text+'"'
+                        else:
+                            steps[tree.title] = tree.text
                         if steps[tree.title].isnumeric():
                             steps[tree.title] = int(steps[tree.title])
                 else:
@@ -613,7 +619,12 @@ class Step_Tree_Class(ui.Widget):
                         else:
                             steps[tree.title] = [tree.text]
                     else:
-                        steps[tree.title] = [tree.text.lstrip('[').rstrip(']')]
+                        if (tree.text.startswith('[') and tree.text.endswith(']') ):
+                            steps[tree.title] = [tree.text.lstrip('[').rstrip(']')]
+                        elif (tree.text.startswith('[') or tree.text.endswith(']') ):
+                            steps[tree.title] = ['"'+tree.text+'"']
+                        else:
+                            steps[tree.title] = [tree.text]
                 else:
                     steps[tree.text] = None
         return steps
@@ -968,7 +979,12 @@ class Only_Tree_Class(ui.Widget):
                         else:
                             steps[tree.title] = tree.text
                     else:
-                        steps[tree.title] = tree.text.lstrip('[').rstrip(']')
+                        if (tree.text.startswith('[') and tree.text.endswith(']') ):
+                            steps[tree.title] = tree.text.lstrip('[').rstrip(']')
+                        # elif (tree.text.startswith('[') or tree.text.endswith(']') ):
+                            # steps[tree.title] = '"'+tree.text+'"'
+                        else:
+                            steps[tree.title] = tree.text
                 else:
                     steps[tree.text] = None
         return steps
@@ -3004,8 +3020,19 @@ class Login(flx.PyComponent):
 
 class Run_NeatSeq_Flow_GUI(app.PyComponent):
 
-    def init(self,arg1,arg2):
+    def init(self,arg1,arg2,USERSFILE,SMTPserver=None,sender_email=None):
         super().init()
+        import os 
+        Users={}
+        if SMTPserver!=None:
+            try:
+                for line in open(USERSFILE, 'r').readlines():
+                    split_line = line.split(" ")
+                    if len(split_line) ==2:
+                        Users[split_line[0]]=split_line[1] 
+            except:
+                pass
+        
         if SERVE:
             self.redirect = Redirect('/Login')
             try:
@@ -3016,11 +3043,52 @@ class Run_NeatSeq_Flow_GUI(app.PyComponent):
                 self.session.set_cookie('ARG2', None)
                 self.redirect.go()
                 return
-            if (ARG1!=arg1) or (ARG2 != arg2):
-                 self.redirect.go()
-                 return
+                
+            if ARG1 in Users.keys():
+                if ARG2 == arg2:
+                    self.session.set_cookie('ARG3', ARG1)
+                    self.session.set_cookie('ARG4', get_random_string(length=10))
+                    try:
+                        message = "Subject: Your NeatSeq-Flow login password \n" + self.session.get_cookie('ARG4')
+                        SMTPserver.sendmail(sender_email,Users[ARG1], message)
+                        print('Mail Sent to ' + Users[ARG1])
+                    except:
+                        pass
+                    self.redirect.go()
+                    return
+                else:
+                    try:
+                        ARG3  = self.session.get_cookie('ARG3')
+                        ARG4  = self.session.get_cookie('ARG4')
+                    except:
+                        self.session.set_cookie('ARG1', None)
+                        self.session.set_cookie('ARG2', None)
+                        self.session.set_cookie('ARG3', None)
+                        self.session.set_cookie('ARG4', None)
+                        self.redirect.go()
+                        return
+            try:
+                ARG3  = self.session.get_cookie('ARG3')
+                ARG4  = self.session.get_cookie('ARG4')
+            except:
+                self.session.set_cookie('ARG3', None)
+                self.session.set_cookie('ARG4', None)
+                self.redirect.go()
+                return
+    
+            
+            if SMTPserver!=None:
+                if (ARG1 != ARG3) or (ARG1==None) or (ARG2==None) or (ARG3==None) or (ARG4==None) or (ARG2 != ARG4):
+                     self.redirect.go()
+                     return
+            else:
+                if (ARG1!=arg1) or (ARG2 != arg2):
+                    self.redirect.go()
+                    return
             self.session.set_cookie('ARG1', None)
             self.session.set_cookie('ARG2', None)
+            self.session.set_cookie('ARG3', None)
+            self.session.set_cookie('ARG4', None)
             with flx.Layout():
                 NeatSeq_Flow_GUI()
 
@@ -3056,6 +3124,13 @@ if __name__ == '__main__':
                         help='User Name For This Serve (Only When --Server is set)')
     parser.add_argument('--PASSW',dest='PASSW',metavar="CHAR",type=str,default="",
                         help='Password For This Serve (Only When --Server is set)')
+    parser.add_argument('--USERSFILE',dest='USERSFILE',metavar="CHAR",type=str,default="",
+                        help='''
+                                 The location of a Users file in which a list of users and E-mails addresses are separated by one space (as:USER user@example.com).
+                                 The login password will be send to the user e-mail after filling its user name and the password generated at the beginning of the run (Only When --Server is set).
+                                 You will need a Gmail account to send the password to the users (you will be prompt to type in your Gmail address and password) 
+                                 '''
+                                 )
     args = parser.parse_args()
     SERVE=args.Server
     #temp_MODULES_TEMPLATES = Load_MODULES_TEMPLATES()
@@ -3069,24 +3144,47 @@ if __name__ == '__main__':
         if args.SSL:
             CERTFILE = 'self-signed.crt'
             KEYFILE  = 'self-signed.key'
-            os.system('openssl req -x509 -nodes -days 1 -batch -newkey rsa:2048 -keyout %s -out %s' % (KEYFILE, CERTFILE))
-
+            SLL_COMMAND = 'openssl req  -subj /CN=%s -x509 -nodes -days 1 -batch -newkey rsa:2048 -keyout %s -out %s' % (socket.gethostbyname(socket.gethostname()),
+                                                                                                        KEYFILE,
+                                                                                                        CERTFILE)
+            os.system(SLL_COMMAND)
             # use the self-signed certificate as if specified in normal config
             flx.config.ssl_certfile = CERTFILE
             flx.config.ssl_keyfile  = KEYFILE
         
         Login_m = flx.App(Login)
         Login_m.serve()
-        #,title='NeatSeq-Flow Login',icon=icon
-        #,title='NeatSeq-Flow GUI',icon=icon
-        if args.USER=='':
-            args.USER  = get_random_string(length=7)
-        if args.PASSW=='':
-            args.PASSW = get_random_string(length=7)
-        print('User Name: '+ args.USER)
-        print('Password: '+ args.PASSW)
+        
+        if os.path.isfile(args.USERSFILE):
+            import smtplib, ssl,getpass,sys
+            args.USERSFILE = os.path.abspath(args.USERSFILE)
+            port           = 465  # For SSL
+            smtp_server    = "smtp.gmail.com"
+            sender_email   = input('Enter your Gmail address and press enter:\n')
+            password       = getpass.getpass("Type your Gmail address password and press enter:\n")
+            try:
+                context    = ssl.create_default_context()
+                SMTPserver = smtplib.SMTP_SSL(smtp_server, port, context=context)
+                SMTPserver.login(sender_email, password)
+            except:
+                print('Error: Could not login to your Gmail account')
+                print('Make sure to Turn Allow less secure apps to ON at: https://myaccount.google.com/lesssecureapps')
+                sys.exit(1)
+            if args.PASSW=='':
+                args.PASSW = get_random_string(length=7)
+            print('Password: '+ args.PASSW)
+            
+        else:
+            SMTPserver=None
+            sender_email=None
+            if args.USER=='':
+                args.USER  = get_random_string(length=7)
+            if args.PASSW=='':
+                args.PASSW = get_random_string(length=7)
+            print('User Name: '+ args.USER)
+            print('Password: '+ args.PASSW)
         flx.config.cookie_secret = get_random_string()
-        m = app.App(Run_NeatSeq_Flow_GUI,args.USER,args.PASSW)
+        m = app.App(Run_NeatSeq_Flow_GUI,args.USER,args.PASSW,args.USERSFILE,SMTPserver,sender_email)
         app.create_server(host=socket.gethostbyname(socket.gethostname()))
         m.serve('')
         flx.start()
