@@ -14,20 +14,22 @@ from flexx import app, event, ui
 import os,sys,dialite
 from collections import OrderedDict
 
-SERVE=False
-
-Base_Help_URL = 'https://neatseq-flow.readthedocs.io/projects/neatseq-flow-modules/en/latest/'
 
 sys.path.append(os.path.realpath(os.path.expanduser(os.path.dirname(os.path.abspath(__file__))+os.sep+"..")))
 
+Base_Help_URL          = 'https://neatseq-flow.readthedocs.io/projects/neatseq-flow-modules/en/latest/'
+
 MODULES_TEMPLATES_FILE = 'https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/neatseq_flow_gui/TEMPLATES/MODULES_TEMPLATES.yaml'
 
+SERVE                  = False
 
-STEPS = {'Import': {'module': 'Import', 'script_path': None  },
+LOCK_USER_DIR          = True
 
-         }
+STEPS                  = {'Import': {'module': 'Import', 'script_path': None  },
 
-COLORS = ('#ffffff','#8DD3C7','#BEBADA','#FDBF6F',
+                        }
+
+COLORS                 = ('#ffffff','#8DD3C7','#BEBADA','#FDBF6F',
           '#BC80BD','#FCCDE5','#FFFFB3','#66C2A5',
           '#80B1D3','#FDB462','#B3DE69','#CCEBC5',
           '#FC8D62','#8DA0CB','#E78AC3','#A6D854',
@@ -37,9 +39,9 @@ COLORS = ('#ffffff','#8DD3C7','#BEBADA','#FDBF6F',
           '#FB8072'
           )
 
-COLOR_BY = ['module','tag']
+COLOR_BY               = ['module','tag']
 
-CLUSTER  = {'Executor': 'Local',
+CLUSTER                = {'Executor': 'Local',
            'Default_wait': '10',
            'Qsub_opts': '-cwd',
            'Qsub_path': '/path/to/qstat',
@@ -48,32 +50,32 @@ CLUSTER  = {'Executor': 'Local',
            'conda': {'path': '{Vars.conda.base}', 'env': '{Vars.conda.env}' }
            }
 
-VARS = {'Programs': {},
+VARS                   = {'Programs': {},
         'Genome': {},
         'conda': {'base': None, 'env': None }
         }
 
-Executor = ['SGE', 'SLURM', 'Local']
+Executor               = ['SGE', 'SLURM', 'Local']
 
-MODULES_TEMPLATES = {'Basic': {'Basic_New_Step': {'base': None, 'module': None, 'script_path': None, }}
+MODULES_TEMPLATES      = {'Basic': {'Basic_New_Step': {'base': None, 'module': None, 'script_path': None, }}
 
                      }
 
-MODULE_INFO = {}
+MODULE_INFO            = {}
 
-DEFAULT_HELP_BOX_TEXT='''This is the Help Box!
+DEFAULT_HELP_BOX_TEXT  = '''This is the Help Box!
 ======================
 Information about modules and module's options will be displayed here.
 -
 '''
 
-FILE_TYPES = ['Single', 'Forward', 'Reverse', 'Nucleotide', 'Protein', 'SAM', 'BAM', 'REFERENCE', 'VCF', 'G.VCF','genes.counts','HTSeq.counts','results']
+FILE_TYPES             = ['Single', 'Forward', 'Reverse', 'Nucleotide', 'Protein', 'SAM', 'BAM', 'REFERENCE', 'VCF', 'G.VCF','genes.counts','HTSeq.counts','results']
 
-FILE_TYPES_SLOTS = ['fastq.S', 'fastq.F', 'fastq.R', 'fasta.nucl', 'fasta.prot', 'sam', 'bam', 'reference', 'vcf', 'g.vcf']
+FILE_TYPES_SLOTS       = ['fastq.S', 'fastq.F', 'fastq.R', 'fasta.nucl', 'fasta.prot', 'sam', 'bam', 'reference', 'vcf', 'g.vcf']
 
-FIELDS2SPLIT = ['base']
+FIELDS2SPLIT           = ['base']
 
-Documentation = '''
+Documentation          = '''
 WorkFlow's Documentation
 =========================
 Here you can document your workflow and add notes.
@@ -84,7 +86,7 @@ Here you can document your workflow and add notes.
         2. Don't forget to **save** the workflow at the Design tab!!!
 '''
 
-html_cite='''
+html_cite              = '''
     <p class=MsoNormal dir=LTR style='margin-top:0cm;margin-bottom:0cm;margin-bottom:.0000pt;
     text-align:left;line-height:normal;direction:ltr;unicode-bidi:embed'><b>NeatSeq-Flow
     Graphical User Interface By Liron Levin</b><br>
@@ -1398,19 +1400,19 @@ class Run_NeatSeq_Flow(ui.Widget):
                             with ui.Layout(title='Project Directory', style='min-height: 70px; max-height: 70px;'):
                                 ui.Label(text='Project Directory:',style='padding-left: 0px; font-size: 120% ;')
                                 with ui.HSplit(style='min-height: 35px; max-height: 35px;'):
-                                    self.Project_dir_L = ui.LineEdit(text='')
+                                    self.Project_dir_L = ui.LineEdit(text='',disabled = (Server and LOCK_USER_DIR) )
                                     self.Project_dir_b = ui.Button(text='Browse', style='max-width: 100px; ')
 
                             with ui.Layout(title='Sample File', style='min-height: 70px; max-height: 70px;'):
                                 ui.Label(text='Sample File:',style='padding-left: 0px; font-size: 120% ;')
                                 with ui.HSplit(style='min-height: 35px; max-height: 35px;'):
-                                    self.sample_file_L = ui.LineEdit(text='')
+                                    self.sample_file_L = ui.LineEdit(text='',disabled = (Server and LOCK_USER_DIR))
                                     self.sample_file_b = ui.Button(text='Browse', style='max-width: 100px;')
 
                             with ui.Layout(title='Parameter File', style='min-height: 70px; max-height: 70px;'):
                                 ui.Label(text='Parameter File:',style='padding-left: 0px; font-size: 120% ;')
                                 with ui.HSplit(style='min-height: 35px; max-height: 35px;'):
-                                    self.parameter_file_L = ui.LineEdit(text='')
+                                    self.parameter_file_L = ui.LineEdit(text='',disabled = (Server and LOCK_USER_DIR))
                                     self.parameter_file_b = ui.Button(text='Browse', style='max-width: 100px;')
 
                     ui.Label(style='padding: 0px ;min-height: 50px; max-height: 50px; ')
@@ -1420,19 +1422,19 @@ class Run_NeatSeq_Flow(ui.Widget):
                             with ui.Layout(title='NeatSeq-Flow script location', style='min-height: 70px; max-height: 70px;'):
                                 ui.Label(text='NeatSeq-Flow script location:',style='padding-left: 0px; font-size: 120% ;')
                                 with ui.HSplit(style='min-height: 35px; max-height: 35px;'):
-                                    self.NeatSeq_bin_L = ui.LineEdit(text='neatseq_flow.py')
+                                    self.NeatSeq_bin_L = ui.LineEdit(text='neatseq_flow.py',disabled = (Server and LOCK_USER_DIR))
                                     self.NeatSeq_bin_b = ui.Button(text='Browse', style='max-width: 100px; ')
 
                             with ui.Layout(title='Conda bin location', style='min-height: 70px; max-height: 70px;'):
                                 ui.Label(text='Conda bin location:',style='padding-left: 0px; font-size: 120% ;')
                                 with ui.HSplit(style='min-height: 35px; max-height: 35px;'):
-                                    self.conda_bin_L = ui.LineEdit(text='')
+                                    self.conda_bin_L = ui.LineEdit(text='',disabled = (Server and LOCK_USER_DIR))
                                     self.conda_bin_b = ui.Button(text='Browse', style='max-width: 100px; ')
 
                             with ui.Layout(title='Conda environment to use', style='min-height: 70px; max-height: 70px;'):
                                 ui.Label(text='Conda environment to use:',style='padding-left: 0px; font-size: 120% ;')
                                 with ui.HSplit(style='min-height: 35px; max-height: 35px;'):
-                                    self.conda_env_L = ui.ComboBox(editable=True, text='',
+                                    self.conda_env_L = ui.ComboBox(editable= not (Server and LOCK_USER_DIR), text='',
                                                                    placeholder_text='Choose Conda Environment')
                                     self.conda_env_b = ui.Button(text='Search', style='max-width: 100px; ')
 
@@ -1730,7 +1732,8 @@ class File_Browser(flx.GroupWidget):
     Done          = event.BoolProp(False, settable=True)
     Selected_Path = event.ListProp([],settable=True)
     #main program
-    def init(self):
+    def init(self,base_path):
+        self.set_Path(base_path)
         with ui.VFix():
             with ui.HSplit(style='max-height: 30px;'):
                 self.Parent_Dir = ui.Button(text='..',style='max-width: 30px;')
@@ -1848,13 +1851,22 @@ class Run_File_Browser(flx.PyComponent):
     Selected_Path = event.ListProp([],settable=True)
     
     #main program
-    def init(self):
+    def init(self,base_path):
+        import os
+        
+        if os.path.isdir(base_path.strip()):
+            self.base_path=os.path.abspath(base_path)
+        else:
+            if SERVE:
+                self.base_path=os.getcwd()
+            else:
+                self.base_path=''
         with ui.HSplit(spacing=1):
             #flexx.ui.FileBrowserWidget()
             ui.Layout(style='max-width: 400px;')
             with ui.VSplit():
                 ui.Layout(style='max-height: 150px;')
-                self.File_Browser = File_Browser(title='File Browser')
+                self.File_Browser = File_Browser(self.base_path,title='File Browser')
                 ui.Layout(style='max-height: 150px;')
             ui.Layout(style='max-width: 400px;')
     
@@ -1883,15 +1895,16 @@ class Run_File_Browser(flx.PyComponent):
             Dir              = {}
             Dir['Directory'] = {}
             Dir['File']      = {}
-            import os
+            
             if self.File_Browser.Path=='':
                 Path = os.getcwd()
             else:
-                Path = self.File_Browser.Path
+                Path = os.path.abspath(self.File_Browser.Path)
             if self.File_Browser.Change_Dir != '':
                 if self.File_Browser.Change_Dir == '..':
                     self.File_Browser.set_Change_Dir = ''
-                    Path = os.path.split(Path)[0]
+                    if (Path != self.base_path) or (not LOCK_USER_DIR):
+                        Path = os.path.split(Path)[0]
                 else:
                     Path = os.path.join(Path,self.File_Browser.Change_Dir)
                     self.File_Browser.set_Change_Dir = ''
@@ -2063,7 +2076,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
     Recovery                     = event.IntProp(0, settable=True)
     Locate_Failures              = event.IntProp(0, settable=True)
     
-    def init(self):
+    def init(self,path):
         self.filepicker_key = ''
         with ui.StackLayout(flex=1) as self.stack:
             with ui.VSplit() as self.MainStack:
@@ -2091,7 +2104,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 self.Terminal_string = ''
                 
             with  ui.Widget(flex=1) as self.Browser_W:
-                self.Browser = Run_File_Browser()
+                self.Browser = Run_File_Browser(path)
     # @event.reaction('label.pointer_move')
     # def on_label_move(self, *events):
         # self.label.set_flex(0.2)
@@ -3020,16 +3033,18 @@ class Login(flx.PyComponent):
 
 class Run_NeatSeq_Flow_GUI(app.PyComponent):
 
-    def init(self,arg1,arg2,USERSFILE,SMTPserver=None,sender_email=None):
+    def init(self,arg1,arg2,USERSFILE,SMTPserver=None,sender_email=None,password=None):
         super().init()
-        import os 
+        import os , datetime
         Users={}
         if SMTPserver!=None:
             try:
                 for line in open(USERSFILE, 'r').readlines():
                     split_line = line.split(" ")
                     if len(split_line) ==2:
-                        Users[split_line[0]]=split_line[1] 
+                        Users[split_line[0]]=[split_line[1],'']
+                    if len(split_line) >2:
+                        Users[split_line[0]]=[split_line[1],split_line[2]]
             except:
                 pass
         
@@ -3043,15 +3058,17 @@ class Run_NeatSeq_Flow_GUI(app.PyComponent):
                 self.session.set_cookie('ARG2', None)
                 self.redirect.go()
                 return
-                
+            
             if ARG1 in Users.keys():
                 if ARG2 == arg2:
                     self.session.set_cookie('ARG3', ARG1)
                     self.session.set_cookie('ARG4', get_random_string(length=10))
                     try:
                         message = "Subject: Your NeatSeq-Flow login password \n" + self.session.get_cookie('ARG4')
-                        SMTPserver.sendmail(sender_email,Users[ARG1], message)
-                        print('Mail Sent to ' + Users[ARG1])
+                        SMTPserver = SMTP_connect(sender_email,password,SMTPserver)
+                        SMTPserver.sendmail(sender_email,Users[ARG1][0], message)
+                        #SMTPserver.quit()
+                        print('Mail Sent to ' + Users[ARG1][0])
                     except:
                         pass
                     self.redirect.go()
@@ -3081,16 +3098,26 @@ class Run_NeatSeq_Flow_GUI(app.PyComponent):
                 if (ARG1 != ARG3) or (ARG1==None) or (ARG2==None) or (ARG3==None) or (ARG4==None) or (ARG2 != ARG4):
                      self.redirect.go()
                      return
+                path = Users[ARG1][1]
+                try:
+                    message = "Subject: The user %s just logged in \n The user email is %s" % (self.session.get_cookie('ARG1'),Users[ARG1][0])
+                    SMTPserver = SMTP_connect(sender_email,password,SMTPserver)
+                    SMTPserver.sendmail(sender_email,sender_email, message)
+                    #SMTPserver.quit()
+                    print(str(datetime.datetime.now())+' The User '+ self.session.get_cookie('ARG1') +' just logged in ; Mail Sent to you')
+                except:
+                    pass
             else:
                 if (ARG1!=arg1) or (ARG2 != arg2):
                     self.redirect.go()
                     return
+                path = ''
             self.session.set_cookie('ARG1', None)
             self.session.set_cookie('ARG2', None)
             self.session.set_cookie('ARG3', None)
             self.session.set_cookie('ARG4', None)
             with flx.Layout():
-                NeatSeq_Flow_GUI()
+                NeatSeq_Flow_GUI(path)
 
 
 def get_random_string(length=24, allowed_chars=None):
@@ -3112,6 +3139,27 @@ def get_random_string(length=24, allowed_chars=None):
 
     return ''.join(srandom.choice(allowed_chars) for i in range(length))
 
+def SMTP_connect(sender_email,password,SMTPserver=None):
+    import smtplib, ssl,getpass,sys
+    from tornado.web import decode_signed_value
+    if SMTPserver!=None:
+        try:
+            status = SMTPserver.noop()[0]
+        except:  # smtplib.SMTPServerDisconnected
+            status = -1
+        print(status)
+        if status == 250:
+            return SMTPserver
+    port           = 465  # For SSL
+    smtp_server    = "smtp.gmail.com"
+    context    = ssl.create_default_context()
+    SMTPserver = smtplib.SMTP_SSL(smtp_server, port, context=context)
+    SMTPserver.login(sender_email,
+                     decode_signed_value(flx.config.cookie_secret,
+                                         'email',
+                                         password).decode('UTF-8') )
+    return SMTPserver
+    
 if __name__ == '__main__':
     #getting arguments from the user 
     import argparse
@@ -3126,13 +3174,17 @@ if __name__ == '__main__':
                         help='Password For This Serve (Only When --Server is set)')
     parser.add_argument('--USERSFILE',dest='USERSFILE',metavar="CHAR",type=str,default="",
                         help='''
-                                 The location of a Users file in which a list of users and E-mails addresses are separated by one space (as:USER user@example.com).
+                                 The location of a Users file in which a list of users, E-mails addresses and Users Directorys are separated by one space (as:USER user@example.com /USER/DIR).
                                  The login password will be send to the user e-mail after filling its user name and the password generated at the beginning of the run (Only When --Server is set).
                                  You will need a Gmail account to send the password to the users (you will be prompt to type in your Gmail address and password) 
                                  '''
                                  )
-    args = parser.parse_args()
-    SERVE=args.Server
+    parser.add_argument('--UNLOCK_USER_DIR',dest='UNLOCK',action='store_true',
+                        help="Don't Lock Users to their Directory Or to the Current Working Directory")
+    args          = parser.parse_args()
+    SERVE         = args.Server
+    LOCK_USER_DIR = not args.UNLOCK
+    
     #temp_MODULES_TEMPLATES = Load_MODULES_TEMPLATES()
     temp_MODULES_TEMPLATES = Update_Yaml_Data(MODULES_TEMPLATES_FILE,'TEMPLATES', 'MODULES_TEMPLATES.yaml',"Modules Templates")
     if len(temp_MODULES_TEMPLATES) > 0:
@@ -3141,6 +3193,9 @@ if __name__ == '__main__':
     #icon = app.assets.add_shared_data('ico.icon', open(icon, 'rb').read())
     if args.Server:
         import socket 
+        from tornado.web import create_signed_value
+        flx.config.cookie_secret = get_random_string()
+        
         if args.SSL:
             CERTFILE = 'self-signed.crt'
             KEYFILE  = 'self-signed.key'
@@ -3158,18 +3213,20 @@ if __name__ == '__main__':
         if os.path.isfile(args.USERSFILE):
             import smtplib, ssl,getpass,sys
             args.USERSFILE = os.path.abspath(args.USERSFILE)
-            port           = 465  # For SSL
-            smtp_server    = "smtp.gmail.com"
+           
             sender_email   = input('Enter your Gmail address and press enter:\n')
-            password       = getpass.getpass("Type your Gmail address password and press enter:\n")
+            
+            password       = create_signed_value(flx.config.cookie_secret,
+                                                 'email',
+                                                 getpass.getpass("Type your Gmail address password and press enter:\n"))
+            
             try:
-                context    = ssl.create_default_context()
-                SMTPserver = smtplib.SMTP_SSL(smtp_server, port, context=context)
-                SMTPserver.login(sender_email, password)
+                SMTPserver = SMTP_connect(sender_email,password)
             except:
                 print('Error: Could not login to your Gmail account')
                 print('Make sure to Turn Allow less secure apps to ON at: https://myaccount.google.com/lesssecureapps')
                 sys.exit(1)
+            #SMTPserver.quit()
             if args.PASSW=='':
                 args.PASSW = get_random_string(length=7)
             print('Password: '+ args.PASSW)
@@ -3183,8 +3240,8 @@ if __name__ == '__main__':
                 args.PASSW = get_random_string(length=7)
             print('User Name: '+ args.USER)
             print('Password: '+ args.PASSW)
-        flx.config.cookie_secret = get_random_string()
-        m = app.App(Run_NeatSeq_Flow_GUI,args.USER,args.PASSW,args.USERSFILE,SMTPserver,sender_email)
+        
+        m = app.App(Run_NeatSeq_Flow_GUI,args.USER,args.PASSW,args.USERSFILE,SMTPserver,sender_email,password)
         app.create_server(host=socket.gethostbyname(socket.gethostname()))
         m.serve('')
         flx.start()
