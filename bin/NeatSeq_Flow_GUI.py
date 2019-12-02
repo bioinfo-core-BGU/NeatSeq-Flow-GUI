@@ -3232,8 +3232,9 @@ if __name__ == '__main__':
             print('Password: '+ args.PASSW)
             
         else:
-            SMTPserver=None
-            sender_email=None
+            SMTPserver   = None
+            sender_email = None
+            password     = None
             if args.USER=='':
                 args.USER  = get_random_string(length=7)
             if args.PASSW=='':
