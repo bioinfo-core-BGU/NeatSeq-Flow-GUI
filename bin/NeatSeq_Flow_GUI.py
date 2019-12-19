@@ -1130,14 +1130,14 @@ class Samples_info(ui.Widget):
                         self.load_sample_file_b = ui.Button(text='Load Sample File')
                         self.save_sample_file_b = ui.Button(text='Save Sample File')
             #ui.Label(text='',style='min-height: 5px; max-height: 5px;')
-            with ui.GroupWidget(title='Edit Project Title',style='font-size: 120%; border: 2px solid purple; min-height: 40px; max-height: 40px;' ):
-                self.tree_title_b = ui.LineEdit(text='', style = 'font-size: 80%; border: 1px solid red;max-height: 30px;',
+            with ui.GroupWidget(title='Edit Project Title',style='font-size: 120%; border: 2px solid purple; max-height: 55px; min-height: 55px;' ):
+                self.tree_title_b = ui.LineEdit(text='', style = 'font-size: 80%; border: 1px solid red;',
                                                 placeholder_text='Project Title')
             
             ui.Label(text='',style='min-height: 5px; max-height: 5px;')
             with ui.GroupWidget(title='Project Level',style='font-size: 120% ;padding: 10px ;border: 2px solid green; border-radius: 10px;'):
                  with ui.VSplit():
-                    with ui.HFix(style='max-height:30px;overflow-y:scroll;'):
+                    with ui.HFix(style='max-height:30px;'):#overflow-y:scroll;'):
                         ui.LineEdit(text='File Type',
                                     disabled=True,
                                     style='background: SeaShell  ; text-align: center;border-radius: 0px; text-decoration: max-height:30px;')
@@ -1147,9 +1147,9 @@ class Samples_info(ui.Widget):
                         ui.LineEdit(text='Remove Project File',
                                     disabled=True,
                                     style='background: SeaShell  ; text-align: center;border-radius: 0px; text-decoration: max-height:30px;')
-                        # ui.LineEdit(text='',
-                                    # disabled=True,
-                                    # style='background: SeaShell  ; text-align: center;border-radius: 0px; text-decoration: max-height:30px; max-width:13px;')
+                        ui.LineEdit(text='',
+                                    disabled=True,
+                                    style='background: SeaShell  ; text-align: center;border-radius: 0px; text-decoration: max-height:30px; max-width:15px;')
 
                     
                     with ui.Layout(style='overflow-y:scroll;'):
@@ -1158,7 +1158,7 @@ class Samples_info(ui.Widget):
 
             with ui.GroupWidget( title='Sample Level',style='font-size: 120% ;padding: 5px ; border: 3px solid blue; border-radius: 10px;'):
                 with ui.VSplit():
-                    with ui.HFix(style='max-height:30px;overflow-y:scroll;'):
+                    with ui.HFix(style='max-height:30px;'):#overflow-y:scroll;'):
                         ui.LineEdit(text='Sample Name',
                                     disabled=True,
                                     style='background: Lavender  ; text-align: center;border-radius: 0px; text-decoration: max-height:30px;')
@@ -1171,9 +1171,9 @@ class Samples_info(ui.Widget):
                         ui.LineEdit(text='Remove Sample File',
                                     disabled=True,
                                     style='background: Lavender  ; text-align: center;border-radius: 0px; text-decoration: max-height:30px;')
-                        # ui.LineEdit(text='',
-                                    # disabled=True,
-                                    # style='background: Lavender  ; text-align: center;border-radius: 0px; text-decoration: max-height:30px; max-width:13px;')
+                        ui.LineEdit(text='',
+                                    disabled=True,
+                                    style='background: Lavender  ; text-align: center;border-radius: 0px; text-decoration: max-height:30px; max-width:15px;')
 
                     
                     with ui.Layout(style='overflow-y:scroll;'):
@@ -2735,7 +2735,8 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 except:
                     samples_data = []
                     self.samples_info.set_load_samples_file([])
-                    dialite.fail('Load Error', 'Error loading sample file')
+                    if not SERVE:
+                        dialite.fail('Load Error', 'Error loading sample file')
                 if len(samples_data) > 0:
                     self.update_samples_data(samples_data)
                     self.Run.set_sample_file(self.samples_info.load_samples_file)
@@ -2758,7 +2759,8 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 except:
                     param_data = []
                     self.step_info.set_workflow_file([])
-                    dialite.fail('Load Error', 'Error loading workflow file')
+                    if not SERVE:
+                        dialite.fail('Load Error', 'Error loading workflow file')
                 if len(param_data) > 0:
 
                     if 'Step_params' in param_data.keys():
@@ -2817,7 +2819,8 @@ class NeatSeq_Flow_GUI(app.PyComponent):
 
                 except:
                     err_flag=False
-                    dialite.fail('Save Error', 'Error saving workflow file')
+                    if not SERVE:
+                        dialite.fail('Save Error', 'Error saving workflow file')
 
                 if err_flag:
                     self.Run.set_parameter_file(self.step_info.save_workflow_file)
@@ -3042,9 +3045,9 @@ class Run_NeatSeq_Flow_GUI(app.PyComponent):
                 for line in open(USERSFILE, 'r').readlines():
                     split_line = line.split(" ")
                     if len(split_line) ==2:
-                        Users[split_line[0]]=[split_line[1],'']
+                        Users[split_line[0]]=[split_line[1].strip(),'']
                     if len(split_line) >2:
-                        Users[split_line[0]]=[split_line[1],split_line[2]]
+                        Users[split_line[0]]=[split_line[1].strip(),split_line[2].strip()]
             except:
                 pass
         
@@ -3245,7 +3248,23 @@ if __name__ == '__main__':
         m = app.App(Run_NeatSeq_Flow_GUI,args.USER,args.PASSW,args.USERSFILE,SMTPserver,sender_email,password)
         app.create_server(host=socket.gethostbyname(socket.gethostname()))
         m.serve('')
-        flx.start()
+        keep_runing = True
+        import signal
+        
+        while keep_runing:
+            
+            try:
+                flx.start()
+                print('Do you want to exit? (yes/no)')
+                signal.signal(signal.SIGALRM, lambda x,y: 1/0 )
+                signal.alarm(5)
+                if input() == 'yes':
+                    keep_runing = False
+                    print('Bye Bye ..')
+                    sys.exit(1)
+            except :
+                if keep_runing:
+                    print(' Keep going ')
     else:
-        m = app.App(NeatSeq_Flow_GUI,'').launch(runtime ='app',size=(1300, 750),title='NeatSeq-Flow GUI',icon=icon)
+        m = app.App(NeatSeq_Flow_GUI).launch(runtime ='app',size=(1300, 750),title='NeatSeq-Flow GUI',icon=icon)
         app.run()
