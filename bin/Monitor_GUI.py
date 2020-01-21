@@ -550,7 +550,8 @@ class Monitor_GUI(flx.PyComponent):
     @event.reaction('Dir')
     def Update_Dir(self, *events):
         for ev in events:
-            self.mynsfgm.set_Dir(os.path.join(ev.new_value,"logs"))
+            if ev.new_value!='':
+                self.mynsfgm.set_Dir(os.path.join(ev.new_value,"logs"))
         
     @event.reaction('file_menu.Current_Highlite','file_menu.choice')
     def choose_log_file(self, *events):

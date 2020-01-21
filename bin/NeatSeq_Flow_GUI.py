@@ -1014,13 +1014,13 @@ class Only_Tree_Class(ui.Widget):
                 if self.tree_value_b.disabled != True:
                     if self.tree_value_b.text != '':
                         self.current_selected.set_text(self.tree_value_b.text)
-                        self.current_selected.set_title(self.tree_key_b.text)
+                        self.current_selected.set_title("".join([ c if (c.isalnum() or c=='_') else "" for c in self.tree_key_b.text ]))
                     else:
-                        self.current_selected.set_text(self.tree_key_b.text)
+                        self.current_selected.set_text("".join([ c if (c.isalnum() or c=='_') else "" for c in self.tree_key_b.text ]))
                         self.current_selected.set_title('')
                 elif self.tree_key_b.disabled != True:
                     if self.tree_key_b.text != '':
-                        self.current_selected.set_text(self.tree_key_b.text)
+                        self.current_selected.set_text("".join([ c if (c.isalnum() or c=='_')  else "" for c in self.tree_key_b.text ]))
 
     @event.reaction('tree_add_option_b.pointer_click')
     def tree_add_button_click(self, *events):
@@ -1731,13 +1731,17 @@ class File_Browser(flx.GroupWidget):
     Browser_Type  = event.DictProp({'select_style':'Single','select_type':'Dir'}, settable=True)
     Done          = event.BoolProp(False, settable=True)
     Selected_Path = event.ListProp([],settable=True)
+    New_Dir       = event.StringProp('', settable=True)
     #main program
     def init(self,base_path):
         self.set_Path(base_path)
         with ui.VFix():
             with ui.HSplit(style='max-height: 30px;'):
-                self.Parent_Dir = ui.Button(text='..',style='max-width: 30px;')
-                self.Path_Label = ui.Label(text=self.Path)
+                self.Parent_Dir        = ui.Button(text='..',style='max-width: 30px;')
+                self.Path_Label        = ui.Label(text=self.Path)
+                self.New_Dir_Button    = ui.Button(text='New Directory',style='max-width: 150px;')
+                self.New_Dir_Name_Edit = ui.LineEdit(style='max-height: 30px;',disabled=False)
+                
             with flx.Layout(style='overflow-y:scroll;') as self.Browser:
                 with ui.HSplit(style='background: white; border: 0px solid gray;') as self.Data:
                     self.set_update(True)
@@ -1766,7 +1770,12 @@ class File_Browser(flx.GroupWidget):
             self.set_update(False)
         else:
             self.set_update(True)
-
+            
+    @event.reaction('New_Dir_Button.pointer_click')
+    def New_Dir_Button_click(self):
+        if self.New_Dir_Name_Edit.text.strip().replace(' ','_')!='':
+            self.set_New_Dir(self.New_Dir_Name_Edit.text.strip().replace(' ','_'))
+        
     @event.reaction('OK.pointer_click')
     def Ok_Button_click(self):
         selected_path=[]
@@ -1824,11 +1833,15 @@ class File_Browser(flx.GroupWidget):
                 with ui.VFix(spacing=0,style='background: white; border: 0px solid gray;'):
                     with ui.VFix(spacing=1,title='Directory'):
                         if 'Directory' in  self.Dir.keys():
-                            for files in self.Dir['Directory'].keys():
+                            Dir_list = list(self.Dir['Directory'].keys())
+                            Dir_list.sort()
+                            for files in Dir_list: #self.Dir['Directory'].keys():
                                 ui.Button(text=files,style='max-height: 30px;min-height: 30px;text-align:left;border: 1px solid gray;')
                     with ui.VFix(spacing=1,title='Files') as self.Files:
                         if 'File' in  self.Dir.keys():
-                            for files in self.Dir['File'].keys():
+                            files_list = list(self.Dir['File'].keys())
+                            files_list.sort()
+                            for files in files_list: #self.Dir['File'].keys():
                                 if self.Browser_Type['select_type']=='Open':
                                     if self.Browser_Type['select_style']=='Single':
                                         ui.RadioButton(text=files,style='max-height: 30px;min-height: 30px;border: 0px solid gray;')
@@ -1838,10 +1851,14 @@ class File_Browser(flx.GroupWidget):
                                     ui.Button(text=files,disabled=True,style='background: white;border: 0px solid gray;max-height: 30px;min-height: 30px;text-align:left;')
                 with ui.VFix(spacing=1,style='background: white; border: 0px solid gray;'):
                     if 'Directory' in  self.Dir.keys():
-                        for files in self.Dir['Directory'].keys():
+                        Dir_list = list(self.Dir['Directory'].keys())
+                        Dir_list.sort()
+                        for files in Dir_list: #self.Dir['Directory'].keys():
                             ui.Button(text='Directory',disabled=True,style='background: white;border: 0px solid gray;max-height: 30px;min-height: 30px;max-width: 100px;')
                     if 'File' in  self.Dir.keys():
-                        for files in self.Dir['File'].keys():
+                        files_list = list(self.Dir['File'].keys())
+                        files_list.sort()
+                        for files in files_list: #self.Dir['File'].keys():
                             ui.Button(text=self.Dir['File'][files],disabled=True,style='background: white;border: 0px solid gray;max-height: 30px;min-height: 30px;max-width: 100px;text-align:right;')
 
 
@@ -1902,12 +1919,12 @@ class Run_File_Browser(flx.PyComponent):
                 Path = os.path.abspath(self.File_Browser.Path)
             if self.File_Browser.Change_Dir != '':
                 if self.File_Browser.Change_Dir == '..':
-                    self.File_Browser.set_Change_Dir = ''
+                    self.File_Browser.set_Change_Dir('')
                     if (Path != self.base_path) or (not LOCK_USER_DIR):
                         Path = os.path.split(Path)[0]
                 else:
                     Path = os.path.join(Path,self.File_Browser.Change_Dir)
-                    self.File_Browser.set_Change_Dir = ''
+                    self.File_Browser.set_Change_Dir('')
             try:
                 with os.scandir(Path) as it:
                     for entry in it:
@@ -1930,11 +1947,22 @@ class Run_File_Browser(flx.PyComponent):
                 self.File_Browser.set_Dir(Dir)
             except :     
                 pass
+            self.File_Browser.set_update(False)
     
     @event.reaction('Browser_Type')
     def update_Browser_Type(self,*events):
         self.File_Browser.set_Browser_Type(self.Browser_Type)
-
+    
+    @event.reaction('File_Browser.New_Dir')
+    def create_new_dir(self,*events):
+        Path = os.path.abspath(self.File_Browser.Path)
+        Path = os.path.join(Path,self.File_Browser.New_Dir)
+        print(Path)
+        try:
+            os.mkdir(Path)
+        except :     
+            pass
+        self.File_Browser.set_update(True)
 
 class NeatSeq_Flow_GUI(app.PyComponent):
     CSS = """
@@ -2091,7 +2119,8 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                     if SERVE:
                         import Monitor_GUI
                         with ui.Widget(title='Monitor') as self.Monitor:
-                            self.monitor = Monitor_GUI.Monitor_GUI()
+                            with ui.Layout() as self.Monitor_Widget:
+                                self.monitor = Monitor_GUI.Monitor_GUI(path)
                     self.Help = ui.IFrame(url=Base_Help_URL,
                                           title='Help')
                     
@@ -2123,6 +2152,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
     def select_files(self,select_style='Single', select_type='Open', wildcard='*'):
         if SERVE:
             self.Browser.set_Browser_Type({'select_style':select_style,'select_type':select_type})
+            self.Browser.File_Browser.set_update(True)
             self.stack.set_current(self.Browser_W)
         else:
             try:
@@ -2676,12 +2706,19 @@ class NeatSeq_Flow_GUI(app.PyComponent):
     
     @event.reaction('Run.jump2monitortab')
     def jump2monitortab(self, *events):
+        import Monitor_GUI
         for ev in events:
             if ev.new_value!='None':
+                self.monitor.dispose()
                 if os.path.isdir(ev.new_value):
-                    self.monitor.set_Dir(ev.new_value)
+                    
+                    with self.Monitor:
+                        with ui.Layout() as self.Monitor_Widget:
+                            self.monitor = Monitor_GUI.Monitor_GUI(ev.new_value)
                 else:
-                    self.monitor.set_Dir(os.getcwd())
+                    with self.Monitor:
+                        with ui.Layout() as self.Monitor_Widget:
+                            self.monitor = Monitor_GUI.Monitor_GUI(os.getcwd())
                 self.TabLayout2.set_current(self.Monitor)
                 self.Run.set_jump2monitortab('None')
     
