@@ -3303,5 +3303,5 @@ if __name__ == '__main__':
                 if keep_runing:
                     print(' Keep going ')
     else:
-        m = app.App(NeatSeq_Flow_GUI).launch(runtime ='app',size=(1300, 750),title='NeatSeq-Flow GUI',icon=icon)
+        m = app.App(NeatSeq_Flow_GUI,os.getcwd()).launch(runtime ='app',size=(1300, 750),title='NeatSeq-Flow GUI',icon=icon)
         app.run()
