@@ -1,14 +1,6 @@
 #!/usr/bin/env python                                                          
 # -*- coding: UTF-8 -*-
 
-__author__ = "Liron Levin"
-__version__ = "1.3"
-
-
-__affiliation__ = "Bioinformatics Core Unit, NIBN, Ben Gurion University"
-
-
-
 """ 
 :Neatseq-Flow Monitor
 -----------------------
@@ -94,8 +86,11 @@ Help message:
 
 """
 
+__author__ = "Liron Levin"
+__version__ = "1.3"
 
 
+__affiliation__ = "Bioinformatics Core Unit, NIBN, Ben Gurion University"
 
 
 import argparse
@@ -218,14 +213,15 @@ class nsfgm:
                 else:
                     runlog_Data["State"]=''
                 
-                    if 'Job ID' in runlog_Data.columns:
-                        if len(set(runlog_Data["Host"]))==1:
-                            if list(set(runlog_Data["Host"]))[0]==LOCAL_HOST:
-                                PID = self.get_PID()
-                                if len(PID)>0:
-                                    runlog_Data = runlog_Data.merge(PID,how='left',on='Job ID')
-                                    runlog_Data.loc[~runlog_Data["PID_State"].isnull(),"State"]='running'
-                                    runlog_Data = runlog_Data.drop('PID_State',axis=1)
+                if 'Job ID' in runlog_Data.columns:
+                    if len(set(runlog_Data["Host"]))==1:
+                        if list(set(runlog_Data["Host"]))[0]==LOCAL_HOST+"-LOCAL_RUN":
+                            PID = self.get_PID()
+                            if len(PID)>0:
+                                runlog_Data = runlog_Data.merge(PID,how='left',on='Job ID')
+                                runlog_Data.loc[~runlog_Data["PID_State"].isnull(),"State"]='running'
+                                runlog_Data.loc[runlog_Data.duplicated(subset=["Job name","PID_State"],keep=False),"State"]=''
+                                runlog_Data = runlog_Data.drop('PID_State',axis=1)
                     
                 # get only the data for the chosen step
                 runlog_Data=runlog_Data.loc[runlog_Data["Instance"]==Instance,].copy()
@@ -288,14 +284,15 @@ class nsfgm:
                 runlog_Data["State"]=''
                 
                 
-                if 'Job ID' in runlog_Data.columns:
-                    if len(set(runlog_Data["Host"]))==1:
-                        if list(set(runlog_Data["Host"]))[0]==LOCAL_HOST:
-                            PID = self.get_PID()
-                            if len(PID)>0:
-                                runlog_Data = runlog_Data.merge(PID,how='left',on='Job ID')
-                                runlog_Data.loc[~runlog_Data["PID_State"].isnull(),"State"]='running'
-                                runlog_Data = runlog_Data.drop('PID_State',axis=1)
+            if 'Job ID' in runlog_Data.columns:
+                if len(set(runlog_Data["Host"]))==1:
+                    if list(set(runlog_Data["Host"]))[0]==LOCAL_HOST+"-LOCAL_RUN":
+                        PID = self.get_PID()
+                        if len(PID)>0:
+                            runlog_Data = runlog_Data.merge(PID,how='left',on='Job ID')
+                            runlog_Data.loc[~runlog_Data["PID_State"].isnull(),"State"]='running'
+                            runlog_Data.loc[runlog_Data.duplicated(subset=["Job name","PID_State"],keep=False),"State"]=''
+                            runlog_Data = runlog_Data.drop('PID_State',axis=1)
                 
             logpiv=logpiv.join(runlog_Data.groupby("Instance")["State"].apply(lambda x:list(x).count("running")),how="left", rsuffix='running')            
 
