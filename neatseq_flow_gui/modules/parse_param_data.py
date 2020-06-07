@@ -50,6 +50,46 @@ GLOBAL_PARAMS_MULTIPLE_V = ['Qsub_opts','Qsub_nodes','module_path']
 STEP_PARAMS_MULTIPLE_V = ['script_path','base','setenv','export']   
 STEP_PARAMS_SINGLE_VALUE = ['module','redirects']
 
+
+def parse_param_file_object(file_object,filename):
+    """Parses a file from object
+    """
+    file_conts = []
+    
+    try:
+        with file_object as fileh:
+            file_conts += fileh.readlines()
+    except:
+        sys.exit("Parameter file %s does not exist.\n" % filename)
+    check_newlines(file_conts)
+
+    try:
+        return get_param_data_YAML(file_conts)
+        # pp(get_param_data_YAML(file_conts))
+        
+    except ConstructorError as exc:
+        if hasattr(exc, 'problem_mark'):
+            mark = exc.problem_mark
+            print("Error position: (%s:%s)" % (mark.line+1, mark.column+1))
+            print(mark.get_snippet())
+        raise Exception("Possible duplicate value passed", "parameters")
+    except yaml.YAMLError as exc:
+        if hasattr(exc, 'problem_mark'):
+            mark = exc.problem_mark
+            print("Error position: (%s:%s)" % (mark.line+1, mark.column+1))
+            print(mark.get_snippet())
+        
+        # Comment out the following line to enable classic param file format.
+        # Not recommended.
+        raise Exception("Failed to read YAML file. Make sure your parameter file is a correctly formatted YAML document.", "parameters")
+    except:
+        raise #Exception("Unrecognised exception reading the parameter file.", "parameters")
+    
+    print("YAML failed. trying classic")
+    return get_param_data(file_conts)
+
+
+
 def parse_param_file(filename):
     """Parses a file from filename
     """
