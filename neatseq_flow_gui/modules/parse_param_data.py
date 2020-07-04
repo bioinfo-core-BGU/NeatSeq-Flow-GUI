@@ -60,7 +60,7 @@ def parse_param_file_object(file_object,filename):
         with file_object as fileh:
             file_conts += fileh.readlines()
     except:
-        sys.exit("Parameter file %s does not exist.\n" % filename)
+        sys.exit("Could not open Parameter file %s.\n" % filename)
     check_newlines(file_conts)
 
     try:

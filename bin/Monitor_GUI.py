@@ -8,12 +8,163 @@ import socket
 import asyncio
 import argparse
 from multiprocessing import Process, Queue
+import threading
 
 __author__   = "Liron Levin"
 jid_name_sep = '..'
 LOCAL_HOST   = socket.gethostname()
-
 Text_COLORS  = ['black','green','red','orange','magenta','cyan','blue']
+
+
+def get_random_string(length=24, allowed_chars=None):
+    import random
+    """ Produce a securely generated random string.
+    NOTE: secure random string generation implementation is adapted from the Django project.
+    With a length of 12 with the a-z, A-Z, 0-9 character set returns
+    a 71-bit value. log_2((26+26+10)^12) =~ 71 bits
+    """
+    allowed_chars = allowed_chars or ('abcdefghijklmnopqrstuvwxyz' +
+                                      'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789')
+    try:
+        srandom = random.SystemRandom()
+    except NotImplementedError:  # pragma: no cover
+        srandom = random
+        logger.warning('Falling back to less secure Mersenne Twister random string.')
+        bogus = "%s%s%s" % (random.getstate(), time.time(), 'sdkhfbsdkfbsdbhf')
+        random.seed(hashlib.sha256(bogus.encode()).digest())
+    return ''.join(srandom.choice(allowed_chars) for i in range(length))
+
+class Popen_SSH(object):
+
+    def __init__(self,ssh_client,command,shell=False,pty=False,timeout=20,nbytes = 40096):
+        import time
+        self.timeout     = timeout
+        self.shell       = shell
+        self.err_flag    = True
+        self.nbytes      = nbytes
+        self.stdout_data = []
+        self.stderr_data = []
+        self.ssh_session = None
+        self.EFC         = get_random_string()
+        self.Done        = True
+        self.time        = time.time()
+        try:
+            if (ssh_client!= None) :
+                if ssh_client.get_transport().is_active():
+                    self.ssh_transport     = ssh_client.get_transport()
+                    self.ssh_session       = self.ssh_transport.open_channel(kind='session')
+                    if pty:
+                        self.ssh_session.get_pty('vt100')
+                    if self.shell:
+                        self.err_flag = False
+                        self.ssh_session.invoke_shell()
+                        self.Done = False
+                        self.ssh_session.send("stty -echo\n")
+                        command = "bash ; " + command + "; echo " + self.EFC
+                        command = command.replace(';','\n')
+                        for line in command.split('\n'):
+                            self.ssh_session.send(line+'\n')
+                    if not self.shell:
+                        self.ssh_session.settimeout(self.timeout)
+                        self.Done = False
+                        self.err_flag = False
+                        self.ssh_session.exec_command(command)
+        except :
+            self.err_flag = True
+            try:
+                self.ssh_session.close()
+            except:
+                pass
+            pass
+            
+    def output(self,out_queue=None,err_queue=None):
+        import time
+        keep_running = False
+        if not self.err_flag:
+            try:
+                while True:
+                    if self.ssh_session.recv_ready() or keep_running:
+                        out = self.ssh_session.recv(self.nbytes).decode('utf-8')
+                        self.stdout_data.extend(out)
+                        if out_queue!=None:
+                            if self.shell:
+                                if len(''.join(self.stdout_data).split(self.EFC))==2:
+                                    if len(out.split(self.EFC))==2:
+                                        out_queue.put(out.split(self.EFC)[1])
+                                    else:
+                                        out_queue.put(out)
+                                elif len(''.join(self.stdout_data).split(self.EFC))>2:
+                                    if len(out.split(self.EFC))==2:
+                                        out_queue.put(out.split(self.EFC)[0])
+                                    else:
+                                        out_queue.put(out)
+                            else:
+                                out_queue.put(out)
+                    if self.ssh_session.recv_stderr_ready() or keep_running:
+                        err = self.ssh_session.recv_stderr(self.nbytes).decode('utf-8')
+                        self.stderr_data.extend(err)
+                        if err_queue!=None:
+                            if self.shell:
+                                err_queue.put(err)
+                    if self.shell:
+                        if len(''.join(self.stdout_data).split(self.EFC))>2:
+                            break
+                        if (time.time() - self.time) > self.timeout:
+                            out_queue.put('\nTime Out\n')
+                            break
+                    if self.ssh_session.exit_status_ready():
+                        if len(out)!=0:
+                            keep_running = True
+                        else:
+                            #print(self.ssh_session.recv(10000000000).decode('utf-8'))
+                            break
+                if not self.shell:
+                    self.stdout_data = ''.join(self.stdout_data)
+                    self.stderr_data = ''.join(self.stderr_data)
+                    if self.ssh_session.recv_exit_status()==0:
+                        self.err_flag = False
+                else:
+                    if len(''.join(self.stdout_data).split(self.EFC))>2:
+                        self.stdout_data = ''.join(self.stdout_data).split(self.EFC)[1]
+                    else:
+                        self.stdout_data = ''.join(self.stdout_data)
+                    self.stderr_data = ''.join(self.stderr_data)
+                self.Done = True
+            except :
+                self.err_flag = True
+                self.Done = True
+            if self.err_flag:
+                try:
+                    self.ssh_session.close()
+                except:
+                    pass
+                return [''.join(self.stdout_data) , ''.join(self.stderr_data) , 1]
+            else:
+                try:
+                    self.ssh_session.close()
+                except:
+                    pass
+                return [''.join(self.stdout_data) , ''.join(self.stderr_data) , 0]
+        else:
+            return ['','',1]
+    
+    def kill(self):
+        try:
+            self.ssh_session.close()
+        except:
+            pass
+    
+    def poll(self):
+        if self.shell:
+            if self.Done:
+                return 1
+            else:
+                return None
+        else:
+            if not self.ssh_session.exit_status_ready():
+                return None
+            else:
+                return self.ssh_session.recv_exit_status()
 
 class Table(flx.GroupWidget):
     items            = event.DictProp({}, settable=True)
@@ -159,8 +310,7 @@ class Table(flx.GroupWidget):
 class nsfgm(flx.PyComponent):
     #  Main class for neatseq-flow Log file parser
     #Function for setting the main directory [the pipeline run location]
-    Dir = event.StringProp('', settable=True)
-    
+    Dir          = event.StringProp('', settable=True)    
     def init(self,directory,
                   Regular,        
                   Bar_Marker,     
@@ -173,48 +323,102 @@ class nsfgm(flx.PyComponent):
         self.Bar_Marker      = Bar_Marker
         self.Bar_Spacer      = Bar_Spacer
         self.Bar_len         = Bar_len
+        self.qstat           = None
         self.set_Dir(os.path.join(directory ,"logs"))
-
+    
+    def format_file_size(self,size):
+        if size>1000:
+            if size>1000000:
+                if size>1000000000:
+                    return "{0:.2f}".format(round(size/1000000000,2))+'GB'
+                else:
+                    return "{0:.2f}".format(round(size/1000000,2))+'MB'
+            else:
+                return "{0:.2f}".format(round(size/1000,2))+'KB'
+        else:
+            return str(size)+'B'
+        
     #Function for gathering information about the available log files as Data-Frame
-    def file_browser(self,Regular,q=None):
+    def file_browser(self,ssh_client,Regular,q=None):
         try:
             file_sys=pd.DataFrame()
-            # get the available log files names
-            file_sys["Name"]=[x for x in os.listdir(self.Dir) if len(re.findall(Regular,x))]
-            # get the available log files created times
-            file_sys["Created"]=[datetime.fromtimestamp(os.path.getctime(os.path.join(self.Dir,x))).strftime('%d/%m/%Y %H:%M:%S') for x in file_sys["Name"]]
-            # get the available log files last modified times
-            file_sys["Last Modified"]=[os.path.getmtime(os.path.join(self.Dir,x)) for x in file_sys["Name"]]
-            file_sys=file_sys.sort_values(by="Last Modified",ascending=False).reset_index(drop=True).copy()
-            file_sys["Last Modified"]=[datetime.fromtimestamp(x).strftime('%d/%m/%Y %H:%M:%S') for x in file_sys["Last Modified"]]
-            # get the available log files sizes
-            file_sys["Size"]=[os.path.getsize(os.path.join(self.Dir,x)) for x in file_sys["Name"]]
-
+            if ssh_client==None:
+                # get the available log files names
+                file_sys["Name"]          = [x for x in os.listdir(self.Dir) if len(re.findall(Regular,x))]
+                # get the available log files created times
+                file_sys["Created"]       = [datetime.fromtimestamp(os.path.getctime(os.path.join(self.Dir,x))).strftime('%d/%m/%Y %H:%M:%S') for x in file_sys["Name"]]
+                # get the available log files last modified times
+                file_sys["Last Modified"] = [os.path.getmtime(os.path.join(self.Dir,x)) for x in file_sys["Name"]]
+                file_sys                  = file_sys.sort_values(by="Last Modified",ascending=False).reset_index(drop=True).copy()
+                file_sys["Last Modified"] = [datetime.fromtimestamp(x).strftime('%d/%m/%Y %H:%M:%S') for x in file_sys["Last Modified"]]
+                # get the available log files sizes
+                file_sys["Size"]          = [os.path.getsize(os.path.join(self.Dir,x)) for x in file_sys["Name"]]
+                file_sys["Size"]          = list(map(lambda x: self.format_file_size(x),file_sys["Size"]))
+            else:
+                # get the available log files names
+                sftp    = ssh_client.open_sftp()
+                listdir = sftp.listdir(self.Dir)
+                #print(listdir)
+                file_sys["Name"]          = [x for x in listdir if len(re.findall(Regular,x))]
+                #print(file_sys["Name"])
+                # get the available log files created times
+                file_sys["Created"]       = [datetime.fromtimestamp(sftp.stat(os.path.join(self.Dir,x)).st_mtime ).strftime('%d/%m/%Y %H:%M:%S') for x in file_sys["Name"]]
+                # get the available log files last modified times
+                file_sys["Last Modified"] = [sftp.stat(os.path.join(self.Dir,x)).st_mtime  for x in file_sys["Name"]]
+                file_sys                  = file_sys.sort_values(by="Last Modified",ascending=False).reset_index(drop=True).copy()
+                file_sys["Last Modified"] = [datetime.fromtimestamp(x).strftime('%d/%m/%Y %H:%M:%S') for x in file_sys["Last Modified"]]
+                # get the available log files sizes
+                file_sys["Size"]          = [sftp.stat(os.path.join(self.Dir,x)).st_size for x in file_sys["Name"]]
+                file_sys["Size"]          = list(map(lambda x: self.format_file_size(x),file_sys["Size"]))
         except :
             file_sys=pd.DataFrame(columns=["Name","Created","Last Modified","Size"])
+       
         if q!=None:
            q.put({'items':file_sys.to_dict('list'),'rowmode': len(file_sys)})
         return {'items':file_sys.to_dict('list'),'rowmode': len(file_sys)}
 
     #Function for getting information from qstat
-    def get_qstat(self):
+    def get_qstat(self,ssh_client):
         import subprocess
-        qstat=pd.DataFrame()
+        qstat = pd.DataFrame()
+        xml   = ''
         # run qstat and get running information in xml format
-        if subprocess.call('type qstat', shell=True,
-                                stdout=subprocess.PIPE, stderr=subprocess.PIPE) == 0:
-            #xml = os.popen('qstat -xml -u $USER').read()
-            xml = os.popen('qstat -xml ').read()
+        if ssh_client!=None:
+            if self.qstat==None:
+                [outs, errs , exit_status] = Popen_SSH(ssh_client,'bash -c "type qstat"').output()
+                if exit_status==0:
+                    self.qstat = True
+                else:
+                    self.qstat = False
+            if self.qstat:
+                [out, errs , exit_status]  = Popen_SSH(ssh_client,'qstat -u $USER -xml').output()
+                if exit_status==0:
+                    xml = out
+        else:            
+            if subprocess.call('type qstat', shell=True,
+                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE) == 0:
+                #xml = os.popen('qstat -xml -u $USER').read()
+                xml = os.popen('qstat -xml ').read()
+        if len(xml)>0:
             # extract the jobs names
-            qstat["Job name"]=[re.sub("[</]+JB_name>","",x) for x in re.findall('[</]+JB_name>\S+',xml)]
+            Job_name          = [re.sub("[</]+JB_name>","",x) for x in re.findall('[</]+JB_name>\S+',xml)]
             # extract the jobs status
-            qstat["State"]=[x.strip('job_list state="') for x in re.findall('job_list state="\w+',xml)]
+            state             = [x.strip('job_list state="') for x in re.findall('job_list state="\w+',xml)]
+            if len(state)!=len(Job_name):
+                print('sss')
+            qstat["Job name"] = Job_name
+            qstat["State"]    = state
         return qstat
 
     #Function for getting PID information
-    def get_PID(self):
+    def get_PID(self,ssh_client):
         PID=pd.DataFrame()
-        PID["Job ID"]   = list(map(lambda x: str(int(x.strip('\n'))),os.popen('ps -ae -o pid=').readlines()))
+        if ssh_client!=None:
+            [outs, errs , exit_status]    = Popen_SSH(ssh_client,'ps -ae -o pid=').output()
+            if exit_status == 0:
+                PID["Job ID"]             = list(map(lambda x: str(int(x.strip('\n'))) if x.strip('\n').isdigit() else '' ,outs.split('\n')))
+        else:
+            PID["Job ID"]                 = list(map(lambda x: str(int(x.strip('\n'))),os.popen('ps -ae -o pid=').readlines()))
         PID["PID_State"] = 'running'
         return PID
 
@@ -226,12 +430,15 @@ class nsfgm(flx.PyComponent):
         return [char_value,list(map(lambda x,y: (int(x.total_seconds()/char_value)*Bar_Spacer + ((int(-(-(y.total_seconds()-x.total_seconds())/char_value))+1)*Bar_Marker)).ljust(Bar_len,Bar_Spacer)  ,self.logpiv["Started"],self.logpiv["Finished"]))]
 
     # main function for parsing log file
-    def read_run_log(self,runlog_file,Bar_len,Bar_Marker,Bar_Spacer,q=None,Instance=True,read_from_disk=True):
-
+    def read_run_log(self,ssh_client,runlog_file,Bar_len,Bar_Marker,Bar_Spacer,q=None,Instance=True,read_from_disk=True):
         try:
             # read log file to a Data-Frame
             if read_from_disk:
-                runlog_Data=pd.read_table(runlog_file,header =4,dtype={'Job ID':str})
+                if ssh_client!=None:
+                    sftp = ssh_client.open_sftp()
+                    runlog_Data=pd.read_table(sftp.file(runlog_file),header =4,dtype={'Job ID':str})
+                else:
+                    runlog_Data=pd.read_table(runlog_file,header =4,dtype={'Job ID':str})
                 self.LogData=runlog_Data.copy()
             else:
                 runlog_Data=self.LogData.copy()
@@ -263,20 +470,20 @@ class nsfgm(flx.PyComponent):
             # for the sample window information:
             else:
                 # get the running information from qstat
-                qstat=self.get_qstat()
+                qstat=self.get_qstat(ssh_client)
                 if len(qstat)>0:
                     runlog_Data=runlog_Data.merge(qstat,how='left')
                     runlog_Data.loc[runlog_Data["State"].isnull(),"State"]=''
                 else:
                     runlog_Data["State"]=''
-
                 if 'Job ID' in runlog_Data.columns:
                     if len(set(runlog_Data["Host"]))==1:
                         if list(set(runlog_Data["Host"]))[0]==LOCAL_HOST+"-LOCAL_RUN":
-                            PID = self.get_PID()
+                            PID = self.get_PID(ssh_client)
                             if len(PID)>0:
                                 runlog_Data = runlog_Data.merge(PID,how='left',on='Job ID')
                                 runlog_Data.loc[~runlog_Data["PID_State"].isnull(),"State"]='running'
+                                runlog_Data.loc[runlog_Data.duplicated(subset=["Job name","PID_State"],keep=False),"State"]=''
                                 runlog_Data = runlog_Data.drop('PID_State',axis=1)
 
                 # get only the data for the chosen step
@@ -332,23 +539,22 @@ class nsfgm(flx.PyComponent):
             N_Started=logpiv.applymap(lambda x:len(x))["Started"]
             # count how many jobs Finished
             N_Finished=logpiv.applymap(lambda x:len(x))["Finished"]
-
+            
             # get the running information from qstat and add the information to the Data-Frame
-            qstat=self.get_qstat()
+            qstat=self.get_qstat(ssh_client)
             if len(qstat)>0:
                 runlog_Data=runlog_Data.merge(qstat,how='left')
                 runlog_Data.loc[runlog_Data["State"].isnull(),"State"]=''
             else:
                 runlog_Data["State"]=''
-
-
             if 'Job ID' in runlog_Data.columns:
                 if len(set(runlog_Data["Host"]))==1:
                     if list(set(runlog_Data["Host"]))[0]==LOCAL_HOST+"-LOCAL_RUN":
-                        PID = self.get_PID()
+                        PID = self.get_PID(ssh_client)
                         if len(PID)>0:
                             runlog_Data = runlog_Data.merge(PID,how='left',on='Job ID')
                             runlog_Data.loc[~runlog_Data["PID_State"].isnull(),"State"]='running'
+                            runlog_Data.loc[runlog_Data.duplicated(subset=["Job name","PID_State"],keep=False),"State"]=''
                             runlog_Data = runlog_Data.drop('PID_State',axis=1)
 
             logpiv=logpiv.join(runlog_Data.groupby("Instance")["State"].apply(lambda x:list(x).count("running")),how="left", rsuffix='running')
@@ -399,7 +605,7 @@ class nsfgm(flx.PyComponent):
                 self.items["#ERRORs"]=logpiv["Status"].values
                 self.rowmode=list(map(lambda x,y: 2 if x>0 else y, self.items["#ERRORs"],self.rowmode))
 
-        except :# ValueError: #IOError:
+        except : #IOError: #ValueError: #
             if Instance==True:
                 self.items=pd.DataFrame(columns=["Steps","Progress","Started","Finished","#Started","#Finished","#Running"])
             else:
@@ -414,104 +620,165 @@ class nsfgm(flx.PyComponent):
 
 class Relay_log_files(flx.PyComponent):
 
-    def init(self,mynsfgm,Table_H,refreshrate=1):
-        self.q           = Queue()
-        self.running     = False
-        self.mynsfgm     = mynsfgm
-        self.Table_H     = Table_H
-        self.refreshrate = refreshrate
+    def init(self,ssh_client,mynsfgm,Table_H,refreshrate=1):
+        self.q            = Queue()
+        self.running      = False
+        self.mynsfgm      = mynsfgm
+        self.Table_H      = Table_H
+        self.refreshrate  = refreshrate
+        self.ssh_client   = ssh_client
+        self.Process      = None
+        self.keep_running = True
         self.Refresh_log_files()
 
     def Refresh_log_files(self):
-        if not self.running:
-            self.Process = Process(target=self.mynsfgm.file_browser, args=(self.mynsfgm.Regular,self.q))
+        if (not self.running) and (self.keep_running):
+            #self.Process = Process(target=self.mynsfgm.file_browser, args=(self.mynsfgm.Regular,self.q))
+            self.Process = threading.Thread(target=self.mynsfgm.file_browser, args=(self.ssh_client,
+                                                                                    self.mynsfgm.Regular,
+                                                                                    self.q,))
             self.Process.start()
             self.running=True
-        elif self.q.empty()==False:
-            log=self.q.get(True)
-            self.Process.join()
-            self.running=False
-            self.Table_H.set_items(log['items'])
-            self.Table_H.set_rowmode([1]*log['rowmode'])
-        if self.session.status:
-            asyncio.get_event_loop().call_later(self.refreshrate, self.Refresh_log_files)
-        else:
-            if self.Process.is_alive():
-                self.q.get(True)
+        elif  (self.keep_running):
+            if self.q.empty()==False:
+                log=self.q.get(True)
                 self.Process.join()
+                self.running=False
+                self.Table_H.set_items(log['items'])
+                self.Table_H.set_rowmode([1]*log['rowmode'])
+        if not self.Process.is_alive():
+            self.running = False
+            #self.q       = Queue()
+        if (self.session.status!=0) and (self.keep_running):
+            asyncio.get_event_loop().call_later(self.refreshrate, self.Refresh_log_files)
+                
+    def close(self):
+        self.keep_running = False
 
 class Relay_main_menu(flx.PyComponent):
     runlog_file   = event.StringProp('', settable=True)
 
-    def init(self,mynsfgm,Table_H,refreshrate=1):
-        self.q           = Queue()
-        self.running     = False
-        self.mynsfgm     = mynsfgm
-        self.Table_H     = Table_H
-        self.refreshrate = refreshrate
+    def init(self,ssh_client,mynsfgm,Table_H,refreshrate=1):
+        self.q            = Queue()
+        self.running      = False
+        self.mynsfgm      = mynsfgm
+        self.Table_H      = Table_H
+        self.refreshrate  = refreshrate
+        self.ssh_client   = ssh_client
+        self.Process      = None
+        self.keep_running = True
         self.Refresh_main_menu()
 
     def Refresh_main_menu(self):
-        if not self.running:
-            self.Process = Process(target=self.mynsfgm.read_run_log, args=(self.runlog_file,
-                                                                           self.mynsfgm.Bar_len,
-                                                                           self.mynsfgm.Bar_Marker,
-                                                                           self.mynsfgm.Bar_Spacer,
-                                                                           self.q))
+        if (not self.running) and (self.keep_running):
+            self.Process = threading.Thread(target=self.mynsfgm.read_run_log, args=(self.ssh_client,
+                                                                                   self.runlog_file,
+                                                                                   self.mynsfgm.Bar_len,
+                                                                                   self.mynsfgm.Bar_Marker,
+                                                                                   self.mynsfgm.Bar_Spacer,
+                                                                                   self.q,))
             self.Process.start()
             self.running=True
-        elif self.q.empty()==False:
-            steps=self.q.get(True)
-            self.Process.join()
-            self.running=False
-            self.Table_H.set_items(steps['items'])
-            self.Table_H.set_rowmode(steps['rowmode'])
-        if self.session.status:
-            asyncio.get_event_loop().call_later(self.refreshrate, self.Refresh_main_menu)
-        else:
-            if self.Process.is_alive():
-                self.q.get(True)
+        elif  (self.keep_running):
+            if self.q.empty()==False:
+                steps=self.q.get(True)
                 self.Process.join()
-            
+                self.running=False
+                self.Table_H.set_items(steps['items'])
+                self.Table_H.set_rowmode(steps['rowmode'])
+        if not self.Process.is_alive():
+            self.running = False
+            #self.q       = Queue()
+        if (self.session.status!=0) and (self.keep_running):
+            asyncio.get_event_loop().call_later(self.refreshrate, self.Refresh_main_menu)
+                
+    
+    def close(self):
+        self.keep_running = False
+
 class Relay_sample_menu(flx.PyComponent):
     instances   = event.StringProp('', settable=True)
     runlog_file = event.StringProp('', settable=True)
 
-    def init(self,mynsfgm,Table_H,refreshrate=1):
-        self.q           = Queue()
-        self.running     = False
-        self.mynsfgm     = mynsfgm
-        self.Table_H     = Table_H
-        self.refreshrate = refreshrate
+    def init(self,ssh_client,mynsfgm,Table_H,refreshrate=1):
+        self.q            = Queue()
+        self.running      = False
+        self.mynsfgm      = mynsfgm
+        self.Table_H      = Table_H
+        self.refreshrate  = refreshrate
+        self.ssh_client   = ssh_client
+        self.Process      = None
+        self.keep_running = True
         self.Refresh_sample_menu()
 
     def Refresh_sample_menu(self):
-        if not self.running:
-            self.Process = Process(target=self.mynsfgm.read_run_log, args=(self.runlog_file,
-                                                                           self.mynsfgm.Bar_len,
-                                                                           self.mynsfgm.Bar_Marker,
-                                                                           self.mynsfgm.Bar_Spacer,
-                                                                           self.q,
-                                                                           self.instances))
+        if (not self.running) and (self.keep_running):
+            self.Process = threading.Thread(target=self.mynsfgm.read_run_log, args=(self.ssh_client,
+                                                                                   self.runlog_file,
+                                                                                   self.mynsfgm.Bar_len,
+                                                                                   self.mynsfgm.Bar_Marker,
+                                                                                   self.mynsfgm.Bar_Spacer,
+                                                                                   self.q,
+                                                                                   self.instances,))
             self.Process.start()
             self.running=True
-        elif self.q.empty()==False:
-            steps=self.q.get(True)
-            self.Process.join()
-            self.running=False
-            self.Table_H.set_items(steps['items'])
-            self.Table_H.set_rowmode(steps['rowmode'])
-        if self.session.status:
-            asyncio.get_event_loop().call_later(self.refreshrate, self.Refresh_sample_menu)
-        else:
-            if self.Process.is_alive():
-                self.q.get(True)
+        elif  (self.keep_running):
+            if self.q.empty()==False:
+                steps=self.q.get(True)
                 self.Process.join()
+                self.running=False
+                self.Table_H.set_items(steps['items'])
+                self.Table_H.set_rowmode(steps['rowmode'])
+        if not self.Process.is_alive():
+            self.running = False
+            #self.q       = Queue()
+        if (self.session.status!=0) and (self.keep_running):
+            asyncio.get_event_loop().call_later(self.refreshrate, self.Refresh_sample_menu)
+                
+    def close(self):
+        self.keep_running = False
+
+class Test_sftp_alive(flx.PyComponent):
+    Kill_session = event.BoolProp(False, settable=True)
+
+    def init(self,ssh_client,refreshrate=1):
+        self.refreshrate  = refreshrate
+        self.ssh_client   = ssh_client
+        self.keep_running = True
+        if self.ssh_client!=None:
+            self.sftp_alive()
+
+    def sftp_alive(self):
+        if (self.keep_running):
+            try:
+                if not self.ssh_client.get_transport().is_active():
+                    self.keep_running = False
+            except:
+                self.keep_running = False
+            if self.keep_running==False:
+                self.set_Kill_session(True)
+        if (self.session.status!=0) and (self.keep_running):
+            asyncio.get_event_loop().call_later(self.refreshrate, self.sftp_alive)
+                
+    def close(self):
+        self.keep_running = False
+
+class Redirect(flx.JsComponent):
+
+    def init(self, dest):
+        super().init()
+        self.dest = dest
+
+    @flx.action
+    def go(self):
+        global window
+        window.location.href = self.dest
 
 class Monitor_GUI(flx.PyComponent):
     Dir = event.StringProp('', settable=True)
     #main program
     def init(self,directory         = os.getcwd(),
+                  ssh_client        = None,
                   Regular           = "log_[0-9]+.txt$",
                   Monitor_RF        = 1,
                   File_browser_RF   = 2,
@@ -519,7 +786,27 @@ class Monitor_GUI(flx.PyComponent):
                   Bar_Marker        = '#',
                   Bar_Spacer        = ' ',
                   Bar_len           = 40 ):
-                  
+        
+        self.redirect = Redirect('/')
+        global LOCAL_HOST
+        if ssh_client!=None:
+            try:
+                SFTP                          = ssh_client.open_sftp()
+                [outs, errs , exit_status]    = Popen_SSH(ssh_client,'echo $HOST').output()
+                if exit_status==0:
+                    LOCAL_HOST                = outs.strip()
+            except:
+                SFTP       = None
+            if SFTP!=None:
+                try:
+                    directory = SFTP.normalize(directory)
+                except:
+                    directory = SFTP.normalize('')
+        else:
+            SFTP = None
+            if not os.path.isdir(directory):
+                directory     = os.getcwd()
+
         sample_menu_flag=-1
         sample_menu_active=False
         #initializing the main monitor/qstat log file parser module
@@ -536,16 +823,37 @@ class Monitor_GUI(flx.PyComponent):
             self.sample_menu = Table(0,'NavajoWhite',title='Samples Menu',style='font-size: 70%;')
         #get list of log files and information about them
         #with self:
-        self.Relay_log    = Relay_log_files(self.mynsfgm,
+        self.Test_sftp    = Test_sftp_alive(ssh_client)
+        self.Relay_log    = Relay_log_files(ssh_client,
+                                            self.mynsfgm,
                                             self.file_menu,
                                             File_browser_RF)
-        self.Relay_main   = Relay_main_menu(self.mynsfgm,
+        self.Relay_main   = Relay_main_menu(ssh_client,
+                                            self.mynsfgm,
                                             self.main_menu,
                                             Monitor_RF)
-        self.Relay_sample = Relay_sample_menu(self.mynsfgm,
+        self.Relay_sample = Relay_sample_menu(ssh_client,
+                                              self.mynsfgm,
                                               self.sample_menu,
                                               Sample_RF)
-
+                                              
+    def close_session(self):
+        #self.session.app.dispose()
+        #self.session.close()
+        self.redirect.go()
+            
+    @event.reaction('Test_sftp.Kill_session')
+    def kill_session(self, *events):
+        for ev in events:
+            if ev.new_value==True:
+                self.close()
+                self.close_session()
+                
+    def close(self):
+        self.Relay_sample.close()
+        self.Relay_main.close()
+        self.Relay_log.close()
+        self.Test_sftp.close()
 
     @event.reaction('Dir')
     def Update_Dir(self, *events):
@@ -619,6 +927,7 @@ if __name__ == '__main__':
         import socket
         m = app.App(Monitor_GUI,
                     args.directory,
+                    None,
                     args.Regular,
                     args.Monitor_RF,
                     args.File_browser_RF,

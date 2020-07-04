@@ -16,6 +16,7 @@ from io import StringIO
 from pprint import pprint as pp
 import re
 
+Global_SFTP      = None
 FASTQ_FILE_TPYES = ['Single', 'Forward', 'Reverse']
 FASTA_FILE_TYPES = ['Nucleotide','Protein']
 ALIGNMENT_FILE_TYPES = ['SAM','BAM','REFERENCE']
@@ -51,7 +52,27 @@ def check_newlines(filelines):
     assert not lines_with_CRs, "The sample and parameter files must not contain carriage returns. Convert newlines to UNIX style!\n"
     
     
-
+def parse_sample_file_object(file_object,filename,sftp=None):
+    """Parses a file from file object
+    """
+    global Global_SFTP
+    if sftp != None:
+        Global_SFTP = sftp
+    
+    file_conts = []
+    try:
+        with file_object as fileh:
+            file_conts += fileh.readlines()
+    except:
+        sys.exit("Could not open sample file %s.\n" % filename)
+    check_newlines(file_conts)
+    sample_data = get_sample_data(file_conts)
+    # check_sample_constancy(sample_data)  # Letting user use both zipped and unzipped files. Not recommended
+    
+    # pp(sample_data)
+    # sys.exit()
+    return sample_data
+  
 def parse_sample_file(filename):
     """Parses a file from filename
     """
@@ -439,7 +460,8 @@ def get_full_path(path):
     
     url = urlparse(path)
     if not url.scheme:   # Regular path
-        if not os.path.isabs(path):
-            return os.path.abspath(os.path.expanduser(path)) 
+        if Global_SFTP == None:
+            if not os.path.isabs(path):
+                return os.path.abspath(os.path.expanduser(path))
     return path
     

@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-
+#!/programs/miniconda2/envs/NeatSeq_Flow/bin/python
 
 
 __author__ = "Liron Levin"
@@ -10,12 +9,15 @@ __affiliation__ = "Bioinformatics Core Unit, NIBN, Ben Gurion University"
 
 
 
-from flexx import app, event, ui
+from flexx import app, event, ui, flx 
 import os,sys,dialite
 from collections import OrderedDict
 
-
 sys.path.append(os.path.realpath(os.path.expanduser(os.path.dirname(os.path.abspath(__file__))+os.sep+"..")))
+
+NeatSeq_Flow_Conda_env = 'NeatSeq_Flow'
+
+CONDA_BIN              = ''
 
 Base_Help_URL          = 'https://neatseq-flow.readthedocs.io/projects/neatseq-flow-modules/en/latest/'
 
@@ -87,9 +89,9 @@ Here you can document your workflow and add notes.
 '''
 
 html_cite              = '''
-    <p class=MsoNormal dir=LTR style='margin-top:0cm;margin-bottom:0cm;margin-bottom:.0000pt;
+    <p class=MsoNormal dir=LTR style='color:CadetBlue;margin-top:0cm;margin-bottom:0cm;margin-bottom:.0000pt;
     text-align:left;line-height:normal;direction:ltr;unicode-bidi:embed'><b>NeatSeq-Flow
-    Graphical User Interface By Liron Levin</b><br>
+    was Created by the Bioinformatics Core Unit at the Ben Gurion University, Israel</b><br>
     <span style='font-size:10.0pt'>If you are using NeatSeq-Flow, please cite:</span></p>
 
     <p class=MsoNormal dir=LTR style='margin-top:0cm;margin-right:0cm;margin-bottom:
@@ -104,6 +106,29 @@ html_cite              = '''
     Sklarz, Liron Levin, Michal Gordon, Vered Chalifa-Caspi<br>
     doi: https://doi.org/10.1101/173005</span></p>
       '''
+
+
+# Associate CodeMirror's assets with this module so that Flexx will load
+# them when (things from) this module is used.
+
+try:
+    base_url =  os.path.join(os.path.realpath(os.path.expanduser(os.path.dirname(os.path.abspath(__file__))+os.sep+"..")),'neatseq_flow_gui','Codemirror')
+    flx.assets.associate_asset(__name__,'codemirror.css', open(os.path.join(base_url , 'codemirror.css'), encoding="utf-8").read())
+    flx.assets.associate_asset(__name__,'codemirror.js' ,open(os.path.join(base_url ,'codemirror.js'), encoding="utf-8").read())
+    flx.assets.associate_asset(__name__,'markdown.js' ,open(os.path.join(base_url ,'mode/markdown/markdown.js'), encoding="utf-8").read())
+    flx.assets.associate_asset(__name__, 'solarized.css' ,open(os.path.join(base_url ,'theme/solarized.css'), encoding="utf-8").read())
+    flx.assets.associate_asset(__name__,'active-line.js', open(os.path.join(base_url , 'addon/selection/active-line.js'), encoding="utf-8").read())
+    flx.assets.associate_asset(__name__, 'matchbrackets.js' ,open(os.path.join(base_url , 'addon/edit/matchbrackets.js'), encoding="utf-8").read())
+    flx.assets.associate_asset(__name__, 'continuelist.js' ,open(os.path.join(base_url , 'addon/edit/continuelist.js'), encoding="utf-8").read())
+except :
+    base_url = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.46.0/'
+    flx.assets.associate_asset(__name__, base_url + 'codemirror.css')
+    flx.assets.associate_asset(__name__, base_url + 'codemirror.js')
+    flx.assets.associate_asset(__name__, base_url + 'mode/markdown/markdown.js')
+    flx.assets.associate_asset(__name__, base_url + 'theme/solarized.css')
+    flx.assets.associate_asset(__name__, base_url + 'addon/selection/active-line.js')
+    flx.assets.associate_asset(__name__, base_url + 'addon/edit/matchbrackets.js')
+    flx.assets.associate_asset(__name__, base_url + 'addon/edit/continuelist.js')
 
 
 class Graphical_panel(ui.CanvasWidget):
@@ -367,7 +392,6 @@ class Graphical_panel(ui.CanvasWidget):
             ev.source.apply_style(style)
             self.update()
 
-
 class Step_Tree_Class(ui.Widget):
     flag               = event.BoolProp(False, settable=True)
     open_filepicker    = event.StringProp('', settable=True)
@@ -386,7 +410,7 @@ class Step_Tree_Class(ui.Widget):
         self.current_selected = None
         with ui.HSplit() as self.main_lay:
             with ui.VSplit(flex=0.25) as self.tree_lay:
-                with ui.GroupWidget(flex=0.1,title='Step Editing Panel'):
+                with ui.GroupWidget(flex=0.05,title='Step Editing Panel'):
                     with ui.HSplit(flex=0.1):
                         with ui.FormLayout(flex=0.01) as self.form:
                             self.tree_key_b           = ui.LineEdit(title='Key:', text='')
@@ -403,12 +427,15 @@ class Step_Tree_Class(ui.Widget):
                             self.tree_duplicate_b   = ui.Button(text='Duplicate')
                             self.tree_remove_b      = ui.Button(text='Remove')
 
-                self.tree = ui.TreeWidget(flex=0.2, max_selected=1)
-                self.tree.text = 'Top_level'
+                self.tree           = ui.TreeWidget(flex=0.1, max_selected=1)
+                self.tree.text      = 'Top_level'
                 self.Order_Steps_b  = ui.Button(text='Order Steps',style='font-size: 80%;')
-                ui.Label(text='Help box:',style='max-height: 20px; min-height: 20px;')
-                self.info = Documentation_Editor(DEFAULT_HELP_BOX_TEXT,True,False,True,flex=0.01,style='border: 1px solid red;min-height: 50px;min-width: 100px; ')
-
+                self.info_lable     = ui.Label(text='Help box:',style='max-height: 20px; min-height: 20px;')
+                self.info           = Documentation_Editor(DEFAULT_HELP_BOX_TEXT,True,False,True,flex=0.05,style='border: 1px solid red;min-height: 50px;min-width: 100px; ')
+                self.info_lable.set_capture_mouse(2)
+                self.info.set_capture_mouse(2)
+                self.main_lay.set_capture_mouse(2)
+                
             with ui.VSplit(flex=0.6) as self.canvas_lay:
                 with ui.Layout(flex=0.03, style='min-height: 70px; max-height: 75px;'):
                     with ui.HSplit():
@@ -418,8 +445,8 @@ class Step_Tree_Class(ui.Widget):
                                                                  style='min-width: 380px;border: 1px solid red;',
                                                                  placeholder_text='Choose a Step Template',
                                                                  options=MODULES_TEMPLATES.keys())
-                                self.Help_b = ui.Button(text='About',style='color: blue; min-width: 80px;max-width: 80px;font-size: 100% ;')
-                                self.tree_create_new_step_b = ui.Button(text='Add',style='color: red; min-width: 80px;max-width: 80px;')
+                                self.Help_b = ui.Button(text='About',style=' min-width: 80px;max-width: 80px;font-size: 100% ;')
+                                self.tree_create_new_step_b = ui.Button(text='Add',style=' min-width: 80px;max-width: 80px;')
                         with ui.GroupWidget(title='Color Steps By',style='border: 2px solid pink;'):
                             with ui.HSplit():
                                 self.Color_by_b = ui.ComboBox(title='Color by:', editable=False,
@@ -435,6 +462,17 @@ class Step_Tree_Class(ui.Widget):
                     self.create_tree(self.Graphical_panel.Steps_Data)
                     self.collapse_all_not_selectd(self.tree)
 
+    # @event.reaction('info_lable.pointer_move','info.pointer_move')
+    # def on_info_move(self, *events):
+        
+        # for ev in events:
+            # w_border = float(ev.source.size[0])*0.15
+            # h_border = float(ev.source.size[1])*0.15
+            # if (ev.pos[0]>ev.source.size[0]-w_border) or (ev.pos[0]<w_border)  or (ev.pos[1]>ev.source.size[1]-h_border) or (ev.pos[1]<h_border) :
+                # self.info.set_flex(0.05)
+            # else:
+                # self.info.set_flex(0.2)
+            
     @event.reaction('Order_Steps_b.pointer_click')
     def change_order(self):
         order=list()
@@ -879,7 +917,6 @@ class Step_Tree_Class(ui.Widget):
                                 self.tree_value_options_b.set_selected_index(-1)
                                 self.tree_value_options_b.set_text('')
 
-
 class Only_Tree_Class(ui.Widget):
     Data_update = event.BoolProp(False, settable=True)
     Data = event.DictProp({}, settable=True)
@@ -1106,7 +1143,6 @@ class Only_Tree_Class(ui.Widget):
                             self.tree_value_options_b.set_selected_index(-1)
                             self.tree_value_options_b.set_text('')
 
-
 class Samples_info(ui.Widget):
     open_filepicker = event.StringProp('', settable=True)
     project_files = event.ListProp([], settable=True)
@@ -1118,23 +1154,21 @@ class Samples_info(ui.Widget):
     converter = event.DictProp({}, settable=True)
 
     def init(self):
-        with ui.VSplit( padding=20,spacing=20) as self.layout:
-            with ui.Layout( style='min-height: 70px; max-height: 70px;'):
-                with ui.HSplit(style='min-height: 70px; max-height: 70px;'):
-
-                    with ui.GroupWidget(title='Project Level File/s',style='border: 2px solid green;' ):
+        with ui.VSplit( padding=10,spacing=10) as self.layout:
+            with ui.Layout( style='min-height: 95px; max-height: 95px;'):
+                with ui.HSplit(style='min-height: 55px; max-height: 55px;'):
+                    with ui.GroupWidget(title='Edit Project Title',style='font-size: 120%; border: 2px solid purple; max-height: 55px; min-height: 55px;' ):
+                        self.tree_title_b = ui.LineEdit(text='My_Project', style = 'font-size: 80%; border: 1px solid red;min-width: 300px;',
+                                                        placeholder_text='My_Project')
+                    with ui.GroupWidget(title='Project Level File/s',style='border: 2px solid green;max-height: 55px; min-height: 55px; max-width: 200px;' ):
                         self.add_project_file_b = ui.Button(text='Add',style='min-width: 150px;')
-                    with ui.GroupWidget(title='Sample Level File/s',style='border: 2px solid blue;' ):
+                    with ui.GroupWidget(title='Sample Level File/s',style='border: 2px solid blue;max-height: 55px; min-height: 55px;max-width: 200px;' ):
                         self.add_sample_file_b  = ui.Button(text='Add',style='min-width: 150px;')
                     with ui.VSplit():
-                        self.load_sample_file_b = ui.Button(text='Load Sample File')
-                        self.save_sample_file_b = ui.Button(text='Save Sample File')
-            #ui.Label(text='',style='min-height: 5px; max-height: 5px;')
-            with ui.GroupWidget(title='Edit Project Title',style='font-size: 120%; border: 2px solid purple; max-height: 55px; min-height: 55px;' ):
-                self.tree_title_b = ui.LineEdit(text='', style = 'font-size: 80%; border: 1px solid red;',
-                                                placeholder_text='Project Title')
+                        self.load_sample_file_b = ui.Button(text='Load Sample File',style='max-width: 200px;')
+                        self.save_sample_file_b = ui.Button(text='Save Sample File',style='max-width: 200px;')
             
-            ui.Label(text='',style='min-height: 5px; max-height: 5px;')
+            #ui.Label(text='',style='min-height: 5px; max-height: 5px;')
             with ui.GroupWidget(title='Project Level',style='font-size: 120% ;padding: 10px ;border: 2px solid green; border-radius: 10px;'):
                  with ui.VSplit():
                     with ui.HFix(style='max-height:30px;'):#overflow-y:scroll;'):
@@ -1198,15 +1232,17 @@ class Samples_info(ui.Widget):
             sample.dispose()
 
     def recreate_samples_info_Widget(self, samples_data):
-        if 'Title' in samples_data.keys():
+        samples_data_keys = samples_data.keys()
+        samples_data_keys.sort()
+        if 'Title' in samples_data_keys:
             self.tree_title_b.set_text(samples_data['Title'])
 
-        if 'project_data' in samples_data.keys():
+        if 'project_data' in samples_data_keys:
             for project_type in samples_data['project_data'].keys():
                 for project_file in samples_data['project_data'][project_type]:
                     self.add_project_file(project_file, project_type)
 
-        for name in samples_data.keys():
+        for name in samples_data_keys:
             if name not in ['project_data', 'Title', 'samples']:
                 for filetype in samples_data[name].keys():
                     for path in samples_data[name][filetype]:
@@ -1320,7 +1356,6 @@ class Samples_info(ui.Widget):
                 for file in self.sample_files:
                     self.add_sample_file(file[1], file[0])
 
-
 def Load_MODULES_TEMPLATES():
     import yaml, os, inspect
     import urllib.request
@@ -1343,7 +1378,6 @@ def Load_MODULES_TEMPLATES():
 
     except:
         return {}
-
 
 def Update_Yaml_Data(remote_file,local_directory, file,Message=''):
     import yaml, os, inspect
@@ -1368,13 +1402,11 @@ def Update_Yaml_Data(remote_file,local_directory, file,Message=''):
     except:
         return {}
 
-
 def setup_yaml(yaml, OrderedDict):
     """ http://stackoverflow.com/a/8661021 """
     represent_dict_order = lambda self, data: self.represent_mapping('tag:yaml.org,2002:map', data.items())
     yaml.add_representer(OrderedDict, represent_dict_order)
     return yaml
-
 
 class Run_NeatSeq_Flow(ui.Widget):
     open_filepicker = event.StringProp('', settable=True)
@@ -1415,7 +1447,7 @@ class Run_NeatSeq_Flow(ui.Widget):
                                     self.parameter_file_L = ui.LineEdit(text='',disabled = (Server and LOCK_USER_DIR))
                                     self.parameter_file_b = ui.Button(text='Browse', style='max-width: 100px;')
 
-                    ui.Label(style='padding: 0px ;min-height: 50px; max-height: 50px; ')
+                    ui.Label(style='padding: 0px ;min-height: 20px; max-height: 20px; ')
                     with ui.GroupWidget(title='NeatSeq-Flow Information (For Advanced Users)', style='min-height: 230px; min-width: 250px; border: 2px solid green;'):
                         with ui.VSplit():
 
@@ -1428,7 +1460,7 @@ class Run_NeatSeq_Flow(ui.Widget):
                             with ui.Layout(title='Conda bin location', style='min-height: 70px; max-height: 70px;'):
                                 ui.Label(text='Conda bin location:',style='padding-left: 0px; font-size: 120% ;')
                                 with ui.HSplit(style='min-height: 35px; max-height: 35px;'):
-                                    self.conda_bin_L = ui.LineEdit(text='',disabled = (Server and LOCK_USER_DIR))
+                                    self.conda_bin_L = ui.LineEdit(text=CONDA_BIN,disabled = (Server and LOCK_USER_DIR))
                                     self.conda_bin_b = ui.Button(text='Browse', style='max-width: 100px; ')
 
                             with ui.Layout(title='Conda environment to use', style='min-height: 70px; max-height: 70px;'):
@@ -1437,7 +1469,6 @@ class Run_NeatSeq_Flow(ui.Widget):
                                     self.conda_env_L = ui.ComboBox(editable= not (Server and LOCK_USER_DIR), text='',
                                                                    placeholder_text='Choose Conda Environment')
                                     self.conda_env_b = ui.Button(text='Search', style='max-width: 100px; ')
-
 
                 with ui.VSplit():
 
@@ -1457,10 +1488,10 @@ class Run_NeatSeq_Flow(ui.Widget):
                             self.Recovery_b         = ui.Button(text='Recover', style='max-height: 20px; min-width: 150px;')
                     ui.Label(text='',style='max-height: 5px; min-height: 5px;')
                     with ui.GroupWidget(title='Terminal:',style='font-size: 120% ;border: 2px solid red;'):
-                        with ui.Layout( style='min-height: 480px; max-height: 480px; padding: 10px ;'):
+                        with ui.VFix():#ui.Layout( style='min-height: 460px; max-height: 460px; padding: 10px ;'):
                         #ui.Label(text='Terminal:',style='padding-left: 0px; padding-top: 10px; font-size: 120% ;max-height: 30px; min-height: 30px;')
-                            self.label = ui.Label(style='max-height: 460px; min-height: 460px; padding: 10px ; border: 0px solid gray; border-radius: 10px;   overflow-y: auto; overflow-x: auto;')
-                        #ui.Label(style='padding: 0px ; ')
+                            self.label = ui.Label(style=' padding: 10px ; border: 0px solid gray; border-radius: 10px;   overflow-y: auto; overflow-x: auto;')
+            ui.Label(style='padding: 0px ; ')
 
 
     @event.reaction('conda_env')
@@ -1598,31 +1629,6 @@ class Run_NeatSeq_Flow(ui.Widget):
                 self.parameter_file_L.set_text(self.parameter_file[0][0])
                 self.set_parameter_file([])
 
-
-from flexx import flx
-
-# Associate CodeMirror's assets with this module so that Flexx will load
-# them when (things from) this module is used.
-
-try:
-    base_url =  os.path.join(os.path.realpath(os.path.expanduser(os.path.dirname(os.path.abspath(__file__))+os.sep+"..")),'neatseq_flow_gui','Codemirror')
-    flx.assets.associate_asset(__name__,'codemirror.css', open(os.path.join(base_url , 'codemirror.css'), encoding="utf-8").read())
-    flx.assets.associate_asset(__name__,'codemirror.js' ,open(os.path.join(base_url ,'codemirror.js'), encoding="utf-8").read())
-    flx.assets.associate_asset(__name__,'markdown.js' ,open(os.path.join(base_url ,'mode/markdown/markdown.js'), encoding="utf-8").read())
-    flx.assets.associate_asset(__name__, 'solarized.css' ,open(os.path.join(base_url ,'theme/solarized.css'), encoding="utf-8").read())
-    flx.assets.associate_asset(__name__,'active-line.js', open(os.path.join(base_url , 'addon/selection/active-line.js'), encoding="utf-8").read())
-    flx.assets.associate_asset(__name__, 'matchbrackets.js' ,open(os.path.join(base_url , 'addon/edit/matchbrackets.js'), encoding="utf-8").read())
-    flx.assets.associate_asset(__name__, 'continuelist.js' ,open(os.path.join(base_url , 'addon/edit/continuelist.js'), encoding="utf-8").read())
-except :
-    base_url = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.46.0/'
-    flx.assets.associate_asset(__name__, base_url + 'codemirror.css')
-    flx.assets.associate_asset(__name__, base_url + 'codemirror.js')
-    flx.assets.associate_asset(__name__, base_url + 'mode/markdown/markdown.js')
-    flx.assets.associate_asset(__name__, base_url + 'theme/solarized.css')
-    flx.assets.associate_asset(__name__, base_url + 'addon/selection/active-line.js')
-    flx.assets.associate_asset(__name__, base_url + 'addon/edit/matchbrackets.js')
-    flx.assets.associate_asset(__name__, base_url + 'addon/edit/continuelist.js')
-
 class Documentation_Editor(flx.Widget):
     """ A CodeEditor widget based on CodeMirror.
     """
@@ -1722,7 +1728,6 @@ class Documentation_Editor(flx.Widget):
             self.cm.setOption('theme','default')
             self.cm.setOption('styleActiveLine',True)
 
-
 class File_Browser(flx.GroupWidget):
     Dir           = event.DictProp({}, settable=True)
     update        = event.BoolProp(False, settable=True)
@@ -1733,24 +1738,30 @@ class File_Browser(flx.GroupWidget):
     Selected_Path = event.ListProp([],settable=True)
     New_Dir       = event.StringProp('', settable=True)
     #main program
-    def init(self,base_path):
+    def init(self,base_path,upper_panel=True,show_size=True):
+        self.Upper_Panel       = upper_panel
+        self.Show_Size         = show_size
+        self.New_Directory_str = 'New Directory'
+        self.Parent_Dir_str    = '..'
         self.set_Path(base_path)
         with ui.VFix():
-            with ui.HSplit(style='max-height: 30px;'):
-                self.Parent_Dir        = ui.Button(text='..',style='max-width: 30px;')
-                self.Path_Label        = ui.Label(text=self.Path)
-                self.New_Dir_Button    = ui.Button(text='New Directory',style='max-width: 150px;')
-                self.New_Dir_Name_Edit = ui.LineEdit(style='max-height: 30px;',disabled=False)
+            if self.Upper_Panel:
+                with ui.HSplit(style='max-height: 30px;'):
+                    self.Parent_Dir        = ui.Button(text=self.Parent_Dir_str,style='max-width: 30px;')
+                    self.Path_Label        = ui.Label(text=self.Path)
+                    self.New_Dir_Button    = ui.Button(text=self.New_Directory_str,style='max-width: 150px;')
+                    self.New_Dir_Name_Edit = ui.LineEdit(style='max-height: 30px;',disabled=False)
                 
-            with flx.Layout(style='overflow-y:scroll;') as self.Browser:
+            with flx.Layout(style='border: 0px solid gray; overflow-y:scroll;') as self.Browser:
                 with ui.HSplit(style='background: white; border: 0px solid gray;') as self.Data:
                     self.set_update(True)
             self.File_Name_Edit = ui.LineEdit(style='max-height: 30px;',disabled=True)
+            self.File_Name_Edit.apply_style('visibility: hidden;')
             if self.Browser_Type['select_type']=='Save':
                 self.File_Name_Edit.set_disabled(False)
-            with ui.HBox(style='max-height: 30px;'):
-                self.Cancel = ui.Button(text='Cancel')
-                self.OK     = ui.Button(text='OK')
+            with ui.HBox(style='max-height: 40px;'):
+                self.Cancel = ui.Button(text='Cancel',style='min-width: 150px;')
+                self.OK     = ui.Button(text='OK',style='min-width: 150px;')
                 if self.Browser_Type['select_type']=='Open':
                     if self.Browser_Type['select_style']=='Single':
                         self.OK.set_text('Open')
@@ -1758,23 +1769,39 @@ class File_Browser(flx.GroupWidget):
                         self.OK.set_text('Select')
                 elif self.Browser_Type['select_type']=='Save':
                     self.OK.set_text('Save')
+            flx.Layout(style='max-height: 10px;')
 
     @event.reaction('Path')
     def update_path_label(self):
-        self.Path_Label.set_text(self.Path)
-
-    @event.reaction('Parent_Dir.pointer_click')
-    def update_path_up(self, *events):
-        self.set_Change_Dir('..')
-        if self.update:
-            self.set_update(False)
-        else:
-            self.set_update(True)
+        if self.Upper_Panel:
+            self.Path_Label.set_text(self.Path)
+    
+    @event.reaction('!children**.pointer_click')
+    def Upper_Panel_setup(self, *events):
+        for ev in events:
+            if ev.source.text==self.Parent_Dir_str:
+                self.set_Change_Dir('..')
+                if self.update:
+                    self.set_update(False)
+                else:
+                    self.set_update(True)
+            if ev.source.text==self.New_Directory_str:
+                if self.New_Dir_Name_Edit.text.strip().replace(' ','_')!='':
+                    self.set_New_Dir(self.New_Dir_Name_Edit.text.strip().replace(' ','_'))
+        
             
-    @event.reaction('New_Dir_Button.pointer_click')
-    def New_Dir_Button_click(self):
-        if self.New_Dir_Name_Edit.text.strip().replace(' ','_')!='':
-            self.set_New_Dir(self.New_Dir_Name_Edit.text.strip().replace(' ','_'))
+    # @event.reaction('Parent_Dir.pointer_click')
+    # def update_path_up(self, *events):
+        # self.set_Change_Dir('..')
+        # if self.update:
+            # self.set_update(False)
+        # else:
+            # self.set_update(True)
+            
+    # @event.reaction('New_Dir_Button.pointer_click')
+    # def New_Dir_Button_click(self):
+        # if self.New_Dir_Name_Edit.text.strip().replace(' ','_')!='':
+            # self.set_New_Dir(self.New_Dir_Name_Edit.text.strip().replace(' ','_'))
         
     @event.reaction('OK.pointer_click')
     def Ok_Button_click(self):
@@ -1812,14 +1839,16 @@ class File_Browser(flx.GroupWidget):
                 else:
                     self.set_update(True)
 
-
-    @event.reaction('Dir','Browser_Type','Done')
+    @event.reaction('Dir','Browser_Type')
     def update_Dir(self, *events):
+        
         self.Data.dispose()
         if self.Browser_Type['select_type']=='Save':
             self.File_Name_Edit.set_disabled(False)
+            self.File_Name_Edit.apply_style('visibility: visible;')
         else:
             self.File_Name_Edit.set_disabled(True)
+            self.File_Name_Edit.apply_style('visibility: hidden;')
         if self.Browser_Type['select_type']=='Open':
             if self.Browser_Type['select_style']=='Single':
                 self.OK.set_text('Open')
@@ -1827,21 +1856,21 @@ class File_Browser(flx.GroupWidget):
                 self.OK.set_text('Select')
         elif self.Browser_Type['select_type']=='Save':
             self.OK.set_text('Save')
-        
+            
         with self.Browser:
             with ui.HFix(spacing=1,style='background: white; border: 0px solid gray;') as self.Data:
                 with ui.VFix(spacing=0,style='background: white; border: 0px solid gray;'):
-                    with ui.VFix(spacing=1,title='Directory'):
-                        if 'Directory' in  self.Dir.keys():
+                    if 'Directory' in  self.Dir.keys():
+                        with ui.VFix(spacing=1,title='Directory'):
                             Dir_list = list(self.Dir['Directory'].keys())
                             Dir_list.sort()
-                            for files in Dir_list: #self.Dir['Directory'].keys():
+                            for files in Dir_list: 
                                 ui.Button(text=files,style='max-height: 30px;min-height: 30px;text-align:left;border: 1px solid gray;')
                     with ui.VFix(spacing=1,title='Files') as self.Files:
                         if 'File' in  self.Dir.keys():
                             files_list = list(self.Dir['File'].keys())
                             files_list.sort()
-                            for files in files_list: #self.Dir['File'].keys():
+                            for files in files_list: 
                                 if self.Browser_Type['select_type']=='Open':
                                     if self.Browser_Type['select_style']=='Single':
                                         ui.RadioButton(text=files,style='max-height: 30px;min-height: 30px;border: 0px solid gray;')
@@ -1849,41 +1878,70 @@ class File_Browser(flx.GroupWidget):
                                         ui.CheckBox(text=files,style='max-height: 30px;min-height: 30px;border: 0px solid gray;')
                                 else:
                                     ui.Button(text=files,disabled=True,style='background: white;border: 0px solid gray;max-height: 30px;min-height: 30px;text-align:left;')
+                
                 with ui.VFix(spacing=1,style='background: white; border: 0px solid gray;'):
+                    if self.Show_Size:
+                        size_style = 'visibility: visible;'
+                    else:
+                        size_style = 'visibility: hidden;'
                     if 'Directory' in  self.Dir.keys():
                         Dir_list = list(self.Dir['Directory'].keys())
                         Dir_list.sort()
-                        for files in Dir_list: #self.Dir['Directory'].keys():
-                            ui.Button(text='Directory',disabled=True,style='background: white;border: 0px solid gray;max-height: 30px;min-height: 30px;max-width: 100px;')
+                        for files in Dir_list: 
+                            ui.Button(text='Directory',disabled=True,style= size_style+'color: black; background: white;border: 0px solid gray;max-height: 30px;min-height: 30px;max-width: 100px;')
                     if 'File' in  self.Dir.keys():
                         files_list = list(self.Dir['File'].keys())
                         files_list.sort()
-                        for files in files_list: #self.Dir['File'].keys():
-                            ui.Button(text=self.Dir['File'][files],disabled=True,style='background: white;border: 0px solid gray;max-height: 30px;min-height: 30px;max-width: 100px;text-align:right;')
+                        for files in files_list: 
+                            ui.Button(text=self.Dir['File'][files],disabled=True,style=size_style+'color: black; background: white;border: 0px solid gray;max-height: 30px;min-height: 30px;max-width: 100px;text-align:right;')
 
-
+class Empty_class(flx.PyComponent):
+    Done          = event.BoolProp(False, settable=True)
+    def init(self):
+        pass
+    
 class Run_File_Browser(flx.PyComponent):
     Done          = event.BoolProp(False, settable=True)
     Browser_Type  = event.DictProp({'select_style':'Single','select_type':'Dir'}, settable=True)
     Selected_Path = event.ListProp([],settable=True)
     
     #main program
-    def init(self,base_path):
-        import os
-        
-        if os.path.isdir(base_path.strip()):
-            self.base_path=os.path.abspath(base_path)
+    def init(self,base_path,ssh_client=None,Title='File Browser',Regular = '.+',upper_panel=True,show_size=True,show_dir=True):
+        import os,re
+        self.show_dir = show_dir
+        try:
+            self.Regular  = re.compile(Regular)
+        except:
+            self.Regular  = re.compile('.+')
+        self.ssh_client = ssh_client
+        try:
+            self.sftp   = self.ssh_client.open_sftp()
+        except:
+            self.sftp   = None
+            
+        if self.sftp!=None:
+            from stat import S_ISDIR, S_ISREG
+            try:
+                self.base_path = self.sftp.normalize(base_path)
+            except:
+                self.base_path = self.sftp.normalize('')
+            if not S_ISDIR(self.sftp.stat(self.base_path).st_mode):
+                self.base_path = self.sftp.getcwd()
         else:
-            if SERVE:
-                self.base_path=os.getcwd()
+            if os.path.isdir(base_path.strip()):
+                self.base_path=os.path.abspath(base_path)
             else:
-                self.base_path=''
+                if SERVE:
+                    self.base_path=os.getcwd()
+                else:
+                    self.base_path=''
+                    
         with ui.HSplit(spacing=1):
             #flexx.ui.FileBrowserWidget()
             ui.Layout(style='max-width: 400px;')
             with ui.VSplit():
                 ui.Layout(style='max-height: 150px;')
-                self.File_Browser = File_Browser(self.base_path,title='File Browser')
+                self.File_Browser = File_Browser(self.base_path,upper_panel,show_size,title=Title,style='border: 4px solid purple;')
                 ui.Layout(style='max-height: 150px;')
             ui.Layout(style='max-width: 400px;')
     
@@ -1908,47 +1966,84 @@ class Run_File_Browser(flx.PyComponent):
     
     @event.reaction('File_Browser.update')
     def update_file_sys(self, *events):
-        for ev in events:
-            Dir              = {}
-            Dir['Directory'] = {}
-            Dir['File']      = {}
-            
-            if self.File_Browser.Path=='':
-                Path = os.getcwd()
-            else:
-                Path = os.path.abspath(self.File_Browser.Path)
-            if self.File_Browser.Change_Dir != '':
-                if self.File_Browser.Change_Dir == '..':
-                    self.File_Browser.set_Change_Dir('')
-                    if (Path != self.base_path) or (not LOCK_USER_DIR):
-                        Path = os.path.split(Path)[0]
-                else:
-                    Path = os.path.join(Path,self.File_Browser.Change_Dir)
-                    self.File_Browser.set_Change_Dir('')
-            try:
-                with os.scandir(Path) as it:
-                    for entry in it:
-                        if entry.is_dir():
-                            Dir['Directory'][entry.name]=''
-                        else:
-                            size = entry.stat().st_size
-                            if size>1000:
-                                if size>1000000:
-                                    if size>1000000000:
-                                        Dir['File'][entry.name]="{0:.2f}".format(round(size/1000000000,2))+'GB'
+        if self.File_Browser.update:
+            for ev in events:
+                Dir              = {}
+                Dir['Directory'] = {}
+                Dir['File']      = {}
+                
+                if self.ssh_client!=None:
+                    try:
+                        self.sftp.normalize('')
+                    except:
+                        self.sftp   = self.ssh_client.open_sftp()
+                    from stat import S_ISDIR, S_ISREG
+                    if self.File_Browser.Path=='':
+                        Path = self.sftp.getcwd()
+                    else:
+                        Path = self.sftp.normalize(self.File_Browser.Path)
+                else:    
+                    if self.File_Browser.Path=='':
+                        Path = os.getcwd()
+                    else:
+                        Path = os.path.abspath(self.File_Browser.Path)
+                        
+                        
+                if self.File_Browser.Change_Dir != '':
+                    if self.File_Browser.Change_Dir == '..':
+                        self.File_Browser.set_Change_Dir('')
+                        if (Path != self.base_path) or (not LOCK_USER_DIR):
+                            Path = os.path.split(Path)[0]
+                    else:
+                        Path = os.path.join(Path,self.File_Browser.Change_Dir)
+                        self.File_Browser.set_Change_Dir('')
+                try:
+                    if self.ssh_client!=None:
+                        try:
+                            self.sftp.normalize('')
+                        except:
+                            self.sftp   = self.ssh_client.open_sftp()
+                        for entry in self.sftp.listdir_attr(Path):
+                            if S_ISDIR(entry.st_mode):
+                                if self.show_dir:
+                                    Dir['Directory'][entry.filename]=''
+                            elif self.Regular.fullmatch(entry.filename):
+                                size = entry.st_size
+                                if size>1000:
+                                    if size>1000000:
+                                        if size>1000000000:
+                                            Dir['File'][entry.filename]="{0:.2f}".format(round(size/1000000000,2))+'GB'
+                                        else:
+                                            Dir['File'][entry.filename]="{0:.2f}".format(round(size/1000000,2))+'MB'
                                     else:
-                                        Dir['File'][entry.name]="{0:.2f}".format(round(size/1000000,2))+'MB'
+                                        Dir['File'][entry.filename]="{0:.2f}".format(round(size/1000,2))+'KB'
                                 else:
-                                    Dir['File'][entry.name]="{0:.2f}".format(round(size/1000,2))+'KB'
-                            else:
-                                Dir['File'][entry.name]=str(size)+'B'
+                                    Dir['File'][entry.filename]=str(size)+'B'
+                    else:
+                        with os.scandir(Path) as it:
+                            for entry in it:
+                                if entry.is_dir():
+                                    if self.show_dir:
+                                        Dir['Directory'][entry.name]=''
+                                elif self.Regular.fullmatch(entry.name):
+                                    size = entry.stat().st_size
+                                    if size>1000:
+                                        if size>1000000:
+                                            if size>1000000000:
+                                                Dir['File'][entry.name]="{0:.2f}".format(round(size/1000000000,2))+'GB'
+                                            else:
+                                                Dir['File'][entry.name]="{0:.2f}".format(round(size/1000000,2))+'MB'
+                                        else:
+                                            Dir['File'][entry.name]="{0:.2f}".format(round(size/1000,2))+'KB'
+                                    else:
+                                        Dir['File'][entry.name]=str(size)+'B'
 
-                self.File_Browser.set_Path(Path)
-                self.File_Browser.set_Dir(Dir)
-            except :     
-                pass
-            self.File_Browser.set_update(False)
-    
+                    self.File_Browser.set_Path(Path)
+                    self.File_Browser.set_Dir(Dir)
+                except :     
+                    pass
+                self.File_Browser.set_update(False)
+        
     @event.reaction('Browser_Type')
     def update_Browser_Type(self,*events):
         self.File_Browser.set_Browser_Type(self.Browser_Type)
@@ -1959,7 +2054,10 @@ class Run_File_Browser(flx.PyComponent):
         Path = os.path.join(Path,self.File_Browser.New_Dir)
         print(Path)
         try:
-            os.mkdir(Path)
+            if self.sftp!=None:
+                self.sftp.mkdir(Path)
+            else:
+                os.mkdir(Path)
         except :     
             pass
         self.File_Browser.set_update(True)
@@ -2010,31 +2108,27 @@ class NeatSeq_Flow_GUI(app.PyComponent):
 
 
       .flx-Button {
-
-          border-radius: 8px;
-          background-color: white;
-          border: 2px solid gray;
-          box-shadow: 0 2px 2px 0 rgba(0,0,0,0.24), 0 2px 2px 0 rgba(0,0,0,0.19);
+          border: 1px solid white;
+          color: white;
+          background-color: #555555;
           text-align: center;
           transition: all 0.3s;
           cursor: pointer;
-
         }
-
-
 
     .flx-Button:after {
           content: "";
           position: absolute;
-
           top: 0;
           right: -20px;
           transition: 0.5s;
         }
 
     .flx-Button:hover  {
+          border: 1px solid black;
+          color: black;
+          background-color: white;
           padding-right: 25px;
-
         }
 
     .flx-Button:hover:after {
@@ -2043,7 +2137,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
 
 
      .flx-Graphical_panel .flx-Button {
-
+          color: black;
           border-radius: 8px;
           background-color: white;
           border: 2px solid gray;
@@ -2104,7 +2198,21 @@ class NeatSeq_Flow_GUI(app.PyComponent):
     Recovery                     = event.IntProp(0, settable=True)
     Locate_Failures              = event.IntProp(0, settable=True)
     
-    def init(self,path):
+    def init(self,path,ssh_client=None,WOKFLOW_DIR=None):
+        self.send_massage = None
+        self.ssh_client = ssh_client
+        if self.ssh_client!=None:
+            try:
+                from stat import S_ISDIR, S_ISREG
+                self.sftp = self.ssh_client.open_sftp()
+            except:
+                self.sftp = None
+        else:
+            self.sftp = None
+        
+        if SERVE:
+            self.send_massage = send_massage()
+        
         self.filepicker_key = ''
         with ui.StackLayout(flex=1) as self.stack:
             with ui.VSplit() as self.MainStack:
@@ -2133,18 +2241,31 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 self.Terminal_string = ''
                 
             with  ui.Widget(flex=1) as self.Browser_W:
-                self.Browser = Run_File_Browser(path)
+                self.Browser         = Run_File_Browser(path,self.ssh_client)
+            if (WOKFLOW_DIR != None) and (SERVE):
+                with ui.Widget(flex=1) as self.workflow_select_w:
+                    self.workflow_select = Run_File_Browser(WOKFLOW_DIR,self.ssh_client,'Select a Work-Flow','.+yaml$',False,False,False)
+                    self.filepicker_key  = 'workflow_file'
+                    self.workflow_select.set_Browser_Type({'select_style':'Single','select_type':'Open'})
+                    self.workflow_select_w.apply_style('font-size:140%;')
+                    self.stack.set_current(self.workflow_select_w)
+            else:
+                self.workflow_select = Empty_class()
+                
+        if not SERVE:
+            self.stack.apply_style('font-size:80%;')
     # @event.reaction('label.pointer_move')
     # def on_label_move(self, *events):
         # self.label.set_flex(0.2)
     
-    @event.reaction('Browser.Done')
+    @event.reaction('Browser.Done','!workflow_select.Done')
     def when_File_Browser_Done(self,*events):
-        if self.Browser.Done:
-            self.stack.set_current(self.MainStack)
-            self.Browser.set_Done(False)
-            self.set_filepicker_options()
-    
+        for ev in events:
+            if ev.source.Done:
+                ev.source.set_Done(False)
+                self.set_filepicker_options(ev.source.Selected_Path)
+                self.stack.set_current(self.MainStack)
+            
     @event.reaction('label.pointer_click')
     def on_label_click(self, *events):
         self.label.set_flex(0.2)
@@ -2152,8 +2273,8 @@ class NeatSeq_Flow_GUI(app.PyComponent):
     def select_files(self,select_style='Single', select_type='Open', wildcard='*'):
         if SERVE:
             self.Browser.set_Browser_Type({'select_style':select_style,'select_type':select_type})
-            self.Browser.File_Browser.set_update(True)
             self.stack.set_current(self.Browser_W)
+            self.Browser.File_Browser.set_update(True)
         else:
             try:
                 import wx, os
@@ -2263,21 +2384,21 @@ class NeatSeq_Flow_GUI(app.PyComponent):
             self.filepicker_key = ''
             return None
     
-    def set_filepicker_options(self):
-        options = {'file_path': lambda: self.step_info.set_file_path(self.Browser.Selected_Path),
-                   'NeatSeq_bin': lambda: self.Run.set_NeatSeq_bin(self.Browser.Selected_Path),
-                   'conda_bin': lambda: self.Run.set_conda_bin(self.Browser.Selected_Path),
-                   'Project_dir': lambda: self.Run.set_Project_dir(self.Browser.Selected_Path),
-                   'sample_file_to_run': lambda: self.Run.set_sample_file(self.Browser.Selected_Path),
-                   'parameter_file_to_run': lambda: self.Run.set_parameter_file(self.Browser.Selected_Path),
-                   'Cluster_file_path': lambda: self.cluster_info.set_file_path(self.Browser.Selected_Path),
-                   'Vars_file_path': lambda: self.vars_info.set_file_path(self.Browser.Selected_Path),
-                   'workflow_file': lambda: self.step_info.set_workflow_file(self.Browser.Selected_Path),
-                   'save_workflow_file': lambda: self.step_info.set_save_workflow_file(self.Browser.Selected_Path),
-                   'project': lambda: self.samples_info.set_project_files(self.Browser.Selected_Path),
-                   'samples': lambda: self.samples_info.set_sample_files(self.Browser.Selected_Path),
-                   'load_samples_file': lambda: self.samples_info.set_load_samples_file(self.Browser.Selected_Path),
-                   'save_samples_file': lambda: self.samples_info.set_save_samples_file(self.Browser.Selected_Path)
+    def set_filepicker_options(self,Selected_Path):
+        options = {'file_path': lambda: self.step_info.set_file_path(Selected_Path),
+                   'NeatSeq_bin': lambda: self.Run.set_NeatSeq_bin(Selected_Path),
+                   'conda_bin': lambda: self.Run.set_conda_bin(Selected_Path),
+                   'Project_dir': lambda: self.Run.set_Project_dir(Selected_Path),
+                   'sample_file_to_run': lambda: self.Run.set_sample_file(Selected_Path),
+                   'parameter_file_to_run': lambda: self.Run.set_parameter_file(Selected_Path),
+                   'Cluster_file_path': lambda: self.cluster_info.set_file_path(Selected_Path),
+                   'Vars_file_path': lambda: self.vars_info.set_file_path(Selected_Path),
+                   'workflow_file': lambda: self.step_info.set_workflow_file(Selected_Path),
+                   'save_workflow_file': lambda: self.step_info.set_save_workflow_file(Selected_Path),
+                   'project': lambda: self.samples_info.set_project_files(Selected_Path),
+                   'samples': lambda: self.samples_info.set_sample_files(Selected_Path),
+                   'load_samples_file': lambda: self.samples_info.set_load_samples_file(Selected_Path),
+                   'save_samples_file': lambda: self.samples_info.set_save_samples_file(Selected_Path)
                    }
         if self.filepicker_key in options.keys():
             return options[self.filepicker_key]()
@@ -2304,6 +2425,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
     def conda_env_options(self, conda_bin):
         import os
         from subprocess import Popen, PIPE, STDOUT
+        options      = []
         temp_command = ''
         if len(conda_bin) > 0:
             temp_command = conda_bin
@@ -2312,35 +2434,57 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         err_flag = False
         try:
             self.Run.set_Terminal(self.Terminal_string + '[Searching for Conda Environments]: Searching...\n')
-            conda_proc = Popen(temp_command, stdout=PIPE, stderr=PIPE, shell=True, universal_newlines=True)
-            outs, errs = conda_proc.communicate(timeout=15)
+            if self.ssh_client!= None:
+                [outs, errs , exit_status] = Popen_SSH(self.ssh_client,temp_command).output()
+                if exit_status!=0:
+                    err_flag = True
+            else:
+                conda_proc = Popen(temp_command, stdout=PIPE, stderr=PIPE, shell=True, universal_newlines=True)
+                outs, errs = conda_proc.communicate(timeout=15)
 
         except :
             err_flag = True
-            conda_proc.kill()
-            outs, errs = conda_proc.communicate()
-
+            if self.ssh_client == None:
+                conda_proc.kill()
+                outs, errs = conda_proc.communicate()
 
         if len(errs) > 0:
             self.Terminal_string = self.Terminal_string + '[Searching for Conda Environments]: Error:\n' + errs
-        if len(outs) > 0:
+        if err_flag:
+            self.Terminal_string = self.Terminal_string + '[Searching for Conda Environments]: Finished with Error!! \n'
+        elif len(outs) > 0:
             options = list(map(lambda y: y.split(os.sep)[0].replace('*', '').replace(' ', ''),
                            filter(lambda x: len(x.split(os.sep)) > 1, outs.split('\n'))))
             self.Run.set_conda_env(options)
             if len(options) > 0:
                 self.Terminal_string = self.Terminal_string +  ' [Searching for Conda Environments]: '+ str(len(options)) + ' Conda Environments were found \n'
-        if err_flag:
-            self.Terminal_string = self.Terminal_string + '[Searching for Conda Environments]: Finished with Error!! \n'
+        
         self.Run.set_Terminal(self.Terminal_string)
-    
+        return options
+        
     def Generate_scripts_command(self, NeatSeq_bin, conda_bin, conda_env, Project_dir, sample_file, parameter_file):
         import os,re
         from subprocess import Popen, PIPE, STDOUT, TimeoutExpired
-
-        if len(Project_dir) == 0:
-            Project_dir=os.getcwd()
-
+        errs  = ''
+        outs  = ''
         Error = ''
+        
+        if len(Project_dir) == 0:
+            Error = Error + 'Error:\n No Project Directory\n'
+            #self.send_massage.set_massage(Error)
+            # if self.sftp!= None:
+                # Project_dir=self.sftp.getcwd()
+            # else:
+                # Project_dir=os.getcwd()
+        if (self.ssh_client != None) and (len(conda_env)==0):
+            if len(conda_bin) > 0:
+                options = self.conda_env_options(conda_bin)
+            else:
+                options = self.conda_env_options('')
+            if len(options)>0:
+                if NeatSeq_Flow_Conda_env in options:
+                    conda_env = NeatSeq_Flow_Conda_env
+        
         if len(NeatSeq_bin) > 0:
             temp_command = ''
             if len(conda_env) > 0:
@@ -2353,8 +2497,9 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 else:
                     temp_command = temp_command + 'activate' + ' ' + conda_env + ';'
                     temp_command = temp_command + 'export CONDA_BASE=$(conda  info --root); '
-            elif 'CONDA_PREFIX' in os.environ.keys():
-                temp_command = temp_command + 'export CONDA_BASE=$(conda  info --root); '
+            elif self.ssh_client == None:
+                if 'CONDA_PREFIX' in os.environ.keys():
+                    temp_command = temp_command + 'export CONDA_BASE=$(conda  info --root); '
 
             if NeatSeq_bin.startswith(os.sep):
                 temp_command = temp_command + ' python ' + NeatSeq_bin
@@ -2375,26 +2520,44 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 temp_command = temp_command + ' -d ' + Project_dir
             else:
                 Error = Error + 'Error:\n No Project directory \n'
-
-            if os.path.exists(os.path.join(Project_dir,'logs')):
-                logs_files = list(filter(lambda x: len(re.findall('log_[0-9]+.txt$',x))>0,
-                                    os.listdir(os.path.join(Project_dir,'logs') )))
+            
+            if self.sftp!= None:
+                try:
+                    logs_files = list(filter(lambda x: len(re.findall('log_[0-9]+.txt$',x))>0,
+                                      list(self.sftp.listdir(self.sftp.normalize(os.path.join(Project_dir,'logs'))))))
+                except:
+                    logs_files = []
+                    
                 if len(logs_files)>0:
                     temp_command = temp_command + ' -r curr '
+                    
+            else:
+                if os.path.exists(os.path.join(Project_dir,'logs')):
+                    logs_files = list(filter(lambda x: len(re.findall('log_[0-9]+.txt$',x))>0,
+                                        os.listdir(os.path.join(Project_dir,'logs') )))
+                    if len(logs_files)>0:
+                        temp_command = temp_command + ' -r curr '
 
 
             if len(Error) == 0:
                 err_flag = False
                 try:
+                    
                     self.Run.set_Terminal(self.Terminal_string + '[Generating scripts]:  Generating...\n')
-                    Generating_proc = Popen(temp_command, stdout=PIPE, stderr=PIPE, shell=True,
-                                            universal_newlines=True , executable='/bin/bash')
-                    outs, errs = Generating_proc.communicate(timeout=25)
+                    if self.ssh_client!= None:
+                        [outs, errs , exit_status] = Popen_SSH(self.ssh_client,temp_command,shell=True).output()
+                        if exit_status!=0:
+                            err_flag = True
+                    else:
+                        Generating_proc = Popen(temp_command, stdout=PIPE, stderr=PIPE, shell=True,
+                                                universal_newlines=True , executable='/bin/bash')
+                        outs, errs = Generating_proc.communicate(timeout=25)
 
                 except :
                     err_flag = True
-                    Generating_proc.kill()
-                    outs, errs = Generating_proc.communicate()
+                    if self.ssh_client== None:
+                        Generating_proc.kill()
+                        outs, errs = Generating_proc.communicate()
 
                 if len(errs) > 0:
                     for line in errs.split('\n'):
@@ -2413,40 +2576,60 @@ class NeatSeq_Flow_GUI(app.PyComponent):
     
     def Search_Tags(self,Project_dir):
         import os,re
-        if len(Project_dir) == 0:
-            Project_dir=os.getcwd()
+        # if len(Project_dir) != 0:
+            # Project_dir=os.getcwd()
         if len(Project_dir) > 0:
-            dname = os.path.join(Project_dir,'scripts', 'tags_scripts')
-            if os.path.isdir(dname):
-                options=list(map(lambda y: re.sub('\.sh$','',y) ,list(filter(lambda x: x.endswith('.sh'),os.listdir(dname)))))
-                options.insert(0,self.Run.Tags[0])
-                self.Run.set_Tags(options)
+            try:
+                dname = os.path.join(Project_dir,'scripts', 'tags_scripts')
+                if self.sftp!= None:
+                    options=list(map(lambda y: re.sub('\.sh$','',y) ,list(filter(lambda x: x.endswith('.sh'),self.sftp.listdir( self.sftp.normalize(dname) )))))
+                    options.insert(0,self.Run.Tags[0])
+                    self.Run.set_Tags(options)
+                else:
+                    if os.path.isdir(dname):
+                        options=list(map(lambda y: re.sub('\.sh$','',y) ,list(filter(lambda x: x.endswith('.sh'),os.listdir(dname)))))
+                        options.insert(0,self.Run.Tags[0])
+                        self.Run.set_Tags(options)
+            except:
+                self.Run.set_Tags([self.Run.Tags[0]])
     
     def Run_scripts_command(self,Project_dir):
         import os
         from subprocess import Popen, PIPE, STDOUT, TimeoutExpired
 
-        if len(Project_dir) == 0:
-            Project_dir=os.getcwd()
-
+        # if len(Project_dir) == 0:
+            # Project_dir=os.getcwd()
         Error = ''
         temp_command = ''
+            
         if len(Project_dir) > 0:
-            if self.Run.Tag_selected!=self.Run.Tags[0]:
-                fname = os.path.join(Project_dir,'scripts', 'tags_scripts',self.Run.Tag_selected+'.sh')
+            if self.sftp!= None:
+                if self.Run.Tag_selected!=self.Run.Tags[0]:
+                    dname = os.path.join(Project_dir,'scripts', 'tags_scripts')
+                    fname    = self.Run.Tag_selected+'.sh'
+                else:
+                    dname = os.path.join(Project_dir,'scripts')
+                    fname    = '00.workflow.commands.sh'
+                try:
+                    if fname in self.sftp.listdir( self.sftp.normalize(dname) ):
+                        temp_command = 'bash ' + os.path.join(self.sftp.normalize(dname),fname)
+                except:
+                        Error = Error + 'Error:\n You first need to generate the scripts \n'
             else:
-                fname = os.path.join(Project_dir,'scripts', '00.workflow.commands.sh')
-            if os.path.isfile(fname):
-                temp_command = 'bash ' + fname
-            else:
-                Error = Error + 'Error:\n You first need to generate the scripts \n'
+                if self.Run.Tag_selected!=self.Run.Tags[0]:
+                    fname = os.path.join(Project_dir,'scripts', 'tags_scripts',self.Run.Tag_selected+'.sh')
+                else:
+                    fname = os.path.join(Project_dir,'scripts', '00.workflow.commands.sh')
+                if os.path.isfile(fname):
+                    temp_command = 'bash ' + fname
+                else:
+                    Error = Error + 'Error:\n You first need to generate the scripts \n'
         else:
             Error = Error + 'Error:\n No Project directory \n'
-
         if len(Error) == 0:
             if self.Running_script == 0:
                 try:
-                    self.Running_Commands['Running_script'] =  Run_command_in_thread(temp_command)
+                    self.Running_Commands['Running_script'] =  Run_command_in_thread(temp_command,self.ssh_client)
                     self.Running_Commands['Running_script'].Run()
                     self.set_Running_script(self.Running_script+1)
                 except :
@@ -2467,17 +2650,25 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         import os
         from subprocess import Popen, PIPE, STDOUT, TimeoutExpired
 
-        if len(Project_dir) == 0:
-            Project_dir=os.getcwd()
+        # if len(Project_dir) == 0:
+            # Project_dir=os.getcwd()
 
         Error = ''
         temp_command = ''
         if len(Project_dir) > 0:
-            fname = os.path.join(Project_dir,'scripts', '99.kill_all.sh')
-            if os.path.isfile(fname):
-                temp_command = 'bash ' + fname
+            fname = '99.kill_all.sh'
+            dname = os.path.join(Project_dir,'scripts')
+            if self.sftp!= None:
+                if fname in self.sftp.listdir( self.sftp.normalize(dname) ):
+                    temp_command = 'bash ' + os.path.join(self.sftp.normalize(dname),fname)
+                else:
+                    Error = Error + 'Error:\n You first need to generate and run the scripts \n'
             else:
-                Error = Error + 'Error:\n You first need to generate and run the scripts \n'
+                fname = os.path.join(dname,fname)
+                if os.path.isfile(fname):
+                    temp_command = 'bash ' + fname
+                else:
+                    Error = Error + 'Error:\n You first need to generate and run the scripts \n'
         else:
             Error = Error + 'Error:\n No Project directory \n'
 
@@ -2491,7 +2682,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
 
             if self.Kill_Run == 0:
                 try:
-                    self.Running_Commands['Kill_Run'] =  Run_command_in_thread(temp_command)
+                    self.Running_Commands['Kill_Run'] =  Run_command_in_thread(temp_command,self.ssh_client)
                     self.Running_Commands['Kill_Run'].Run()
                     self.set_Kill_Run(self.Kill_Run+1)
                 except :
@@ -2512,17 +2703,25 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         import os
         from subprocess import Popen, PIPE, STDOUT, TimeoutExpired
 
-        if len(Project_dir) == 0:
-            Project_dir=os.getcwd()
+        # if len(Project_dir) == 0:
+            # Project_dir=os.getcwd()
 
         Error = ''
         temp_command = ''
         if len(Project_dir) > 0:
-            fname = os.path.join(Project_dir,'scripts', 'DD.utilities.sh')
-            if os.path.isfile(fname):
-                temp_command = '. ' + fname + ' ; recover_run '
+            fname = 'DD.utilities.sh'
+            dname = os.path.join(Project_dir,'scripts')
+            if self.sftp!= None:
+                if fname in self.sftp.listdir( self.sftp.normalize(dname) ):
+                    temp_command = '. ' + os.path.join(self.sftp.normalize(dname),fname) + ' ; recover_run '
+                else:
+                    Error = Error + 'Error:\n You first need to generate and run the scripts \n'
             else:
-                Error = Error + 'Error:\n You first need to generate and run the scripts \n'
+                fname = os.path.join(dname,fname)
+                if os.path.isfile(fname):
+                    temp_command = '. ' + fname + ' ; recover_run '
+                else:
+                    Error = Error + 'Error:\n You first need to generate and run the scripts \n'
         else:
             Error = Error + 'Error:\n No Project directory \n'
 
@@ -2530,7 +2729,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         if len(Error) == 0:
             if self.Locate_Failures == 0:
                 try:
-                    self.Running_Commands['Locate_Failures'] =  Run_command_in_thread(temp_command)
+                    self.Running_Commands['Locate_Failures'] =  Run_command_in_thread(temp_command,self.ssh_client)
                     self.Running_Commands['Locate_Failures'].Run()
                     self.Terminal_string = self.Terminal_string + '[Locate Failures]:   Searching for failures in the last run.. \n'
                     self.Terminal_string = self.Terminal_string + '[Locate Failures]:   Click on the Recover button if you want to re-run these steps: \n'
@@ -2558,21 +2757,34 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         import os
         from subprocess import Popen, PIPE, STDOUT, TimeoutExpired
     
-        if len(Project_dir) == 0:
-            Project_dir=os.getcwd()
+        # if len(Project_dir) == 0:
+            # Project_dir=os.getcwd()
     
         Error = ''
         temp_command = ''
         if len(Project_dir) > 0:
-            fname = os.path.join(Project_dir,'scripts', 'DD.utilities.sh')
-            if os.path.isfile(fname):
-                fname = os.path.join(Project_dir,'scripts', 'AA.Recovery_script.sh')
-                if os.path.isfile(fname):
-                    temp_command = 'bash ' + fname
+            fname = 'DD.utilities.sh'
+            dname = os.path.join(Project_dir,'scripts')
+            if self.sftp!= None:
+                if fname in self.sftp.listdir( self.sftp.normalize(dname) ):
+                    fname = 'AA.Recovery_script.sh'
+                    if fname in self.sftp.listdir( self.sftp.normalize(dname) ):
+                        temp_command = 'bash ' + os.path.join(self.sftp.normalize(dname),fname)
+                    else:
+                        Error = Error + 'Error:\n You first need to "Locate Failures" \n'
                 else:
-                    Error = Error + 'Error:\n You first need to "Locate Failures" \n'
+                    Error = Error + 'Error:\n You first need to generate and run the scripts \n'
             else:
-                Error = Error + 'Error:\n You first need to generate and run the scripts \n'
+                fname = os.path.join(dname,fname)
+                if os.path.isfile(fname):
+                    fname = 'AA.Recovery_script.sh'
+                    fname = os.path.join(dname,fname)
+                    if os.path.isfile(fname):
+                        temp_command = 'bash ' + fname
+                    else:
+                        Error = Error + 'Error:\n You first need to "Locate Failures" \n'
+                else:
+                    Error = Error + 'Error:\n You first need to generate and run the scripts \n'
         else:
             Error = Error + 'Error:\n No Project directory \n'
 
@@ -2581,7 +2793,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
 
             if self.Recovery == 0:
                 try:
-                    self.Running_Commands['Recovery'] =  Run_command_in_thread(temp_command)
+                    self.Running_Commands['Recovery'] =  Run_command_in_thread(temp_command,self.ssh_client)
                     self.Running_Commands['Recovery'].Run()
                     self.Terminal_string = self.Terminal_string + '[Recovery]:   Trying to Recover.. \n'
                     self.Run.set_Terminal(self.Terminal_string)
@@ -2613,8 +2825,8 @@ class NeatSeq_Flow_GUI(app.PyComponent):
 
         Error = ''
 
-        if len(Project_dir) == 0:
-            Project_dir=os.getcwd()
+        # if len(Project_dir) == 0:
+            # Project_dir=os.getcwd()
 
         parser = argparse.ArgumentParser(description='Neatseq-flow Monitor By Liron Levin ')
         parser.add_argument('-D', dest='directory',metavar="STR", type=str,default=Project_dir,
@@ -2658,12 +2870,11 @@ class NeatSeq_Flow_GUI(app.PyComponent):
     def update_Terminal(self, *events):
         for ev in events:
             if ev.new_value>0:
-
-                Task_End=False
-                Title = ''
-                stat=True
-                outs = ''
-                errs = ''
+                Task_End = False
+                Title    = ''
+                stat     = True
+                outs     = ''
+                errs     = ''
                 try:
                     if self.Running_Commands[ev.type].proc.poll() is None:
                        outs, errs = self.Running_Commands[ev.type].output()
@@ -2709,16 +2920,11 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         import Monitor_GUI
         for ev in events:
             if ev.new_value!='None':
-                self.monitor.dispose()
-                if os.path.isdir(ev.new_value):
-                    
-                    with self.Monitor:
-                        with ui.Layout() as self.Monitor_Widget:
-                            self.monitor = Monitor_GUI.Monitor_GUI(ev.new_value)
-                else:
-                    with self.Monitor:
-                        with ui.Layout() as self.Monitor_Widget:
-                            self.monitor = Monitor_GUI.Monitor_GUI(os.getcwd())
+                self.monitor.close()
+                #self.monitor.dispose()
+                with self.Monitor:
+                    with ui.Layout() as self.Monitor_Widget:
+                        self.monitor = Monitor_GUI.Monitor_GUI(ev.new_value,self.ssh_client)
                 self.TabLayout2.set_current(self.Monitor)
                 self.Run.set_jump2monitortab('None')
     
@@ -2742,33 +2948,49 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         for ev in events:
             if len(self.samples_info.save_samples_file) > 0:
                 if len(self.samples_info.samples_data.keys()) > 0:
-                    sample_file = open(self.samples_info.save_samples_file[0][0], 'w')
-                    sample_file.write('Title\t' + self.samples_info.samples_data.setdefault("Title", "Untitled") + '\n')
-                    sample_file.write('\n')
-                    if "project_data" in self.samples_info.samples_data.keys():
-                        sample_file.write('#Type\tPath' + '\n')
-                        for project_types in self.samples_info.samples_data["project_data"].keys():
-                            for project_path in self.samples_info.samples_data["project_data"][project_types]:
-                                sample_file.write(project_types + '\t' + project_path + '\n')
-                    sample_file.write('\n')
-                    sample_file.write('#SampleID\tType\tPath' + '\n')
-                    for sample_name in self.samples_info.samples_data.keys():
-                        if sample_name not in ['project_data', 'Title']:
-                            for sample_types in self.samples_info.samples_data[sample_name].keys():
-                                for sample_path in self.samples_info.samples_data[sample_name][sample_types]:
-                                    sample_file.write(sample_name + '\t' + sample_types + '\t' + sample_path + '\n')
-                    sample_file.close()
-                    self.Run.set_sample_file(self.samples_info.save_samples_file)
-                    self.samples_info.set_save_samples_file([])
+                    try:
+                        if self.sftp!=None:
+                            sample_file = self.sftp.open(self.samples_info.save_samples_file[0][0],mode='w')
+                        else:
+                            sample_file = open(self.samples_info.save_samples_file[0][0], 'w')
+                        sample_file.write('Title\t' + self.samples_info.samples_data.setdefault("Title", "Untitled") + '\n')
+                        sample_file.write('\n')
+                        if "project_data" in self.samples_info.samples_data.keys():
+                            sample_file.write('#Type\tPath' + '\n')
+                            for project_types in self.samples_info.samples_data["project_data"].keys():
+                                for project_path in self.samples_info.samples_data["project_data"][project_types]:
+                                    sample_file.write(project_types + '\t' + project_path + '\n')
+                        sample_file.write('\n')
+                        sample_file.write('#SampleID\tType\tPath' + '\n')
+                        for sample_name in self.samples_info.samples_data.keys():
+                            if sample_name not in ['project_data', 'Title']:
+                                for sample_types in self.samples_info.samples_data[sample_name].keys():
+                                    for sample_path in self.samples_info.samples_data[sample_name][sample_types]:
+                                        if sample_path=='':
+                                            sample_path='""'
+                                        sample_file.write(sample_name + '\t' + sample_types + '\t' + sample_path + '\n')
+                        sample_file.close()
+                        self.Run.set_sample_file(self.samples_info.save_samples_file)
+                        self.samples_info.set_save_samples_file([])
+                    except:
+                        pass
     
     @event.reaction('samples_info.load_samples_file')
     def load_sample_file(self, *events):
-        from neatseq_flow_gui.modules.parse_sample_data import parse_sample_file
+        
         samples_data = self.samples_info.samples_data
         for ev in events:
             if len(self.samples_info.load_samples_file) > 0:
                 try:
-                    samples_data = parse_sample_file(self.samples_info.load_samples_file[0][0])
+                    if self.sftp!=None:
+                        from neatseq_flow_gui.modules.parse_sample_data import parse_sample_file_object
+                        file_name    = self.samples_info.load_samples_file[0][0]
+                        file_object  = self.sftp.open(file_name,mode='r')
+                        samples_data = parse_sample_file_object(file_object,file_name,self.sftp)
+                        file_object.close()
+                    else:
+                        from neatseq_flow_gui.modules.parse_sample_data import parse_sample_file
+                        samples_data = parse_sample_file(self.samples_info.load_samples_file[0][0])
                 except:
                     samples_data = []
                     self.samples_info.set_load_samples_file([])
@@ -2788,11 +3010,19 @@ class NeatSeq_Flow_GUI(app.PyComponent):
     
     @event.reaction('step_info.workflow_file')
     def load_workflow_file(self, *events):
-        from neatseq_flow_gui.modules.parse_param_data import parse_param_file
         for ev in events:
             if len(self.step_info.workflow_file) > 0:
+                
                 try:
-                    param_data = parse_param_file(self.step_info.workflow_file[0][0])
+                    if self.sftp!=None:
+                        from neatseq_flow_gui.modules.parse_param_data import parse_param_file_object
+                        file_name   = self.step_info.workflow_file[0][0]
+                        file_object = self.sftp.open(file_name)
+                        param_data  = parse_param_file_object(file_object,file_name)
+                        file_object.close()
+                    else:
+                        from neatseq_flow_gui.modules.parse_param_data import parse_param_file
+                        param_data = parse_param_file(self.step_info.workflow_file[0][0])
                 except:
                     param_data = []
                     self.step_info.set_workflow_file([])
@@ -2828,8 +3058,13 @@ class NeatSeq_Flow_GUI(app.PyComponent):
             if len(self.step_info.save_workflow_file) > 0:
                 err_flag=True
                 try:
-
-                    with open(self.step_info.save_workflow_file[0][0], 'w') as outfile:
+                    if self.sftp!=None:
+                        file_name   = self.step_info.save_workflow_file[0][0]
+                        file_object = self.sftp.open(file_name,mode='w')
+                    else:
+                        file_object = open(self.step_info.save_workflow_file[0][0], 'w')
+                        
+                    with file_object as outfile:
                         param_data = OrderedDict()
                         param_data['Documentation'] = re.sub(string=self.Documentation.value.rstrip('\t').replace('\t',"    "),
                                                              pattern=' +\n',
@@ -2858,7 +3093,10 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                     err_flag=False
                     if not SERVE:
                         dialite.fail('Save Error', 'Error saving workflow file')
-
+                
+                if self.sftp!=None:
+                    file_object.close()
+                    
                 if err_flag:
                     self.Run.set_parameter_file(self.step_info.save_workflow_file)
                 self.step_info.set_save_workflow_file([])
@@ -2893,7 +3131,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         self.cluster_info.set_Data(Cluster_Data)
         self.cluster_info.set_converter(converer)
         self.cluster_info.set_Data_update(True)
-
+    
     @event.action
     def update_vars_data(self, Vars_Data):
         converer = OrderedDict()
@@ -2901,7 +3139,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         self.vars_info.set_Data(Vars_Data)
         self.vars_info.set_converter(converer)
         self.vars_info.set_Data_update(True)
-
+    
     def correct_dict(self, dic, count, converer):
         if isinstance(dic, dict):
             dic_keys = list(dic.keys())
@@ -2911,7 +3149,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 dic['temp_' + str(count)], count = self.correct_dict(temp, count + 1, converer)
 
         return dic, count
-
+    
     def dic2list(self, Vars, flat_list, string='Vars.'):
         for item in Vars.keys():
             if isinstance(Vars[item], dict):
@@ -2921,21 +3159,21 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 string = temp_string
             else:
                 flat_list.append('{' + string + item + '}')
-
+    
     @event.reaction('step_info.Vars_data')
     def pars_vars_in_new_step(self, *events):
         input_list = []
         self.find_vars_in_dict(self.step_info.Vars_data, input_list)
         new_vars_data = self.Add_items_to_vars_dict(self.vars_info.Data, input_list)
         self.update_vars_data(new_vars_data)
-
+    
     def Add_items_to_vars_dict(self, vars_data, items2add):
         for items in items2add:
             item = items.split('.')
             item.remove('Vars')
             self.list2dict(vars_data, item)
         return vars_data
-
+    
     def list2dict(self, dic, input_list):
         if len(input_list) > 0:
             key = input_list.pop(0)
@@ -2956,7 +3194,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 return None
             else:
                 return dic
-
+    
     def find_vars_in_dict(self, input_dict, input_list):
         import re
         var_re = "\{(Vars\.[\w\.\-]+?)\}"
@@ -2966,11 +3204,140 @@ class NeatSeq_Flow_GUI(app.PyComponent):
             elif len(re.findall(var_re, str(input_dict[key]))) > 0:
                 input_list.extend(list(re.findall(var_re, input_dict[key])))
 
+class Popen_SSH(object):
+
+    def __init__(self,ssh_client,command,shell=False,pty=True,timeout=200,nbytes = 4096):
+        import time
+        self.timeout     = timeout
+        self.shell       = shell
+        self.err_flag    = True
+        self.nbytes      = nbytes
+        self.stdout_data = []
+        self.stderr_data = []
+        self.ssh_session     = None
+        self.EFC         = get_random_string()
+        self.Done        = True
+        self.time        = time.time()
+        try:
+            if ssh_client!= None:
+                if ssh_client.get_transport().is_active():
+                    self.ssh_transport     = ssh_client.get_transport()
+                    self.ssh_session       = self.ssh_transport.open_channel(kind='session')
+                    if pty:
+                        self.ssh_session.get_pty('vt100')
+                        if self.shell:
+                            self.err_flag = False
+                            self.ssh_session.invoke_shell()
+                            self.Done = False
+                            self.ssh_session.send("stty -echo\n")
+                            command = "bash ; " + command + "; echo " + self.EFC
+                            command = command.replace(';','\n')
+                            for line in command.split('\n'):
+                                self.ssh_session.send(line+'\n')
+                    if not self.shell:
+                        self.ssh_session.settimeout(self.timeout)
+                        self.Done = False
+                        self.err_flag = False
+                        self.ssh_session.exec_command(command)
+        except :
+            self.err_flag = True
+            try:
+                self.ssh_session.close()
+            except:
+                pass
+            pass
+            
+    def output(self,out_queue=None,err_queue=None):
+        import time
+        if not self.err_flag: 
+            try:
+                while True:
+                    if self.ssh_session.recv_ready():
+                        out = self.ssh_session.recv(self.nbytes).decode('utf-8')
+                        self.stdout_data.extend(out)
+                        if out_queue!=None:
+                            if self.shell:
+                                if len(''.join(self.stdout_data).split(self.EFC))==2:
+                                    if len(out.split(self.EFC))==2:
+                                        out_queue.put(out.split(self.EFC)[1])
+                                    else:
+                                        out_queue.put(out)
+                                elif len(''.join(self.stdout_data).split(self.EFC))>2:
+                                    if len(out.split(self.EFC))==2:
+                                        out_queue.put(out.split(self.EFC)[0])
+                                    else:
+                                        out_queue.put(out)
+                            else:
+                                out_queue.put(out)
+                    if self.ssh_session.recv_stderr_ready():
+                        err = self.ssh_session.recv_stderr(self.nbytes).decode('utf-8')
+                        self.stderr_data.extend(err)
+                        if err_queue!=None:
+                            if self.shell:
+                                err_queue.put(err)
+                    if self.ssh_session.exit_status_ready():
+                        break
+                    if self.shell:
+                        if len(''.join(self.stdout_data).split(self.EFC))>2:
+                            break
+                        if (time.time() - self.time) > self.timeout:
+                            out_queue.put('\nTime Out\n')
+                            break
+                if not self.shell:
+                    self.stdout_data = ''.join(self.stdout_data)
+                    self.stderr_data = ''.join(self.stderr_data)
+                    if self.ssh_session.recv_exit_status()==0:
+                        self.err_flag = False
+                else:
+                    if len(''.join(self.stdout_data).split(self.EFC))>2:
+                        self.stdout_data = ''.join(self.stdout_data).split(self.EFC)[1]
+                    else:
+                        self.stdout_data = ''.join(self.stdout_data)
+                    self.stderr_data = ''.join(self.stderr_data)
+                    # if out_queue!=None:
+                        # out_queue.put(self.stdout_data,False)
+                    # if err_queue!=None:
+                        # err_queue.put(self.stderr_data,False)
+                self.Done = True
+            except :
+                self.err_flag = True
+                self.Done = True
+            if self.err_flag:
+                try:
+                    self.ssh_session.close()
+                except:
+                    pass
+                return [''.join(self.stdout_data) , ''.join(self.stderr_data) , 1]
+            else:
+                try:
+                    self.ssh_session.close()
+                except:
+                    pass
+                return [''.join(self.stdout_data) , ''.join(self.stderr_data) , 0]
+        else:
+            return ['','',1]
+ 
+    def kill(self):
+        try:
+            self.ssh_session.close()
+        except:
+            pass
+    def poll(self):
+        if self.shell:
+            if self.Done:
+                return 1
+            else:
+                return None
+        else:
+            if not self.ssh_session.exit_status_ready():
+                return None
+            else:
+                return self.ssh_session.recv_exit_status()
 
 class Run_command_in_thread(object):
 
 
-    def __init__(self,command):
+    def __init__(self,command,ssh_client=None,shell=True):
 
         import threading
         import multiprocessing
@@ -2983,12 +3350,17 @@ class Run_command_in_thread(object):
         self.get_std_out  =   threading.Thread(target=self.collect_out)
         self.proc         =   None
         self.Run_command  =   command
+        self.ssh_client   =   ssh_client
+        self.shell        =   shell
 
 
     def collect_out(self):
-        for stdout in iter(self.proc.stdout.readline, ''):
-            if len(stdout)>0:
-                self.stdout.put(stdout,False)
+        if self.ssh_client != None:
+            self.proc.output(self.stdout,self.stderr)
+        else:
+            for stdout in iter(self.proc.stdout.readline, ''):
+                if len(stdout)>0:
+                    self.stdout.put(stdout,False)
 
     def collect_err(self):
         for stderr in iter(self.proc.stderr.readline, ''):
@@ -2996,18 +3368,22 @@ class Run_command_in_thread(object):
                 self.stderr.put(stderr,False)
 
     def Run(self):
-        from subprocess import Popen, PIPE, STDOUT
-        self.proc = Popen(self.Run_command , shell=True, executable='/bin/bash', stdout=PIPE, stderr=PIPE,
-                             universal_newlines=True)
-        self.get_std_out.start()
-        self.get_std_err.start()
+        if self.ssh_client != None:
+            self.proc = Popen_SSH(self.ssh_client,self.Run_command,self.shell)
+            self.get_std_out.start()
+            # self.get_std_err.start()
+        else:
+            from subprocess import Popen, PIPE, STDOUT
+            self.proc = Popen(self.Run_command , shell=self.shell, executable='/bin/bash', stdout=PIPE, stderr=PIPE,
+                                 universal_newlines=True)
+            self.get_std_out.start()
+            self.get_std_err.start()
 
     def Stop(self):
         self.get_std_out.join()
-        self.get_std_err.join()
+        if self.ssh_client == None:
+            self.get_std_err.join()
         self.proc.kill()
-
-
 
     def output(self):
         import time
@@ -3029,6 +3405,23 @@ class Run_command_in_thread(object):
         time.sleep(0.000001)
         return [ out , err]
 
+class send_massage(ui.Widget):
+    massage = event.StringProp('', settable=True)
+    def init(self):
+        pass
+        
+    @event.reaction('massage')
+    def print_massage(self, *events):
+        for ev in events:
+            if ev.new_value!='':
+                global window
+                window.alert(ev.new_value)
+                self.set_massage('') 
+                # RawJS("""      
+                        # var msg = ('{massage}');
+                        # window.alert(msg);   
+                                # """.format(massage=ev.new_value) )
+
 
 class Redirect(flx.JsComponent):
 
@@ -3041,29 +3434,27 @@ class Redirect(flx.JsComponent):
         global window
         window.location.href = self.dest
 
-
 class Login(flx.PyComponent):
 
     def init(self):
         self.redirect = Redirect('/')
-        with ui.HSplit(spacing=1):
-            ui.Layout(style='max-width: 500px;')
+        with ui.HSplit():
+            ui.Layout()
             with ui.VSplit():
-                ui.Layout(style='max-height: 250px;')
-                with flx.GroupWidget(title='NeatSeq-Flow Log-In',style='font-size: 120%; border: 4px solid purple;'):
+                ui.Layout()
+                with flx.GroupWidget(title='NeatSeq-Flow Log-In',style='font-size: 120%; border: 4px solid purple;min-width:450px;min-height:350px;'):
                     with ui.VBox():
-                        ui.ImageWidget(style='min-height: 250px;',
-                                       stretch=True,
+                        ui.ImageWidget(stretch=True,
                                        source='https://neatseq-flow.readthedocs.io/en/latest/_images/NeatSeq_Flow_logo.png')
                         ui.Widget()  # Spacing
                         with flx.FormLayout():
-                           
                             self.input1 = flx.LineEdit(title='User Name')
                             self.input2 = flx.LineEdit(title='Password',password_mode=True)
                         ui.Widget()  # Spacing
                         self.b1 = flx.Button(text='Login')
-                ui.Layout(style='max-height: 250px;')
-            ui.Layout(style='max-width: 500px;')
+                        ui.Widget()  # Spacing
+                ui.Layout( )
+            ui.Layout()
 
     @flx.reaction('input1.submit', 'b1.pointer_click')
     def login(self, *events):
@@ -3073,11 +3464,12 @@ class Login(flx.PyComponent):
 
 class Run_NeatSeq_Flow_GUI(app.PyComponent):
 
-    def init(self,arg1,arg2,USERSFILE,SMTPserver=None,sender_email=None,password=None):
+    def init(self,arg1,arg2,USERSFILE,SMTPserver=None,sender_email=None,password=None,SSH_HOST=None,SSH_PORT=22,WOKFLOW_DIR=None):
         super().init()
         import os , datetime
+        ssh_client = None
         Users={}
-        if SMTPserver!=None:
+        if (SMTPserver!=None) and (SSH_HOST==None) and (USERSFILE!=None):
             try:
                 for line in open(USERSFILE, 'r').readlines():
                     split_line = line.split(" ")
@@ -3099,66 +3491,91 @@ class Run_NeatSeq_Flow_GUI(app.PyComponent):
                 self.redirect.go()
                 return
             
-            if ARG1 in Users.keys():
-                if ARG2 == arg2:
-                    self.session.set_cookie('ARG3', ARG1)
-                    self.session.set_cookie('ARG4', get_random_string(length=10))
-                    try:
-                        message = "Subject: Your NeatSeq-Flow login password \n" + self.session.get_cookie('ARG4')
-                        SMTPserver = SMTP_connect(sender_email,password,SMTPserver)
-                        SMTPserver.sendmail(sender_email,Users[ARG1][0], message)
-                        #SMTPserver.quit()
-                        print('Mail Sent to ' + Users[ARG1][0])
-                    except:
-                        pass
-                    self.redirect.go()
-                    return
-                else:
-                    try:
-                        ARG3  = self.session.get_cookie('ARG3')
-                        ARG4  = self.session.get_cookie('ARG4')
-                    except:
-                        self.session.set_cookie('ARG1', None)
-                        self.session.set_cookie('ARG2', None)
-                        self.session.set_cookie('ARG3', None)
-                        self.session.set_cookie('ARG4', None)
-                        self.redirect.go()
-                        return
-            try:
-                ARG3  = self.session.get_cookie('ARG3')
-                ARG4  = self.session.get_cookie('ARG4')
-            except:
-                self.session.set_cookie('ARG3', None)
-                self.session.set_cookie('ARG4', None)
-                self.redirect.go()
-                return
-    
-            
-            if SMTPserver!=None:
-                if (ARG1 != ARG3) or (ARG1==None) or (ARG2==None) or (ARG3==None) or (ARG4==None) or (ARG2 != ARG4):
-                     self.redirect.go()
-                     return
-                path = Users[ARG1][1]
+            if SSH_HOST!=None:
                 try:
-                    message = "Subject: The user %s just logged in \n The user email is %s" % (self.session.get_cookie('ARG1'),Users[ARG1][0])
-                    SMTPserver = SMTP_connect(sender_email,password,SMTPserver)
-                    SMTPserver.sendmail(sender_email,sender_email, message)
-                    #SMTPserver.quit()
-                    print(str(datetime.datetime.now())+' The User '+ self.session.get_cookie('ARG1') +' just logged in ; Mail Sent to you')
+                    import paramiko
+                    ssh_client = paramiko.SSHClient()
+                    ssh_client.set_missing_host_key_policy( paramiko.AutoAddPolicy() )
+                    ssh_client.connect(SSH_HOST, username=ARG1, password=ARG2,port=SSH_PORT)
                 except:
-                    pass
-            else:
-                if (ARG1!=arg1) or (ARG2 != arg2):
+                    self.session.set_cookie('ARG1', None)
+                    self.session.set_cookie('ARG2', None)
+                    ssh_client = None
                     self.redirect.go()
                     return
                 path = ''
+                
+                if SMTPserver!=None:
+                    try:
+                        message = "Subject: The user %s just logged in \n " % (self.session.get_cookie('ARG1'))
+                        SMTPserver = SMTP_connect(sender_email,password,SMTPserver)
+                        SMTPserver.sendmail(sender_email,sender_email, message)
+                        #SMTPserver.quit()
+                        print(str(datetime.datetime.now())+' The User '+ self.session.get_cookie('ARG1') +' just logged in ; Mail Sent to you')
+                    except:
+                        pass
+            
+            else:
+            
+                if ARG1 in Users.keys():
+                    if ARG2 == arg2:
+                        self.session.set_cookie('ARG3', ARG1)
+                        self.session.set_cookie('ARG4', get_random_string(length=10))
+                        try:
+                            message = "Subject: Your NeatSeq-Flow login password \n" + self.session.get_cookie('ARG4')
+                            SMTPserver = SMTP_connect(sender_email,password,SMTPserver)
+                            SMTPserver.sendmail(sender_email,Users[ARG1][0], message)
+                            #SMTPserver.quit()
+                            print('Mail Sent to ' + Users[ARG1][0])
+                        except:
+                            pass
+                        self.redirect.go()
+                        return
+                    else:
+                        try:
+                            ARG3  = self.session.get_cookie('ARG3')
+                            ARG4  = self.session.get_cookie('ARG4')
+                        except:
+                            self.session.set_cookie('ARG1', None)
+                            self.session.set_cookie('ARG2', None)
+                            self.session.set_cookie('ARG3', None)
+                            self.session.set_cookie('ARG4', None)
+                            self.redirect.go()
+                            return
+                try:
+                    ARG3  = self.session.get_cookie('ARG3')
+                    ARG4  = self.session.get_cookie('ARG4')
+                except:
+                    self.session.set_cookie('ARG3', None)
+                    self.session.set_cookie('ARG4', None)
+                    self.redirect.go()
+                    return
+        
+                
+                if SMTPserver!=None:
+                    if (ARG1 != ARG3) or (ARG1==None) or (ARG2==None) or (ARG3==None) or (ARG4==None) or (ARG2 != ARG4):
+                         self.redirect.go()
+                         return
+                    path = Users[ARG1][1]
+                    try:
+                        message = "Subject: The user %s just logged in \n The user email is %s" % (self.session.get_cookie('ARG1'),Users[ARG1][0])
+                        SMTPserver = SMTP_connect(sender_email,password,SMTPserver)
+                        SMTPserver.sendmail(sender_email,sender_email, message)
+                        #SMTPserver.quit()
+                        print(str(datetime.datetime.now())+' The User '+ self.session.get_cookie('ARG1') +' just logged in ; Mail Sent to you')
+                    except:
+                        pass
+                else:
+                    if (ARG1!=arg1) or (ARG2 != arg2):
+                        self.redirect.go()
+                        return
+                    path = ''
             self.session.set_cookie('ARG1', None)
             self.session.set_cookie('ARG2', None)
             self.session.set_cookie('ARG3', None)
             self.session.set_cookie('ARG4', None)
             with flx.Layout():
-                NeatSeq_Flow_GUI(path)
-
+                NeatSeq_Flow_GUI(path,ssh_client,WOKFLOW_DIR)
 
 def get_random_string(length=24, allowed_chars=None):
     import random
@@ -3179,9 +3596,10 @@ def get_random_string(length=24, allowed_chars=None):
 
     return ''.join(srandom.choice(allowed_chars) for i in range(length))
 
-def SMTP_connect(sender_email,password,SMTPserver=None):
+def SMTP_connect(sender_email,password,SMTPserver=None,try_for=5):
     import smtplib, ssl,getpass,sys
     from tornado.web import decode_signed_value
+    status=-1
     if SMTPserver!=None:
         try:
             status = SMTPserver.noop()[0]
@@ -3190,15 +3608,45 @@ def SMTP_connect(sender_email,password,SMTPserver=None):
         print(status)
         if status == 250:
             return SMTPserver
-    port           = 465  # For SSL
-    smtp_server    = "smtp.gmail.com"
-    context    = ssl.create_default_context()
-    SMTPserver = smtplib.SMTP_SSL(smtp_server, port, context=context)
-    SMTPserver.login(sender_email,
-                     decode_signed_value(flx.config.cookie_secret,
-                                         'email',
-                                         password).decode('UTF-8') )
+    count=0
+    while (status!=250)  & (count < try_for):
+        port           = 465  # For SSL
+        smtp_server    = "smtp.gmail.com"
+        context    = ssl.create_default_context()
+        SMTPserver = smtplib.SMTP_SSL(smtp_server, port, context=context)
+        SMTPserver.login(sender_email,
+                         decode_signed_value(flx.config.cookie_secret,
+                                             'email',
+                                             password).decode('UTF-8') )
+        try:
+            status = SMTPserver.noop()[0]
+        except:  # smtplib.SMTPServerDisconnected
+            status = -1
+        print(count)
+        print(status)
+        count=count+1
     return SMTPserver
+
+def set_gmail_connection():
+    import smtplib, ssl,getpass,sys
+    SMTPserver   = None
+    sender_email = None
+    password     = None
+    
+    sender_email   = input('Enter your Gmail address and press enter:\n')
+    
+    password       = create_signed_value(flx.config.cookie_secret,
+                                         'email',
+                                         getpass.getpass("Type your Gmail address password and press enter:\n"))
+    
+    try:
+        SMTPserver = SMTP_connect(sender_email,password)
+    except:
+        print('Error: Could not login to your Gmail account')
+        print('Make sure to Turn Allow less secure apps to ON at: https://myaccount.google.com/lesssecureapps')
+        sys.exit(1)
+    #SMTPserver.quit()
+    return [SMTPserver,password,sender_email]
     
 if __name__ == '__main__':
     #getting arguments from the user 
@@ -3206,25 +3654,51 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='NeatSeq-Flow GUI By Liron Levin ')
     parser.add_argument('--Server',dest='Server',action='store_true',
                         help='Run as Server')
+    parser.add_argument('--PORT',dest='PORT',metavar="CHAR",type=int,default=None,
+                        help='''Use this port in which to run the app,
+                                If not set will search for open port
+                                (Works only When --Server is set)
+                                ''')
+    parser.add_argument('--HOST',dest='HOST',metavar="CHAR",type=str,default=None,
+                        help='''The host name/ip to serve the app,
+                            If not set, will try to identify automatically
+                            (Works only When --Server is set)
+                            ''')
     parser.add_argument('--SSL',dest='SSL',action='store_true',
                         help='Use SSL (Only When --Server is set)')
+    parser.add_argument('--SSH_HOST',dest='SSH_HOST',metavar="CHAR",type=str,default="",
+                        help='''Connect using SSH to a remote host,
+                                NeatSeq-Flow needs to be installed on the remote host
+                                (Works only When --Server is set)''')
+    parser.add_argument('--SSH_PORT',dest='SSH_PORT',metavar="CHAR",type=int,default=22,
+                        help='''When --SSH_HOST is set use this ssh port to connect to a remote host.
+                                ''')
     parser.add_argument('--USER',dest='USER',metavar="CHAR",type=str,default="",
-                        help='User Name For This Serve (Only When --Server is set)')
+                        help='User Name For This Serve (Works only When --Server is set)')
     parser.add_argument('--PASSW',dest='PASSW',metavar="CHAR",type=str,default="",
-                        help='Password For This Serve (Only When --Server is set)')
+                        help='Password For This Serve (Works only When --Server is set)')
     parser.add_argument('--USERSFILE',dest='USERSFILE',metavar="CHAR",type=str,default="",
                         help='''
                                  The location of a Users file in which a list of users, E-mails addresses and Users Directorys are separated by one space (as:USER user@example.com /USER/DIR).
-                                 The login password will be send to the user e-mail after filling its user name and the password generated at the beginning of the run (Only When --Server is set).
+                                 The login password will be send to the user e-mail after filling its user name and the password generated at the beginning of the run (Works only When --Server is set).
                                  You will need a Gmail account to send the password to the users (you will be prompt to type in your Gmail address and password) 
                                  '''
                                  )
     parser.add_argument('--UNLOCK_USER_DIR',dest='UNLOCK',action='store_true',
                         help="Don't Lock Users to their Directory Or to the Current Working Directory")
+    parser.add_argument('--WOKFLOW_DIR',dest='WOKFLOW_DIR',metavar="CHAR",type=str,default=None,
+                        help='''A Path to a Directory containing work-flow files to choose from at log-in. 
+                                Works only When --Server is set.
+                                If --SSH_HOST is set, the Path needs to be in the remote host.
+                        ''')
+    parser.add_argument('--CONDA_BIN',dest='CONDA_BIN',metavar="CHAR",type=str,default='',
+                        help='''A Path to a the CONDA bin location. 
+                                If --SSH_HOST is set, the Path needs to be in the remote host.
+                        ''')
     args          = parser.parse_args()
     SERVE         = args.Server
     LOCK_USER_DIR = not args.UNLOCK
-    
+    CONDA_BIN     = args.CONDA_BIN
     #temp_MODULES_TEMPLATES = Load_MODULES_TEMPLATES()
     temp_MODULES_TEMPLATES = Update_Yaml_Data(MODULES_TEMPLATES_FILE,'TEMPLATES', 'MODULES_TEMPLATES.yaml',"Modules Templates")
     if len(temp_MODULES_TEMPLATES) > 0:
@@ -3235,7 +3709,6 @@ if __name__ == '__main__':
         import socket 
         from tornado.web import create_signed_value
         flx.config.cookie_secret = get_random_string()
-        
         if args.SSL:
             CERTFILE = 'self-signed.crt'
             KEYFILE  = 'self-signed.key'
@@ -3250,58 +3723,81 @@ if __name__ == '__main__':
         Login_m = flx.App(Login)
         Login_m.serve()
         
-        if os.path.isfile(args.USERSFILE):
-            import smtplib, ssl,getpass,sys
-            args.USERSFILE = os.path.abspath(args.USERSFILE)
-           
-            sender_email   = input('Enter your Gmail address and press enter:\n')
-            
-            password       = create_signed_value(flx.config.cookie_secret,
-                                                 'email',
-                                                 getpass.getpass("Type your Gmail address password and press enter:\n"))
-            
+        if args.SSH_HOST!='':
             try:
-                SMTPserver = SMTP_connect(sender_email,password)
+                import paramiko
             except:
-                print('Error: Could not login to your Gmail account')
-                print('Make sure to Turn Allow less secure apps to ON at: https://myaccount.google.com/lesssecureapps')
+                print('You need to install the "paramiko" package to use the SHH options')
                 sys.exit(1)
-            #SMTPserver.quit()
-            if args.PASSW=='':
-                args.PASSW = get_random_string(length=7)
-            print('Password: '+ args.PASSW)
-            
+            print('Do you want to use gmail to notify you when user logs-in? (yes/no)')
+            if input() == 'yes':
+                [SMTPserver,password,sender_email] = set_gmail_connection()
+            else:
+                SMTPserver     = None
+                sender_email   = None
+                password       = None
+            args.USERSFILE     = None
+            SSH_HOST = args.SSH_HOST
         else:
-            SMTPserver   = None
-            sender_email = None
-            password     = None
-            if args.USER=='':
-                args.USER  = get_random_string(length=7)
-            if args.PASSW=='':
-                args.PASSW = get_random_string(length=7)
-            print('User Name: '+ args.USER)
-            print('Password: '+ args.PASSW)
+            SSH_HOST = None
+            if os.path.isfile(args.USERSFILE):
+                
+                args.USERSFILE = os.path.abspath(args.USERSFILE)
+                [SMTPserver,password,sender_email] = set_gmail_connection()
+                if args.PASSW=='':
+                    args.PASSW = get_random_string(length=7)
+                print('Password: '+ args.PASSW)
+                
+            else:
+                SMTPserver     = None
+                sender_email   = None
+                password       = None
+                args.USERSFILE = None
+                
+                if args.USER=='':
+                    args.USER  = get_random_string(length=7)
+                if args.PASSW=='':
+                    args.PASSW = get_random_string(length=7)
+                print('User Name: '+ args.USER)
+                print('Password: '+ args.PASSW)
         
-        m = app.App(Run_NeatSeq_Flow_GUI,args.USER,args.PASSW,args.USERSFILE,SMTPserver,sender_email,password)
-        app.create_server(host=socket.gethostbyname(socket.gethostname()))
+        m = app.App(Run_NeatSeq_Flow_GUI,
+                    args.USER,
+                    args.PASSW,
+                    args.USERSFILE,
+                    SMTPserver,
+                    sender_email,
+                    password,
+                    SSH_HOST,
+                    args.SSH_PORT,
+                    args.WOKFLOW_DIR)
+                    
+        if args.HOST!=None:
+            Host = args.HOST
+        else:
+            Host = socket.gethostbyname(socket.gethostname())
+        app.create_server(host=Host,port=args.PORT)
         m.serve('')
         keep_runing = True
         import signal
-        
         while keep_runing:
-            
             try:
                 flx.start()
                 print('Do you want to exit? (yes/no)')
                 signal.signal(signal.SIGALRM, lambda x,y: 1/0 )
                 signal.alarm(5)
                 if input() == 'yes':
+                    signal.alarm(0)
                     keep_runing = False
                     print('Bye Bye ..')
-                    sys.exit(1)
+                    #sys.exit(1)
             except :
                 if keep_runing:
                     print(' Keep going ')
+        try:
+            flx.stop()
+        except :
+            sys.exit(1)
     else:
         m = app.App(NeatSeq_Flow_GUI,os.getcwd()).launch(runtime ='app',size=(1300, 750),title='NeatSeq-Flow GUI',icon=icon)
         app.run()

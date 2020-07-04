@@ -16,7 +16,7 @@ print(extra_files)
 
 setup(
     name                = 'NeatSeq-Flow GUI',
-    version             = '1.0.0',
+    version             = '2.0.0',
     author              = 'Liron Levin',
     author_email        = 'levinl@post.bgu.ac.il',
     maintainer          = 'Liron Levin',
@@ -36,10 +36,14 @@ setup(
     data_files          = extra_files,
                                       
     install_requires    = [
-                        "pyyaml >= 3.12",
-                        "munch",
-                        "wxpython",
-                        "pandas"],
+                        "python   = 3.6",
+                        "pyyaml   = 3.12",
+                        "wxpython = 4.0",
+                        "munch    = 2.3",
+                        "pandas   = 0.23",
+                        "tornado  = 5.0",
+                        "flexx",
+                        "paramiko"],
     classifiers         = [
                           'Development Status :: 4 - Beta',
                           'Environment :: Console',
