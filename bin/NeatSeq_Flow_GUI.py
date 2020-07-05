@@ -1873,11 +1873,11 @@ class File_Browser(flx.GroupWidget):
                             for files in files_list: 
                                 if self.Browser_Type['select_type']=='Open':
                                     if self.Browser_Type['select_style']=='Single':
-                                        ui.RadioButton(text=files,style='max-height: 30px;min-height: 30px;border: 0px solid gray;')
+                                        ui.RadioButton(text=files,style='color: black; max-height: 30px;min-height: 30px;border: 0px solid gray;')
                                     else:
-                                        ui.CheckBox(text=files,style='max-height: 30px;min-height: 30px;border: 0px solid gray;')
+                                        ui.CheckBox(text=files,style='color: black; max-height: 30px;min-height: 30px;border: 0px solid gray;')
                                 else:
-                                    ui.Button(text=files,disabled=True,style='background: white;border: 0px solid gray;max-height: 30px;min-height: 30px;text-align:left;')
+                                    ui.Button(text=files,disabled=True,style='color: black; background: white;border: 0px solid gray;max-height: 30px;min-height: 30px;text-align:left;')
                 
                 with ui.VFix(spacing=1,style='background: white; border: 0px solid gray;'):
                     if self.Show_Size:
@@ -2596,7 +2596,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
     def Run_scripts_command(self,Project_dir):
         import os
         from subprocess import Popen, PIPE, STDOUT, TimeoutExpired
-
+        
         # if len(Project_dir) == 0:
             # Project_dir=os.getcwd()
         Error = ''
@@ -2971,6 +2971,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                                         sample_file.write(sample_name + '\t' + sample_types + '\t' + sample_path + '\n')
                         sample_file.close()
                         self.Run.set_sample_file(self.samples_info.save_samples_file)
+                        self.samples_info.set_title('Samples - '+os.path.basename(self.samples_info.save_samples_file[0][0]))
                         self.samples_info.set_save_samples_file([])
                     except:
                         pass
@@ -2999,6 +3000,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 if len(samples_data) > 0:
                     self.update_samples_data(samples_data)
                     self.Run.set_sample_file(self.samples_info.load_samples_file)
+                    self.samples_info.set_title('Samples - '+os.path.basename(self.samples_info.load_samples_file[0][0]))
     
     @event.action
     def update_samples_data(self, samples_data):
@@ -3047,6 +3049,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                         self.Documentation.set_load_flag(True)
 
                     self.Run.set_parameter_file(self.step_info.workflow_file)
+                    self.TabLayout.set_title('Work-Flow - '+os.path.basename(self.step_info.workflow_file[0][0]))
     
     @event.reaction('step_info.save_workflow_file')
     def save_workflow_file(self, *events):
@@ -3099,6 +3102,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                     
                 if err_flag:
                     self.Run.set_parameter_file(self.step_info.save_workflow_file)
+                    self.TabLayout.set_title('Work-Flow - '+os.path.basename(self.step_info.workflow_file[0][0]))
                 self.step_info.set_save_workflow_file([])
     
     def fix_order_dict(self, dic):
