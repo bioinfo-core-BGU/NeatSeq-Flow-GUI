@@ -36,14 +36,10 @@ setup(
     data_files          = extra_files,
                                       
     install_requires    = [
-                        "python   = 3.6",
-                        "pyyaml   = 3.12",
-                        "wxpython = 4.0",
-                        "munch    = 2.3",
-                        "pandas   = 0.23",
-                        "tornado  = 5.0",
-                        "flexx",
-                        "paramiko"],
+                        "pyyaml >= 3.12",
+                        "munch",
+                        "wxpython",
+                        "pandas"],
     classifiers         = [
                           'Development Status :: 4 - Beta',
                           'Environment :: Console',
