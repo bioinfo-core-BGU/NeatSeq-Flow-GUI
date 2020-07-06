@@ -28,9 +28,9 @@ Generic:
 
 
 
-Merge:                    
-    Merge:                
-        module:           merge 
+Import:                    
+    Import:                
+        module:           Import 
         script_path:      
 
 Fastqc:                   
