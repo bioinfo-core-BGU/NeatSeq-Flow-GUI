@@ -1,4 +1,4 @@
-#!/programs/miniconda2/envs/NeatSeq_Flow/bin/python
+#!/usr/bin/env python
 
 
 __author__ = "Liron Levin"
@@ -14,6 +14,10 @@ import os,sys,dialite
 from collections import OrderedDict
 
 sys.path.append(os.path.realpath(os.path.expanduser(os.path.dirname(os.path.abspath(__file__))+os.sep+"..")))
+
+Title                  = 'NeatSeq-Flow'
+
+ICON                   = ''
 
 NeatSeq_Flow_Conda_env = 'NeatSeq_Flow'
 
@@ -3102,7 +3106,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                     
                 if err_flag:
                     self.Run.set_parameter_file(self.step_info.save_workflow_file)
-                    self.TabLayout.set_title('Work-Flow - '+os.path.basename(self.step_info.workflow_file[0][0]))
+                    self.TabLayout.set_title('Work-Flow - '+os.path.basename(self.step_info.save_workflow_file[0][0]))
                 self.step_info.set_save_workflow_file([])
     
     def fix_order_dict(self, dic):
@@ -3442,7 +3446,7 @@ class Login(flx.PyComponent):
 
     def init(self):
         self.redirect = Redirect('/')
-        with ui.HSplit():
+        with ui.HSplit(icon=ICON,title = Title):
             ui.Layout()
             with ui.VSplit():
                 ui.Layout()
@@ -3578,7 +3582,7 @@ class Run_NeatSeq_Flow_GUI(app.PyComponent):
             self.session.set_cookie('ARG2', None)
             self.session.set_cookie('ARG3', None)
             self.session.set_cookie('ARG4', None)
-            with flx.Layout():
+            with flx.Layout(icon=ICON,title = Title):
                 NeatSeq_Flow_GUI(path,ssh_client,WOKFLOW_DIR)
 
 def get_random_string(length=24, allowed_chars=None):
@@ -3707,8 +3711,9 @@ if __name__ == '__main__':
     temp_MODULES_TEMPLATES = Update_Yaml_Data(MODULES_TEMPLATES_FILE,'TEMPLATES', 'MODULES_TEMPLATES.yaml',"Modules Templates")
     if len(temp_MODULES_TEMPLATES) > 0:
         MODULES_TEMPLATES = temp_MODULES_TEMPLATES
-    icon=os.path.join(os.path.realpath(os.path.expanduser(os.path.dirname(os.path.abspath(__file__))+os.sep+"..")),'neatseq_flow_gui','NeatSeq_Flow.ico')
+    icon = os.path.join(os.path.realpath(os.path.expanduser(os.path.dirname(os.path.abspath(__file__))+os.sep+"..")),'neatseq_flow_gui','NeatSeq_Flow.ico')
     #icon = app.assets.add_shared_data('ico.icon', open(icon, 'rb').read())
+    ICON = app.assets.add_shared_data('ico.icon', open(icon, 'rb').read())
     if args.Server:
         import socket 
         from tornado.web import create_signed_value
@@ -3774,8 +3779,8 @@ if __name__ == '__main__':
                     password,
                     SSH_HOST,
                     args.SSH_PORT,
-                    args.WOKFLOW_DIR)
-                    
+                    args.WOKFLOW_DIR
+                    )
         if args.HOST!=None:
             Host = args.HOST
         else:
