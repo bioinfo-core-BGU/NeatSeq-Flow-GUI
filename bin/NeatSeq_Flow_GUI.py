@@ -409,7 +409,12 @@ class Step_Tree_Class(ui.Widget):
     options            = event.ListProp([], settable=True)
     Vars_data          = event.DictProp({}, settable=True)
     Go2Help            = event.StringProp('', settable=True)
-
+    step2export        = event.DictProp({}, settable=True)
+    step_export_file   = event.ListProp([], settable=True)
+    Load_step_file     = event.ListProp([], settable=True)
+    step2load          = event.DictProp({}, settable=True)
+    step_converter     = event.DictProp({}, settable=True)
+    
     def init(self):
         self.current_selected = None
         with ui.HSplit() as self.main_lay:
@@ -424,12 +429,13 @@ class Step_Tree_Class(ui.Widget):
                             self.tree_value_options_b = ui.ComboBox(title='Value options:', editable=False, text='',
                                                                     placeholder_text='Value options:')
                             self.tree_add_option_b = ui.Button(text='Add')
-                        with ui.VSplit(flex=0.0035,style='min-width: 90px; max-width: 90px;'):
+                        with ui.VSplit(spacing=2,flex=0.0035,style='min-width: 100px; max-width: 100px;'):
                             self.tree_submit_b      = ui.Button(text='Apply')
                             self.tree_new_b         = ui.Button(text='New')
                             self.file_path_b        = ui.Button(text='Browse')
                             self.tree_duplicate_b   = ui.Button(text='Duplicate')
                             self.tree_remove_b      = ui.Button(text='Remove')
+                            self.tree_export_b      = ui.Button(text='Export Step')
 
                 self.tree           = ui.TreeWidget(flex=0.1, max_selected=1)
                 self.tree.text      = 'Top_level'
@@ -444,13 +450,14 @@ class Step_Tree_Class(ui.Widget):
                 with ui.Layout(flex=0.03, style='min-height: 70px; max-height: 75px;'):
                     with ui.HSplit():
                         with ui.GroupWidget(title='Add New Step',style='min-width: 500px;border: 2px solid purple;'):
-                            with ui.HSplit():
+                            with ui.HSplit(spacing=2):
                                 self.tree_module_b = ui.ComboBox(title='Use Module:', editable=True,
                                                                  style='min-width: 380px;border: 1px solid red;',
                                                                  placeholder_text='Choose a Step Template',
                                                                  options=MODULES_TEMPLATES.keys())
                                 self.Help_b = ui.Button(text='About',style=' min-width: 80px;max-width: 80px;font-size: 100% ;')
                                 self.tree_create_new_step_b = ui.Button(text='Add',style=' min-width: 80px;max-width: 80px;')
+                                self.tree_Load_step_from_file_b = ui.Button(text='Load Step From File',style=' min-width: 160px;max-width: 160px;')
                         with ui.GroupWidget(title='Color Steps By',style='border: 2px solid pink;'):
                             with ui.HSplit():
                                 self.Color_by_b = ui.ComboBox(title='Color by:', editable=False,
@@ -458,10 +465,10 @@ class Step_Tree_Class(ui.Widget):
                                                                  placeholder_text='Color by:',
                                                                  selected_index=0,
                                                                  options=list(map(lambda x: x.capitalize(),COLOR_BY)) )
-                        with ui.VSplit():
+                        with ui.VSplit(spacing=2):
                             self.tree_Load_WorkFlow_b = ui.Button(text='Load WorkFlow',style='max-height: 30px; max-width: 150px;')
                             self.tree_save_WorkFlow_b = ui.Button(text='Save WorkFlow',style='max-height: 30px; max-width: 150px;')
-                self.Graphical_panel = Graphical_panel(flex=0.5, style='min-height:600px; overflow-y: auto;')
+                self.Graphical_panel = Graphical_panel(flex=0.5, style='min-height:600px; overflow-y: auto; overflow-x: auto;')
                 with self.tree:
                     self.create_tree(self.Graphical_panel.Steps_Data)
                     self.collapse_all_not_selectd(self.tree)
@@ -535,8 +542,6 @@ class Step_Tree_Class(ui.Widget):
             self.Graphical_panel.set_Steps_Data(self.tree2dict(self.tree))
             self.set_Data(self.tree2dict_for_export(self.tree))
 
-
-
     @event.reaction('Help_b.pointer_click')
     def on_Help_click(self, *events):
         for ev in events:
@@ -581,7 +586,6 @@ class Step_Tree_Class(ui.Widget):
                 tree.set_selected(False)
         self.collapse_all_not_selectd(self.tree)
 
-
     @event.reaction('tree_create_new_step_b.pointer_click')
     def tree_create_new_step_button_click(self, *events):
         for ev in events:
@@ -606,7 +610,6 @@ class Step_Tree_Class(ui.Widget):
             self.tree_module_b.set_options(MODULES_TEMPLATES.keys())
             self.set_flag(False)
 
-
     def create_tree(self, current_level):
         for level in current_level.keys():
             if isinstance(current_level[level], dict):
@@ -619,7 +622,6 @@ class Step_Tree_Class(ui.Widget):
                     ui.TreeItem(title=level, text='['+str(current_level[level])+']', checked=None)
                 else:
                     ui.TreeItem(title=level, text=str(current_level[level]), checked=None)
-
 
     def tree2dict_for_export(self, current_tree):
         steps = {}
@@ -733,7 +735,6 @@ class Step_Tree_Class(ui.Widget):
         map(lambda x: False if x in unique_options else unique_options.append(x) ,options)
         return unique_options
 
-
     def update_bases(self, From, To):
         for Top_level_tree in self.tree.children:
             for tree in Top_level_tree.children:
@@ -780,7 +781,6 @@ class Step_Tree_Class(ui.Widget):
                             tree.set_text(str(temp_text))
                         else:
                             tree.set_text('['+str(temp_text)+']')
-
 
     @event.reaction('tree_submit_b.pointer_click')
     def tree_submit_button_click(self, *events):
@@ -848,6 +848,45 @@ class Step_Tree_Class(ui.Widget):
                 self.current_selected.dispose()
                 self.current_selected = None
 
+    @event.reaction('step2load')
+    def tree_step_load_step_from_file(self, *events):
+        for ev in events:
+            if (len(self.step2load.keys())==1):
+                self.uncorrect_dict(self.step2load, self.step_converter)
+                for step_name in self.step2load.keys():
+                    if step_name in self.Graphical_panel.Steps_Data.keys():
+                        new_step_name = step_name+'_Copy'
+                    else:
+                        new_step_name = step_name
+                    if new_step_name not in self.Graphical_panel.Steps_Data.keys():
+                        self.set_Vars_data({new_step_name:self.step2load[step_name]})
+                        with self.tree:
+                            self.create_tree({new_step_name:self.step2load[step_name]})
+            self.set_step2load({})
+            self.set_step_converter({})
+
+    @event.reaction('tree_Load_step_from_file_b.pointer_click')
+    def tree_step_load_button_click(self, *events):
+        for ev in events:
+            self.set_open_filepicker('Load_step_file')
+
+    @event.reaction('tree_export_b.pointer_click')
+    def tree_export_button_click(self, *events):
+        for ev in events:
+            if self.current_selected != None:
+                if self.current_selected.parent.text == 'Top_level':
+                    if len(self.current_selected.title) == 0:
+                        dict         = self.tree2dict_for_export(self.current_selected)
+                        if 'base' in dict.keys():
+                            dict['base'] = None
+                        else:
+                            temp_dict    = {'base':None}
+                            temp_dict.update(dict)
+                            dict         = temp_dict
+                        dict         = {self.current_selected.text:dict}
+                        self.set_step2export(dict)
+                        self.set_open_filepicker('step_export_file')
+                    
     @event.reaction('tree_duplicate_b.pointer_click')
     def tree_duplicate_button_click(self, *events):
         for ev in events:
@@ -865,7 +904,6 @@ class Step_Tree_Class(ui.Widget):
                                 self.create_tree({new_name:dict})
                         else:
                             self.create_tree({self.current_selected.text:dict})
-
 
     @event.reaction('tree.children**.checked', 'tree.children**.selected',
                     'tree.children**.collapsed')
@@ -1906,7 +1944,7 @@ class Empty_class(flx.PyComponent):
     
 class Run_File_Browser(flx.PyComponent):
     Done          = event.BoolProp(False, settable=True)
-    Browser_Type  = event.DictProp({'select_style':'Single','select_type':'Dir'}, settable=True)
+    Browser_Type  = event.DictProp({'select_style':'Single','select_type':'Dir','Regular':'.+'}, settable=True)
     Selected_Path = event.ListProp([],settable=True)
     
     #main program
@@ -2050,6 +2088,12 @@ class Run_File_Browser(flx.PyComponent):
         
     @event.reaction('Browser_Type')
     def update_Browser_Type(self,*events):
+        import re
+        if 'Regular' in self.Browser_Type.keys():
+            try:
+                self.Regular  = re.compile(self.Browser_Type['Regular'])
+            except:
+                self.Regular  = re.compile('.+')
         self.File_Browser.set_Browser_Type(self.Browser_Type)
     
     @event.reaction('File_Browser.New_Dir')
@@ -2078,7 +2122,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
             /* Set position to absolute so that the canvas is not going
              * to be forcing a size on the container div. */
             position: absolute;
-            overflow-x: auto;
+            
         }
 
         .flx-TreeWidget {
@@ -2276,7 +2320,8 @@ class NeatSeq_Flow_GUI(app.PyComponent):
     
     def select_files(self,select_style='Single', select_type='Open', wildcard='*'):
         if SERVE:
-            self.Browser.set_Browser_Type({'select_style':select_style,'select_type':select_type})
+            Regular = wildcard.replace('*','.+')
+            self.Browser.set_Browser_Type({'select_style':select_style,'select_type':select_type,'Regular':Regular})
             self.stack.set_current(self.Browser_W)
             self.Browser.File_Browser.set_update(True)
         else:
@@ -2379,7 +2424,9 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                    'project'              : lambda: self.select_files(select_style='Multy'),
                    'samples'              : lambda: self.select_files(select_style='Multy'),
                    'load_samples_file'    : lambda: self.select_files('Single', 'Open'),
-                   'save_samples_file'    : lambda: self.select_files('Single', 'Save')
+                   'save_samples_file'    : lambda: self.select_files('Single', 'Save'),
+                   'step_export_file'     : lambda: self.select_files('Single', 'Save'),
+                   'Load_step_file'       : lambda: self.select_files('Single', 'Open','*.step')
                    }
         if key in options.keys():
             self.filepicker_key = key
@@ -2389,20 +2436,22 @@ class NeatSeq_Flow_GUI(app.PyComponent):
             return None
     
     def set_filepicker_options(self,Selected_Path):
-        options = {'file_path': lambda: self.step_info.set_file_path(Selected_Path),
-                   'NeatSeq_bin': lambda: self.Run.set_NeatSeq_bin(Selected_Path),
-                   'conda_bin': lambda: self.Run.set_conda_bin(Selected_Path),
-                   'Project_dir': lambda: self.Run.set_Project_dir(Selected_Path),
-                   'sample_file_to_run': lambda: self.Run.set_sample_file(Selected_Path),
+        options = {'file_path'            : lambda: self.step_info.set_file_path(Selected_Path),
+                   'NeatSeq_bin'          : lambda: self.Run.set_NeatSeq_bin(Selected_Path),
+                   'conda_bin'            : lambda: self.Run.set_conda_bin(Selected_Path),
+                   'Project_dir'          : lambda: self.Run.set_Project_dir(Selected_Path),
+                   'sample_file_to_run'   : lambda: self.Run.set_sample_file(Selected_Path),
                    'parameter_file_to_run': lambda: self.Run.set_parameter_file(Selected_Path),
-                   'Cluster_file_path': lambda: self.cluster_info.set_file_path(Selected_Path),
-                   'Vars_file_path': lambda: self.vars_info.set_file_path(Selected_Path),
-                   'workflow_file': lambda: self.step_info.set_workflow_file(Selected_Path),
-                   'save_workflow_file': lambda: self.step_info.set_save_workflow_file(Selected_Path),
-                   'project': lambda: self.samples_info.set_project_files(Selected_Path),
-                   'samples': lambda: self.samples_info.set_sample_files(Selected_Path),
-                   'load_samples_file': lambda: self.samples_info.set_load_samples_file(Selected_Path),
-                   'save_samples_file': lambda: self.samples_info.set_save_samples_file(Selected_Path)
+                   'Cluster_file_path'    : lambda: self.cluster_info.set_file_path(Selected_Path),
+                   'Vars_file_path'       : lambda: self.vars_info.set_file_path(Selected_Path),
+                   'workflow_file'        : lambda: self.step_info.set_workflow_file(Selected_Path),
+                   'save_workflow_file'   : lambda: self.step_info.set_save_workflow_file(Selected_Path),
+                   'project'              : lambda: self.samples_info.set_project_files(Selected_Path),
+                   'samples'              : lambda: self.samples_info.set_sample_files(Selected_Path),
+                   'load_samples_file'    : lambda: self.samples_info.set_load_samples_file(Selected_Path),
+                   'save_samples_file'    : lambda: self.samples_info.set_save_samples_file(Selected_Path),
+                   'step_export_file'     : lambda: self.step_info.set_step_export_file(Selected_Path),
+                   'Load_step_file'       : lambda: self.step_info.set_Load_step_file(Selected_Path)
                    }
         if self.filepicker_key in options.keys():
             return options[self.filepicker_key]()
@@ -3014,11 +3063,73 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         self.samples_info.set_converter(converer)
         self.samples_info.set_samples_data_update(True)
     
+    @event.reaction('step_info.step_export_file')
+    def step_export_file(self, *events):
+        import yaml,re
+        from collections import OrderedDict
+        setup_yaml(yaml, OrderedDict)
+
+        for ev in events:
+            if len(self.step_info.step_export_file) > 0:
+                err_flag=True
+                try:
+                    if self.sftp!=None:
+                        file_name   = self.step_info.step_export_file[0][0]
+                        if not file_name.endswith('.step'):
+                            file_name = file_name + '.step'
+                        file_object = self.sftp.open(file_name,mode='w')
+                    else:
+                        file_name   = self.step_info.step_export_file[0][0]
+                        if not file_name.endswith('.step'):
+                            file_name = file_name + '.step'
+                        file_object = open(file_name, 'w')
+                        
+                    with file_object as outfile:
+                        step_data         = OrderedDict()
+                        step_data['Step'] = self.fix_order_dict(self.step_info.step2export)
+                        yaml.dump(step_data['Step'], outfile, default_flow_style=False,width=float("inf"), indent=4)
+
+
+                except:
+                    err_flag=False
+                    if not SERVE:
+                        dialite.fail('Save Error', 'Error saving workflow file')
+                
+                if self.sftp!=None:
+                    file_object.close()
+            
+                self.step_info.set_step_export_file([])
+    
+    @event.reaction('step_info.Load_step_file')
+    def load_step_file(self, *events):
+        import yaml
+        for ev in events:
+            if len(self.step_info.Load_step_file) > 0:
+                try:
+                    if self.sftp!=None:
+                        from neatseq_flow_gui.modules.parse_param_data import parse_param_file_object
+                        file_name   = self.step_info.Load_step_file[0][0]
+                        file_object = self.sftp.open(file_name)
+                        Step_data   = yaml.load(file_object, yaml.SafeLoader)
+                        file_object.close()
+                    else:
+                        from neatseq_flow_gui.modules.parse_param_data import parse_param_file
+                        Step_data   = yaml.load(self.step_info.Load_step_file[0][0], yaml.SafeLoader)
+                except:
+                    Step_data = []
+                    if not SERVE:
+                        dialite.fail('Load Error', 'Error loading Step file')
+                self.step_info.set_Load_step_file([])
+                if len(Step_data) > 0:
+                    converter = OrderedDict()
+                    self.correct_dict(Step_data, 1, converter)
+                    self.step_info.set_step_converter(converter)
+                    self.step_info.set_step2load(Step_data)
+    
     @event.reaction('step_info.workflow_file')
     def load_workflow_file(self, *events):
         for ev in events:
             if len(self.step_info.workflow_file) > 0:
-                
                 try:
                     if self.sftp!=None:
                         from neatseq_flow_gui.modules.parse_param_data import parse_param_file_object
@@ -3051,7 +3162,6 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                     if 'Documentation' in param_data.keys():
                         self.Documentation.set_value(param_data['Documentation'])
                         self.Documentation.set_load_flag(True)
-
                     self.Run.set_parameter_file(self.step_info.workflow_file)
                     self.TabLayout.set_title('Work-Flow - '+os.path.basename(self.step_info.workflow_file[0][0]))
     
@@ -3126,10 +3236,10 @@ class NeatSeq_Flow_GUI(app.PyComponent):
     
     @event.action
     def update_steps_data(self, Steps_Data):
-        converer = OrderedDict()
-        self.correct_dict(Steps_Data, 1, converer)
+        converter = OrderedDict()
+        self.correct_dict(Steps_Data, 1, converter)
         self.step_info.set_Steps_Data(Steps_Data)
-        self.step_info.set_converter(converer)
+        self.step_info.set_converter(converter)
         self.step_info.set_Steps_Data_update(True)
     
     @event.action
@@ -3718,10 +3828,14 @@ if __name__ == '__main__':
         import socket 
         from tornado.web import create_signed_value
         flx.config.cookie_secret = get_random_string()
+        if args.HOST!=None:
+            Host = args.HOST
+        else:
+            Host = socket.gethostbyname(socket.gethostname())
         if args.SSL:
             CERTFILE = 'self-signed.crt'
             KEYFILE  = 'self-signed.key'
-            SLL_COMMAND = 'openssl req  -subj /CN=%s -x509 -nodes -days 1 -batch -newkey rsa:2048 -keyout %s -out %s' % (socket.gethostbyname(socket.gethostname()),
+            SLL_COMMAND = 'openssl req  -subj /CN=%s -x509 -nodes -days 1 -batch -newkey rsa:2048 -keyout %s -out %s' % (Host,
                                                                                                         KEYFILE,
                                                                                                         CERTFILE)
             os.system(SLL_COMMAND)
@@ -3781,10 +3895,7 @@ if __name__ == '__main__':
                     args.SSH_PORT,
                     args.WOKFLOW_DIR
                     )
-        if args.HOST!=None:
-            Host = args.HOST
-        else:
-            Host = socket.gethostbyname(socket.gethostname())
+
         app.create_server(host=Host,port=args.PORT)
         m.serve('')
         keep_runing = True
