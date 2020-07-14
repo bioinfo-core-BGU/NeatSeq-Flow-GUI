@@ -12,6 +12,7 @@ __affiliation__ = "Bioinformatics Core Unit, NIBN, Ben Gurion University"
 from flexx import app, event, ui, flx 
 import os,sys,dialite
 from collections import OrderedDict
+import asyncio
 
 sys.path.append(os.path.realpath(os.path.expanduser(os.path.dirname(os.path.abspath(__file__))+os.sep+"..")))
 
@@ -2253,6 +2254,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
             try:
                 from stat import S_ISDIR, S_ISREG
                 self.sftp = self.ssh_client.open_sftp()
+                Test_sftp_alive(self.ssh_client)
             except:
                 self.sftp = None
         else:
@@ -3540,6 +3542,38 @@ class send_massage(ui.Widget):
                         # window.alert(msg);   
                                 # """.format(massage=ev.new_value) )
 
+class Test_sftp_alive(flx.PyComponent):
+    Kill_session = event.BoolProp(False, settable=True)
+
+    def init(self,ssh_client,refreshrate=1):
+        self.redirect       = Redirect('/')
+        self.refreshrate    = refreshrate
+        self.ssh_client     = ssh_client
+        self.keep_running   = True
+        if self.ssh_client !=None:
+            self.sftp_alive()
+
+    def sftp_alive(self):
+        if (self.keep_running):
+            try:
+                if not self.ssh_client.get_transport().is_active():
+                    print('SSH disconnected')
+                    self.keep_running = False
+            except:
+                self.keep_running = False
+            if self.keep_running==False:
+                self.set_Kill_session(True)
+        if (self.session.status!=0) and (self.keep_running):
+            asyncio.get_event_loop().call_later(self.refreshrate, self.sftp_alive)
+        else:
+            self.close_session()
+
+    def close(self):
+        self.keep_running = False
+
+    def close_session(self):
+        if self.session.status!=0:
+            self.redirect.go()
 
 class Redirect(flx.JsComponent):
 
