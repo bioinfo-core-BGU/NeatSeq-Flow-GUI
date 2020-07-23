@@ -10,6 +10,8 @@ import argparse
 from multiprocessing import Process, Queue
 import threading
 
+pd.options.mode.chained_assignment = None
+
 __author__   = "Liron Levin"
 jid_name_sep = '..'
 LOCAL_HOST   = socket.gethostname()
@@ -35,9 +37,10 @@ def get_random_string(length=24, allowed_chars=None):
     return ''.join(srandom.choice(allowed_chars) for i in range(length))
 
 class Popen_SSH(object):
-
-    def __init__(self,ssh_client,command,shell=False,pty=False,timeout=20,nbytes = 40096):
+    
+    def __init__(self,session,ssh_client,command,shell=False,pty=False,timeout=20,nbytes = 4096):
         import time
+        self.session     = session
         self.timeout     = timeout
         self.shell       = shell
         self.err_flag    = True
@@ -49,7 +52,7 @@ class Popen_SSH(object):
         self.Done        = True
         self.time        = time.time()
         try:
-            if (ssh_client!= None) :
+            if (ssh_client!= None) and (self.session.status!=0):
                 if ssh_client.get_transport().is_active():
                     self.ssh_transport     = ssh_client.get_transport()
                     self.ssh_session       = self.ssh_transport.open_channel(kind='session')
@@ -82,47 +85,58 @@ class Popen_SSH(object):
         keep_running = False
         if not self.err_flag:
             try:
-                while True:
+                while self.session.status!=0:
+                    out = ''
+                    err = ''
                     if self.ssh_session.recv_ready() or keep_running:
                         out = self.ssh_session.recv(self.nbytes).decode('utf-8')
                         self.stdout_data.extend(out)
-                        if out_queue!=None:
+                        if (out_queue!=None):
                             if self.shell:
                                 if len(''.join(self.stdout_data).split(self.EFC))==2:
                                     if len(out.split(self.EFC))==2:
-                                        out_queue.put(out.split(self.EFC)[1])
+                                        if self.session.status!=0:
+                                            out_queue.put(out.split(self.EFC)[1])
                                     else:
-                                        out_queue.put(out)
+                                        if self.session.status!=0:
+                                            out_queue.put(out)
                                 elif len(''.join(self.stdout_data).split(self.EFC))>2:
                                     if len(out.split(self.EFC))==2:
-                                        out_queue.put(out.split(self.EFC)[0])
+                                        if self.session.status!=0:
+                                            out_queue.put(out.split(self.EFC)[0])
                                     else:
-                                        out_queue.put(out)
+                                        if self.session.status!=0:
+                                            out_queue.put(out)
                             else:
-                                out_queue.put(out)
+                                if self.session.status!=0:
+                                    out_queue.put(out)
                     if self.ssh_session.recv_stderr_ready() or keep_running:
                         err = self.ssh_session.recv_stderr(self.nbytes).decode('utf-8')
                         self.stderr_data.extend(err)
                         if err_queue!=None:
                             if self.shell:
-                                err_queue.put(err)
+                                if self.session.status!=0:
+                                    err_queue.put(err)
                     if self.shell:
                         if len(''.join(self.stdout_data).split(self.EFC))>2:
                             break
                         if (time.time() - self.time) > self.timeout:
-                            out_queue.put('\nTime Out\n')
+                            if self.session.status!=0:
+                                out_queue.put('\nTime Out\n')
                             break
                     if self.ssh_session.exit_status_ready():
-                        if len(out)!=0:
+                        if (len(out)!=0) or (len(err)!=0) or (self.ssh_session.recv_ready()) or (self.ssh_session.recv_stderr_ready()):
                             keep_running = True
                         else:
-                            #print(self.ssh_session.recv(10000000000).decode('utf-8'))
-                            break
+                            break 
+                
                 if not self.shell:
                     self.stdout_data = ''.join(self.stdout_data)
                     self.stderr_data = ''.join(self.stderr_data)
                     if self.ssh_session.recv_exit_status()==0:
                         self.err_flag = False
+                    else:
+                        self.err_flag = True
                 else:
                     if len(''.join(self.stdout_data).split(self.EFC))>2:
                         self.stdout_data = ''.join(self.stdout_data).split(self.EFC)[1]
@@ -130,7 +144,8 @@ class Popen_SSH(object):
                         self.stdout_data = ''.join(self.stdout_data)
                     self.stderr_data = ''.join(self.stderr_data)
                 self.Done = True
-            except :
+            except Exception as e: 
+                # print(str(e))
                 self.err_flag = True
                 self.Done = True
             if self.err_flag:
@@ -355,10 +370,14 @@ class nsfgm(flx.PyComponent):
                 file_sys["Size"]          = [os.path.getsize(os.path.join(self.Dir,x)) for x in file_sys["Name"]]
                 file_sys["Size"]          = list(map(lambda x: self.format_file_size(x),file_sys["Size"]))
             else:
-                # get the available log files names
+                import paramiko
+                transport  = ssh_client.get_transport()
+                ssh_client = paramiko.SSHClient()
+                ssh_client.set_missing_host_key_policy( paramiko.AutoAddPolicy() )
+                ssh_client.connect(transport.getpeername()[0], username=transport.get_username(), password=transport.auth_handler.password,port=transport.getpeername()[1])
                 sftp    = ssh_client.open_sftp()
                 listdir = sftp.listdir(self.Dir)
-                #print(listdir)
+                # get the available log files names
                 file_sys["Name"]          = [x for x in listdir if len(re.findall(Regular,x))]
                 #print(file_sys["Name"])
                 # get the available log files created times
@@ -370,11 +389,15 @@ class nsfgm(flx.PyComponent):
                 # get the available log files sizes
                 file_sys["Size"]          = [sftp.stat(os.path.join(self.Dir,x)).st_size for x in file_sys["Name"]]
                 file_sys["Size"]          = list(map(lambda x: self.format_file_size(x),file_sys["Size"]))
+                
+                ssh_client.close()
         except :
             file_sys=pd.DataFrame(columns=["Name","Created","Last Modified","Size"])
-       
         if q!=None:
-           q.put({'items':file_sys.to_dict('list'),'rowmode': len(file_sys)})
+            if self.session.status!=0:
+                #print('put')
+                q.put({'items':file_sys.to_dict('list'),'rowmode': len(file_sys)})
+                time.sleep(0.00001)
         return {'items':file_sys.to_dict('list'),'rowmode': len(file_sys)}
 
     #Function for getting information from qstat
@@ -385,13 +408,13 @@ class nsfgm(flx.PyComponent):
         # run qstat and get running information in xml format
         if ssh_client!=None:
             if self.qstat==None:
-                [outs, errs , exit_status] = Popen_SSH(ssh_client,'bash -c "type qstat"').output()
-                if exit_status==0:
-                    self.qstat = True
-                else:
-                    self.qstat = False
-            if self.qstat:
-                [out, errs , exit_status]  = Popen_SSH(ssh_client,'qstat -u $USER -xml').output()
+                # [outs, errs , exit_status] = Popen_SSH(self.session,ssh_client,'bash -c "type qstat"').output()
+                # if exit_status==0:
+                    # self.qstat = True
+                # else:
+                    # self.qstat = None
+            # if self.qstat:
+                [out, errs , exit_status]  = Popen_SSH(self.session,ssh_client,'qstat -u $USER -xml').output()
                 if exit_status==0:
                     xml = out
         else:            
@@ -405,7 +428,7 @@ class nsfgm(flx.PyComponent):
             # extract the jobs status
             state             = [x.strip('job_list state="') for x in re.findall('job_list state="\w+',xml)]
             if len(state)!=len(Job_name):
-                print('sss')
+                pass
             qstat["Job name"] = Job_name
             qstat["State"]    = state
         return qstat
@@ -435,6 +458,11 @@ class nsfgm(flx.PyComponent):
             # read log file to a Data-Frame
             if read_from_disk:
                 if ssh_client!=None:
+                    import paramiko
+                    transport  = ssh_client.get_transport()
+                    ssh_client = paramiko.SSHClient()
+                    ssh_client.set_missing_host_key_policy( paramiko.AutoAddPolicy() )
+                    ssh_client.connect(transport.getpeername()[0], username=transport.get_username(), password=transport.auth_handler.password,port=transport.getpeername()[1])
                     sftp = ssh_client.open_sftp()
                     runlog_Data=pd.read_table(sftp.file(runlog_file),header =4,dtype={'Job ID':str})
                 else:
@@ -476,6 +504,7 @@ class nsfgm(flx.PyComponent):
                     runlog_Data.loc[runlog_Data["State"].isnull(),"State"]=''
                 else:
                     runlog_Data["State"]=''
+                
                 if 'Job ID' in runlog_Data.columns:
                     if len(set(runlog_Data["Host"]))==1:
                         if list(set(runlog_Data["Host"]))[0]==LOCAL_HOST+"-LOCAL_RUN":
@@ -520,9 +549,13 @@ class nsfgm(flx.PyComponent):
                     self.items['Status']=[str(list(runlog_Data.loc[(runlog_Data['Job name']==x)&(runlog_Data['Event']=='Finished'),'Status'])).replace('[','').replace(']','').replace("'",'') for x in logpiv.index.values]
                     #mark samples with ERRORs
                     self.rowmode=list(map(lambda x,y: 2 if 'ERROR' in x else y, self.items['Status'],self.rowmode))
-
                 if q!=None:
-                    q.put({'items':self.items.to_dict('list'),'rowmode': self.rowmode})
+                    if self.session.status!=0:
+                        q.put({'items':self.items.to_dict('list'),'rowmode': self.rowmode})
+                        time.sleep(0.00001)
+
+                if ssh_client!=None:
+                    ssh_client.close()
                 return {'items':self.items.to_dict('list'),'rowmode': self.rowmode}
             # group all jobs by Instance and event to lists of Timestamps
             logpiv=runlog_Data.groupby([args_pivot[0],args_pivot[1]])[args_pivot[2]].apply(list).reset_index()
@@ -612,10 +645,15 @@ class nsfgm(flx.PyComponent):
                 self.items=pd.DataFrame(columns=["Samples","Started","Finished","Host","Memory","Running?"])
 
             self.rowmode=[]
-
+        
         # if this function is running in a sub-process store the results in the queue
         if q!=None:
-           q.put({'items':self.items.to_dict('list'),'rowmode': self.rowmode})
+            if self.session.status!=0:
+                q.put({'items':self.items.to_dict('list'),'rowmode': self.rowmode})
+                time.sleep(0.00001)
+        
+        if ssh_client!=None:
+            ssh_client.close()
         return {'items':self.items.to_dict('list'),'rowmode': self.rowmode}
 
 class Relay_log_files(flx.PyComponent):
@@ -633,31 +671,33 @@ class Relay_log_files(flx.PyComponent):
 
     def Refresh_log_files(self):
         if (not self.running) and (self.keep_running):
-            #self.Process = Process(target=self.mynsfgm.file_browser, args=(self.mynsfgm.Regular,self.q))
-            self.Process = threading.Thread(target=self.mynsfgm.file_browser, args=(self.ssh_client,
-                                                                                    self.mynsfgm.Regular,
-                                                                                    self.q,))
-            self.Process.start()
-            self.running=True
+            try:
+                self.Process  =         Process(target=self.mynsfgm.file_browser, args=(self.ssh_client,
+                                                                                        self.mynsfgm.Regular,
+                                                                                        self.q,))
+                self.Process.daemon = None
+                self.Process.start()
+                self.running=True
+            except:
+                self.Process=None
+                self.running=False
         elif  (self.keep_running):
             if self.q.empty()==False:
                 log=self.q.get(True)
-                self.Process.join()
-                self.running=False
                 self.Table_H.set_items(log['items'])
                 self.Table_H.set_rowmode([1]*log['rowmode'])
-        if not self.Process.is_alive():
-            self.running = False
-            #self.q       = Queue()
+        if self.Process!=None:
+            if not self.Process.is_alive():
+                self.running = False
         if (self.session.status!=0) and (self.keep_running):
-            asyncio.get_event_loop().call_later(self.refreshrate, self.Refresh_log_files)
-                
+            asyncio.get_event_loop().call_later(self.refreshrate, self.Refresh_log_files) 
+
     def close(self):
         self.keep_running = False
-
-class Relay_main_menu(flx.PyComponent):
-    runlog_file   = event.StringProp('', settable=True)
-
+        
+class Relay_log_data(flx.PyComponent):
+    runlog_file           = event.StringProp('', settable=True)
+    
     def init(self,ssh_client,mynsfgm,Table_H,refreshrate=1):
         self.q            = Queue()
         self.running      = False
@@ -668,34 +708,36 @@ class Relay_main_menu(flx.PyComponent):
         self.Process      = None
         self.keep_running = True
         self.Refresh_main_menu()
-
+        
     def Refresh_main_menu(self):
         if (not self.running) and (self.keep_running):
-            self.Process = threading.Thread(target=self.mynsfgm.read_run_log, args=(self.ssh_client,
-                                                                                   self.runlog_file,
-                                                                                   self.mynsfgm.Bar_len,
-                                                                                   self.mynsfgm.Bar_Marker,
-                                                                                   self.mynsfgm.Bar_Spacer,
-                                                                                   self.q,))
-            self.Process.start()
-            self.running=True
+            try:
+                self.Process  =        Process(target=self.mynsfgm.read_run_log, args=(self.ssh_client,
+                                                                                       self.runlog_file,
+                                                                                       self.mynsfgm.Bar_len,
+                                                                                       self.mynsfgm.Bar_Marker,
+                                                                                       self.mynsfgm.Bar_Spacer,
+                                                                                       self.q,))
+                self.Process.daemon = True
+                self.Process.start()
+                self.running=True
+            except:
+                self.Process=None
+                self.running=False
         elif  (self.keep_running):
             if self.q.empty()==False:
                 steps=self.q.get(True)
-                self.Process.join()
-                self.running=False
                 self.Table_H.set_items(steps['items'])
                 self.Table_H.set_rowmode(steps['rowmode'])
-        if not self.Process.is_alive():
-            self.running = False
-            #self.q       = Queue()
+        if self.Process!=None:
+            if not self.Process.is_alive():
+                self.running = False
         if (self.session.status!=0) and (self.keep_running):
             asyncio.get_event_loop().call_later(self.refreshrate, self.Refresh_main_menu)
                 
-    
     def close(self):
         self.keep_running = False
-
+    
 class Relay_sample_menu(flx.PyComponent):
     instances   = event.StringProp('', settable=True)
     runlog_file = event.StringProp('', settable=True)
@@ -713,25 +755,28 @@ class Relay_sample_menu(flx.PyComponent):
 
     def Refresh_sample_menu(self):
         if (not self.running) and (self.keep_running):
-            self.Process = threading.Thread(target=self.mynsfgm.read_run_log, args=(self.ssh_client,
-                                                                                   self.runlog_file,
-                                                                                   self.mynsfgm.Bar_len,
-                                                                                   self.mynsfgm.Bar_Marker,
-                                                                                   self.mynsfgm.Bar_Spacer,
-                                                                                   self.q,
-                                                                                   self.instances,))
-            self.Process.start()
-            self.running=True
+            try:
+                self.Process  =        Process(target=self.mynsfgm.read_run_log, args=(self.ssh_client,
+                                                                                       self.runlog_file,
+                                                                                       self.mynsfgm.Bar_len,
+                                                                                       self.mynsfgm.Bar_Marker,
+                                                                                       self.mynsfgm.Bar_Spacer,
+                                                                                       self.q,
+                                                                                       self.instances,))
+                self.Process.daemon = True
+                self.Process.start()
+                self.running=True
+            except:
+                self.Process=None
+                self.running=False
         elif  (self.keep_running):
             if self.q.empty()==False:
                 steps=self.q.get(True)
-                self.Process.join()
-                self.running=False
                 self.Table_H.set_items(steps['items'])
                 self.Table_H.set_rowmode(steps['rowmode'])
-        if not self.Process.is_alive():
-            self.running = False
-            #self.q       = Queue()
+        if self.Process!=None:
+            if not self.Process.is_alive():
+                self.running = False
         if (self.session.status!=0) and (self.keep_running):
             asyncio.get_event_loop().call_later(self.refreshrate, self.Refresh_sample_menu)
                 
@@ -828,7 +873,7 @@ class Monitor_GUI(flx.PyComponent):
                                             self.mynsfgm,
                                             self.file_menu,
                                             File_browser_RF)
-        self.Relay_main   = Relay_main_menu(ssh_client,
+        self.Relay_data   = Relay_log_data(ssh_client,
                                             self.mynsfgm,
                                             self.main_menu,
                                             Monitor_RF)
@@ -838,8 +883,6 @@ class Monitor_GUI(flx.PyComponent):
                                               Sample_RF)
                                               
     def close_session(self):
-        #self.session.app.dispose()
-        #self.session.close()
         self.redirect.go()
             
     @event.reaction('Test_sftp.Kill_session')
@@ -850,9 +893,9 @@ class Monitor_GUI(flx.PyComponent):
                 self.close_session()
                 
     def close(self):
-        self.Relay_sample.close()
-        self.Relay_main.close()
+        self.Relay_data.close()
         self.Relay_log.close()
+        self.Relay_sample.close()
         self.Test_sftp.close()
 
     @event.reaction('Dir')
@@ -860,7 +903,9 @@ class Monitor_GUI(flx.PyComponent):
         for ev in events:
             if ev.new_value!='':
                 self.mynsfgm.set_Dir(os.path.join(ev.new_value,"logs"))
-        
+                self.Relay_sample.set_instances('')
+                self.Relay_data.set_runlog_file('')
+                
     @event.reaction('file_menu.Current_Highlite','file_menu.choice')
     def choose_log_file(self, *events):
         for ev in events:
@@ -871,9 +916,10 @@ class Monitor_GUI(flx.PyComponent):
                     runlog_file = ''
             except :
                     runlog_file = ''
-            self.Relay_main.set_runlog_file(runlog_file)
+            self.Relay_data.set_runlog_file(runlog_file)
             self.main_menu.set_Current_Highlite(0)
-            self.Relay_sample.set_runlog_file('')
+            self.Relay_sample.set_instances('')
+            self.Relay_sample.set_runlog_file(runlog_file)
 
     # @event.reaction('file_menu.Current_Highlite')
     # def choose_log_file_control(self, *events):
@@ -881,7 +927,7 @@ class Monitor_GUI(flx.PyComponent):
     #         if ev.new_value!=self.file_menu.choice:
     #             self.Relay_main.set_runlog_file('None')
 
-    @event.reaction('main_menu.Current_Highlite','main_menu.choice')
+    @event.reaction('main_menu.choice')
     def choose_step_file(self, *events):
         for ev in events:
             try:
@@ -892,14 +938,13 @@ class Monitor_GUI(flx.PyComponent):
             except :
                     instances = ''
             self.Relay_sample.set_instances(instances)
-            self.Relay_sample.set_runlog_file(self.Relay_main.runlog_file)
 
-    # @event.reaction('main_menu.Current_Highlite')
-    # def choose_step_file_control(self, *events):
-    #     for ev in events:
-    #         if ev.new_value!=self.main_menu.choice:
-    #             self.Relay_sample.set_instances('None')
-    #             self.Relay_sample.set_runlog_file('None')
+    @event.reaction('main_menu.Current_Highlite')
+    def choose_step_file_control(self, *events):
+        for ev in events:
+            if ev.new_value!=self.main_menu.choice:
+                self.Relay_sample.set_instances('')
+
 
 if __name__ == '__main__':
     #getting arguments from the user

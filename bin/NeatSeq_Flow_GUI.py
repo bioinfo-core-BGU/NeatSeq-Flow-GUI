@@ -13,6 +13,7 @@ from flexx import app, event, ui, flx
 import os,sys,dialite
 from collections import OrderedDict
 import asyncio
+import signal
 
 sys.path.append(os.path.realpath(os.path.expanduser(os.path.dirname(os.path.abspath(__file__))+os.sep+"..")))
 
@@ -853,16 +854,18 @@ class Step_Tree_Class(ui.Widget):
     def tree_step_load_step_from_file(self, *events):
         for ev in events:
             if (len(self.step2load.keys())==1):
-                self.uncorrect_dict(self.step2load, self.step_converter)
-                for step_name in self.step2load.keys():
+                step2load      = self.step2load
+                step_converter = self.step_converter
+                self.uncorrect_dict(step2load, step_converter)
+                for step_name in step2load.keys():
                     if step_name in self.Graphical_panel.Steps_Data.keys():
                         new_step_name = step_name+'_Copy'
                     else:
                         new_step_name = step_name
                     if new_step_name not in self.Graphical_panel.Steps_Data.keys():
-                        self.set_Vars_data({new_step_name:self.step2load[step_name]})
+                        self.set_Vars_data({new_step_name:step2load[step_name]})
                         with self.tree:
-                            self.create_tree({new_step_name:self.step2load[step_name]})
+                            self.create_tree({new_step_name:step2load[step_name]})
             self.set_step2load({})
             self.set_step_converter({})
 
@@ -1786,12 +1789,13 @@ class File_Browser(flx.GroupWidget):
         self.Show_Size         = show_size
         self.New_Directory_str = 'New Directory'
         self.Parent_Dir_str    = '..'
+        self.Path_Label_str    = 'Enter Path'
         self.set_Path(base_path)
         with ui.VFix():
             if self.Upper_Panel:
                 with ui.HSplit(style='max-height: 30px;'):
                     self.Parent_Dir        = ui.Button(text=self.Parent_Dir_str,style='max-width: 30px;')
-                    self.Path_Label        = ui.Label(text=self.Path)
+                    self.Path_Label        = ui.LineEdit(text=self.Path, placeholder_text = self.Path_Label_str,disabled=LOCK_USER_DIR)
                     self.New_Dir_Button    = ui.Button(text=self.New_Directory_str,style='max-width: 150px;')
                     self.New_Dir_Name_Edit = ui.LineEdit(style='max-height: 30px;',disabled=False)
                 
@@ -1813,39 +1817,32 @@ class File_Browser(flx.GroupWidget):
                 elif self.Browser_Type['select_type']=='Save':
                     self.OK.set_text('Save')
             flx.Layout(style='max-height: 10px;')
-
+        
     @event.reaction('Path')
     def update_path_label(self):
         if self.Upper_Panel:
             self.Path_Label.set_text(self.Path)
     
-    @event.reaction('!children**.pointer_click')
+    @event.reaction('!children**.pointer_click','!children**.user_done')
     def Upper_Panel_setup(self, *events):
         for ev in events:
-            if ev.source.text==self.Parent_Dir_str:
+            if ev.type=='user_done':
+                if ev.source.placeholder_text ==self.Path_Label_str:
+                    self.set_Path(ev.source.text)
+                    if self.update:
+                        self.set_update(False)
+                    else:
+                        self.set_update(True)
+            elif ev.source.text==self.Parent_Dir_str:
                 self.set_Change_Dir('..')
                 if self.update:
                     self.set_update(False)
                 else:
                     self.set_update(True)
-            if ev.source.text==self.New_Directory_str:
+            elif ev.source.text==self.New_Directory_str:
                 if self.New_Dir_Name_Edit.text.strip().replace(' ','_')!='':
                     self.set_New_Dir(self.New_Dir_Name_Edit.text.strip().replace(' ','_'))
-        
             
-    # @event.reaction('Parent_Dir.pointer_click')
-    # def update_path_up(self, *events):
-        # self.set_Change_Dir('..')
-        # if self.update:
-            # self.set_update(False)
-        # else:
-            # self.set_update(True)
-            
-    # @event.reaction('New_Dir_Button.pointer_click')
-    # def New_Dir_Button_click(self):
-        # if self.New_Dir_Name_Edit.text.strip().replace(' ','_')!='':
-            # self.set_New_Dir(self.New_Dir_Name_Edit.text.strip().replace(' ','_'))
-        
     @event.reaction('OK.pointer_click')
     def Ok_Button_click(self):
         selected_path=[]
@@ -1951,25 +1948,46 @@ class Run_File_Browser(flx.PyComponent):
     #main program
     def init(self,base_path,ssh_client=None,Title='File Browser',Regular = '.+',upper_panel=True,show_size=True,show_dir=True):
         import os,re
-        self.show_dir = show_dir
+        import signal
+        signal.signal(signal.SIGALRM, lambda x,y: 1/0 )
+        self.show_dir     = show_dir
+        self.timeout      = 5
+        self.ssh_client   = ssh_client
+        self.sftp         = None
+        self.Path         = ''
+        
         try:
             self.Regular  = re.compile(Regular)
         except:
             self.Regular  = re.compile('.+')
-        self.ssh_client = ssh_client
-        try:
-            self.sftp   = self.ssh_client.open_sftp()
-        except:
-            self.sftp   = None
+        
+        if self.ssh_client!=None:
+            try:
+                signal.alarm(self.timeout)
+                self.sftp   = self.ssh_client.open_sftp()
+                signal.alarm(0)
+            except:
+                Redirect('/').go()
             
         if self.sftp!=None:
             from stat import S_ISDIR, S_ISREG
             try:
+                signal.alarm(self.timeout)
                 self.base_path = self.sftp.normalize(base_path)
+                signal.alarm(0)
             except:
-                self.base_path = self.sftp.normalize('')
-            if not S_ISDIR(self.sftp.stat(self.base_path).st_mode):
-                self.base_path = self.sftp.getcwd()
+                self.sftp      = self.ssh_client.open_sftp()
+                self.base_path = ''
+            try:
+                signal.alarm(self.timeout)
+                if not S_ISDIR(self.sftp.stat(self.sftp.normalize(self.base_path)).st_mode):
+                    self.base_path = self.sftp.getcwd()
+                else:
+                    self.base_path = self.sftp.normalize(self.base_path)
+                signal.alarm(0)
+            except:
+                Redirect('/').go()
+                
         else:
             if os.path.isdir(base_path.strip()):
                 self.base_path=os.path.abspath(base_path)
@@ -1978,7 +1996,7 @@ class Run_File_Browser(flx.PyComponent):
                     self.base_path=os.getcwd()
                 else:
                     self.base_path=''
-                    
+        self.Path = self.base_path
         with ui.HSplit(spacing=1):
             #flexx.ui.FileBrowserWidget()
             ui.Layout(style='max-width: 400px;')
@@ -2014,23 +2032,27 @@ class Run_File_Browser(flx.PyComponent):
                 Dir              = {}
                 Dir['Directory'] = {}
                 Dir['File']      = {}
-                
                 if self.ssh_client!=None:
                     try:
+                        signal.alarm(self.timeout)
                         self.sftp.normalize('')
+                        signal.alarm(0)
                     except:
                         self.sftp   = self.ssh_client.open_sftp()
                     from stat import S_ISDIR, S_ISREG
-                    if self.File_Browser.Path=='':
-                        Path = self.sftp.getcwd()
-                    else:
-                        Path = self.sftp.normalize(self.File_Browser.Path)
-                else:    
+                    try:
+                        signal.alarm(self.timeout)
+                        Path    = self.sftp.normalize(self.File_Browser.Path)
+                        self.sftp.chdir(Path)
+                        signal.alarm(0)
+                    except:
+                        self.sftp   = self.ssh_client.open_sftp()
+                        Path        = self.Path
+                else:
                     if self.File_Browser.Path=='':
                         Path = os.getcwd()
                     else:
                         Path = os.path.abspath(self.File_Browser.Path)
-                        
                         
                 if self.File_Browser.Change_Dir != '':
                     if self.File_Browser.Change_Dir == '..':
@@ -2040,12 +2062,17 @@ class Run_File_Browser(flx.PyComponent):
                     else:
                         Path = os.path.join(Path,self.File_Browser.Change_Dir)
                         self.File_Browser.set_Change_Dir('')
+                
                 try:
                     if self.ssh_client!=None:
                         try:
+                            signal.alarm(self.timeout)
                             self.sftp.normalize('')
+                            signal.alarm(0)
                         except:
                             self.sftp   = self.ssh_client.open_sftp()
+                        
+                        signal.alarm(self.timeout)
                         for entry in self.sftp.listdir_attr(Path):
                             if S_ISDIR(entry.st_mode):
                                 if self.show_dir:
@@ -2062,6 +2089,7 @@ class Run_File_Browser(flx.PyComponent):
                                         Dir['File'][entry.filename]="{0:.2f}".format(round(size/1000,2))+'KB'
                                 else:
                                     Dir['File'][entry.filename]=str(size)+'B'
+                        signal.alarm(0)
                     else:
                         with os.scandir(Path) as it:
                             for entry in it:
@@ -2082,9 +2110,12 @@ class Run_File_Browser(flx.PyComponent):
                                         Dir['File'][entry.name]=str(size)+'B'
 
                     self.File_Browser.set_Path(Path)
+                    self.Path = Path
                     self.File_Browser.set_Dir(Dir)
                 except :     
-                    pass
+                    # self.ssh_client = Reconnect_SSH(self.ssh_client)
+                    self.sftp   = self.ssh_client.open_sftp()
+                    self.File_Browser.set_Path(self.Path)
                 self.File_Browser.set_update(False)
         
     @event.reaction('Browser_Type')
@@ -2101,16 +2132,30 @@ class Run_File_Browser(flx.PyComponent):
     def create_new_dir(self,*events):
         Path = os.path.abspath(self.File_Browser.Path)
         Path = os.path.join(Path,self.File_Browser.New_Dir)
-        print(Path)
         try:
             if self.sftp!=None:
+                signal.alarm(self.timeout)
                 self.sftp.mkdir(Path)
+                signal.alarm(0)
             else:
                 os.mkdir(Path)
         except :     
-            pass
+            if self.sftp!=None:
+                self.sftp   = self.ssh_client.open_sftp()
+
         self.File_Browser.set_update(True)
 
+def Reconnect_SSH(ssh_client):
+    try:
+        import paramiko
+        transport  = ssh_client.get_transport()
+        ssh_client = paramiko.SSHClient()
+        ssh_client.set_missing_host_key_policy( paramiko.AutoAddPolicy() )
+        ssh_client.connect(transport.getpeername()[0], username=transport.get_username(), password=transport.auth_handler.password,port=transport.getpeername()[1])
+    except:
+        ssh_client.close()
+    return   ssh_client
+    
 class NeatSeq_Flow_GUI(app.PyComponent):
     CSS = """
 
@@ -2254,7 +2299,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
             try:
                 from stat import S_ISDIR, S_ISREG
                 self.sftp = self.ssh_client.open_sftp()
-                Test_sftp_alive(self.ssh_client)
+                # Test_sftp_alive(self.ssh_client)
             except:
                 self.sftp = None
         else:
@@ -2490,7 +2535,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         try:
             self.Run.set_Terminal(self.Terminal_string + '[Searching for Conda Environments]: Searching...\n')
             if self.ssh_client!= None:
-                [outs, errs , exit_status] = Popen_SSH(self.ssh_client,temp_command).output()
+                [outs, errs , exit_status] = Popen_SSH(self.session,self.ssh_client,temp_command).output()
                 if exit_status!=0:
                     err_flag = True
             else:
@@ -2525,13 +2570,26 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         Error = ''
         
         if len(Project_dir) == 0:
-            Error = Error + 'Error:\n No Project Directory\n'
-            #self.send_massage.set_massage(Error)
-            # if self.sftp!= None:
-                # Project_dir=self.sftp.getcwd()
-            # else:
-                # Project_dir=os.getcwd()
-        if (self.ssh_client != None) and (len(conda_env)==0):
+            Error = Error + '[Error]: No Project Directory\n'
+        
+        if len(conda_bin) > 0:
+            if self.ssh_client != None:
+                try:
+                    signal.alarm(5)
+                    self.sftp = self.ssh_client.open_sftp()
+                    listdir   = self.sftp.listdir(conda_bin)
+                    signal.alarm(0)
+                except:
+                    listdir   = []
+            else:
+                try:
+                    listdir   = os.listdir(conda_bin)
+                except:
+                    listdir   = []
+            if not (('conda' in listdir) and ('activate' in listdir)):
+                Error = Error + '[Error]: Your Conda Bin is incorrect\n[Error]: Make Sure the Programs: "conda" and "activate" are located within the Conda Bin Directory\n'
+        
+        if (self.ssh_client != None) and (len(conda_env)==0) and (len(Error))==0:
             if len(conda_bin) > 0:
                 options = self.conda_env_options(conda_bin)
             else:
@@ -2564,17 +2622,17 @@ class NeatSeq_Flow_GUI(app.PyComponent):
             if len(sample_file) > 0:
                 temp_command = temp_command + ' -s ' + sample_file
             else:
-                Error = Error + 'Error:\n No Sample File\n'
+                Error = Error + '[Error]: No Sample File\n'
 
             if len(parameter_file) > 0:
                 temp_command = temp_command + ' -p ' + parameter_file
             else:
-                Error = Error + 'Error:\n No Parameter File\n'
+                Error = Error + '[Error]: No Parameter File\n'
 
             if len(Project_dir) > 0:
                 temp_command = temp_command + ' -d ' + Project_dir
             else:
-                Error = Error + 'Error:\n No Project directory \n'
+                Error = Error + '[Error]:No Project directory \n'
             
             if self.sftp!= None:
                 try:
@@ -2600,7 +2658,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                     
                     self.Run.set_Terminal(self.Terminal_string + '[Generating scripts]:  Generating...\n')
                     if self.ssh_client!= None:
-                        [outs, errs , exit_status] = Popen_SSH(self.ssh_client,temp_command,shell=True).output()
+                        [outs, errs , exit_status] = Popen_SSH(self.session,self.ssh_client,temp_command,shell=True).output()
                         if exit_status!=0:
                             err_flag = True
                     else:
@@ -2684,7 +2742,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         if len(Error) == 0:
             if self.Running_script == 0:
                 try:
-                    self.Running_Commands['Running_script'] =  Run_command_in_thread(temp_command,self.ssh_client)
+                    self.Running_Commands['Running_script'] =  Run_command_in_thread(self.session,temp_command,self.ssh_client)
                     self.Running_Commands['Running_script'].Run()
                     self.set_Running_script(self.Running_script+1)
                 except :
@@ -2692,7 +2750,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
 
             # elif self.Running_Commands['Running_script'].proc.poll() is not None:
                 # try:
-                    # self.Running_Commands['Running_script'] =  Run_command_in_thread(temp_command)
+                    # self.Running_Commands['Running_script'] =  Run_command_in_thread(self.session,temp_command)
                     # self.Running_Commands['Running_script'].Run()
                     # self.set_Running_script(self.Running_script+1)
                 # except :
@@ -2737,7 +2795,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
 
             if self.Kill_Run == 0:
                 try:
-                    self.Running_Commands['Kill_Run'] =  Run_command_in_thread(temp_command,self.ssh_client)
+                    self.Running_Commands['Kill_Run'] =  Run_command_in_thread(self.session,temp_command,self.ssh_client)
                     self.Running_Commands['Kill_Run'].Run()
                     self.set_Kill_Run(self.Kill_Run+1)
                 except :
@@ -2745,7 +2803,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
 
             # elif self.Running_Commands['Kill_Run'].proc.poll() is not None:
                 # try:
-                    # self.Running_Commands['Kill_Run'] =  Run_command_in_thread(temp_command)
+                    # self.Running_Commands['Kill_Run'] =  Run_command_in_thread(self.session,temp_command)
                     # self.Running_Commands['Kill_Run'].Run()
                     # self.set_Kill_Run(self.Kill_Run+1)
                 # except :
@@ -2784,7 +2842,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         if len(Error) == 0:
             if self.Locate_Failures == 0:
                 try:
-                    self.Running_Commands['Locate_Failures'] =  Run_command_in_thread(temp_command,self.ssh_client)
+                    self.Running_Commands['Locate_Failures'] =  Run_command_in_thread(self.session,temp_command,self.ssh_client)
                     self.Running_Commands['Locate_Failures'].Run()
                     self.Terminal_string = self.Terminal_string + '[Locate Failures]:   Searching for failures in the last run.. \n'
                     self.Terminal_string = self.Terminal_string + '[Locate Failures]:   Click on the Recover button if you want to re-run these steps: \n'
@@ -2796,7 +2854,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
 
             # elif self.Running_Commands['Locate_Failures'].proc.poll() is not None:
                 # try:
-                  # self.Running_Commands['Locate_Failures'] =  Run_command_in_thread(temp_command)
+                  # self.Running_Commands['Locate_Failures'] =  Run_command_in_thread(self.session,temp_command)
                     # self.Running_Commands['Locate_Failures'].Run()
                     # self.Terminal_string = self.Terminal_string + '[ Locate Failures ]:   Searching for failures in the last run.. \n'
                     # self.Terminal_string = self.Terminal_string + '[ Locate Failures ]:   Click on the Recover button if you want to re-run these steps: \n'
@@ -2848,7 +2906,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
 
             if self.Recovery == 0:
                 try:
-                    self.Running_Commands['Recovery'] =  Run_command_in_thread(temp_command,self.ssh_client)
+                    self.Running_Commands['Recovery'] =  Run_command_in_thread(self.session,temp_command,self.ssh_client)
                     self.Running_Commands['Recovery'].Run()
                     self.Terminal_string = self.Terminal_string + '[Recovery]:   Trying to Recover.. \n'
                     self.Run.set_Terminal(self.Terminal_string)
@@ -2859,7 +2917,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                     pass
             # elif self.Running_Commands['Recovery'].proc.poll() is not None:
                 # try:
-                    # self.Running_Commands['Recovery'] =  Run_command_in_thread(temp_command)
+                    # self.Running_Commands['Recovery'] =  Run_command_in_thread(self.session,temp_command)
                     # self.Running_Commands['Recovery'].Run()
                     # self.Terminal_string = self.Terminal_string + '[Recovery]:   Trying to Recover.. \n'
                     # self.Run.set_Terminal(self.Terminal_string)
@@ -3108,21 +3166,19 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         for ev in events:
             if len(self.step_info.Load_step_file) > 0:
                 try:
+                    file_name   = self.step_info.Load_step_file[0][0]
                     if self.sftp!=None:
-                        from neatseq_flow_gui.modules.parse_param_data import parse_param_file_object
-                        file_name   = self.step_info.Load_step_file[0][0]
                         file_object = self.sftp.open(file_name)
-                        Step_data   = yaml.load(file_object, yaml.SafeLoader)
-                        file_object.close()
                     else:
-                        from neatseq_flow_gui.modules.parse_param_data import parse_param_file
-                        Step_data   = yaml.load(self.step_info.Load_step_file[0][0], yaml.SafeLoader)
+                        file_object = open(file_name,'r')
+                    Step_data   = yaml.load(file_object, yaml.SafeLoader)
+                    file_object.close()
                 except:
-                    Step_data = []
+                    Step_data = OrderedDict()
                     if not SERVE:
                         dialite.fail('Load Error', 'Error loading Step file')
                 self.step_info.set_Load_step_file([])
-                if len(Step_data) > 0:
+                if len(Step_data.keys()) > 0:
                     converter = OrderedDict()
                     self.correct_dict(Step_data, 1, converter)
                     self.step_info.set_step_converter(converter)
@@ -3325,35 +3381,36 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 input_list.extend(list(re.findall(var_re, input_dict[key])))
 
 class Popen_SSH(object):
-
-    def __init__(self,ssh_client,command,shell=False,pty=True,timeout=200,nbytes = 4096):
+    
+    def __init__(self,session,ssh_client,command,shell=False,pty=True,timeout=200,nbytes = 4096):
         import time
+        self.session     = session
         self.timeout     = timeout
         self.shell       = shell
         self.err_flag    = True
         self.nbytes      = nbytes
         self.stdout_data = []
         self.stderr_data = []
-        self.ssh_session     = None
+        self.ssh_session = None
         self.EFC         = get_random_string()
         self.Done        = True
         self.time        = time.time()
         try:
-            if ssh_client!= None:
+            if (ssh_client!= None) and (self.session.status!=0):
                 if ssh_client.get_transport().is_active():
                     self.ssh_transport     = ssh_client.get_transport()
                     self.ssh_session       = self.ssh_transport.open_channel(kind='session')
                     if pty:
                         self.ssh_session.get_pty('vt100')
-                        if self.shell:
-                            self.err_flag = False
-                            self.ssh_session.invoke_shell()
-                            self.Done = False
-                            self.ssh_session.send("stty -echo\n")
-                            command = "bash ; " + command + "; echo " + self.EFC
-                            command = command.replace(';','\n')
-                            for line in command.split('\n'):
-                                self.ssh_session.send(line+'\n')
+                    if self.shell:
+                        self.err_flag = False
+                        self.ssh_session.invoke_shell()
+                        self.Done = False
+                        self.ssh_session.send("stty -echo\n")
+                        command = "bash ; " + command + "; echo " + self.EFC
+                        command = command.replace(';','\n')
+                        for line in command.split('\n'):
+                            self.ssh_session.send(line+'\n')
                     if not self.shell:
                         self.ssh_session.settimeout(self.timeout)
                         self.Done = False
@@ -3369,57 +3426,70 @@ class Popen_SSH(object):
             
     def output(self,out_queue=None,err_queue=None):
         import time
-        if not self.err_flag: 
+        keep_running = False
+        if not self.err_flag:
             try:
-                while True:
-                    if self.ssh_session.recv_ready():
+                while self.session.status!=0:
+                    out = ''
+                    err = ''
+                    if self.ssh_session.recv_ready() or keep_running:
                         out = self.ssh_session.recv(self.nbytes).decode('utf-8')
                         self.stdout_data.extend(out)
-                        if out_queue!=None:
+                        if (out_queue!=None):
                             if self.shell:
                                 if len(''.join(self.stdout_data).split(self.EFC))==2:
                                     if len(out.split(self.EFC))==2:
-                                        out_queue.put(out.split(self.EFC)[1])
+                                        if self.session.status!=0:
+                                            out_queue.put(out.split(self.EFC)[1])
                                     else:
-                                        out_queue.put(out)
+                                        if self.session.status!=0:
+                                            out_queue.put(out)
                                 elif len(''.join(self.stdout_data).split(self.EFC))>2:
                                     if len(out.split(self.EFC))==2:
-                                        out_queue.put(out.split(self.EFC)[0])
+                                        if self.session.status!=0:
+                                            out_queue.put(out.split(self.EFC)[0])
                                     else:
-                                        out_queue.put(out)
+                                        if self.session.status!=0:
+                                            out_queue.put(out)
                             else:
-                                out_queue.put(out)
-                    if self.ssh_session.recv_stderr_ready():
+                                if self.session.status!=0:
+                                    out_queue.put(out)
+                    if self.ssh_session.recv_stderr_ready() or keep_running:
                         err = self.ssh_session.recv_stderr(self.nbytes).decode('utf-8')
                         self.stderr_data.extend(err)
                         if err_queue!=None:
                             if self.shell:
-                                err_queue.put(err)
-                    if self.ssh_session.exit_status_ready():
-                        break
+                                if self.session.status!=0:
+                                    err_queue.put(err)
                     if self.shell:
                         if len(''.join(self.stdout_data).split(self.EFC))>2:
                             break
                         if (time.time() - self.time) > self.timeout:
-                            out_queue.put('\nTime Out\n')
+                            if self.session.status!=0:
+                                out_queue.put('\nTime Out\n')
                             break
+                    if self.ssh_session.exit_status_ready():
+                        if (len(out)!=0) or (len(err)!=0) or (self.ssh_session.recv_ready()) or (self.ssh_session.recv_stderr_ready()):
+                            keep_running = True
+                        else:
+                            break 
+                
                 if not self.shell:
                     self.stdout_data = ''.join(self.stdout_data)
                     self.stderr_data = ''.join(self.stderr_data)
                     if self.ssh_session.recv_exit_status()==0:
                         self.err_flag = False
+                    else:
+                        self.err_flag = True
                 else:
                     if len(''.join(self.stdout_data).split(self.EFC))>2:
                         self.stdout_data = ''.join(self.stdout_data).split(self.EFC)[1]
                     else:
                         self.stdout_data = ''.join(self.stdout_data)
                     self.stderr_data = ''.join(self.stderr_data)
-                    # if out_queue!=None:
-                        # out_queue.put(self.stdout_data,False)
-                    # if err_queue!=None:
-                        # err_queue.put(self.stderr_data,False)
                 self.Done = True
-            except :
+            except Exception as e: 
+                # print(str(e))
                 self.err_flag = True
                 self.Done = True
             if self.err_flag:
@@ -3436,12 +3506,13 @@ class Popen_SSH(object):
                 return [''.join(self.stdout_data) , ''.join(self.stderr_data) , 0]
         else:
             return ['','',1]
- 
+    
     def kill(self):
         try:
             self.ssh_session.close()
         except:
             pass
+    
     def poll(self):
         if self.shell:
             if self.Done:
@@ -3457,13 +3528,13 @@ class Popen_SSH(object):
 class Run_command_in_thread(object):
 
 
-    def __init__(self,command,ssh_client=None,shell=True):
+    def __init__(self,session,command,ssh_client=None,shell=True):
 
         import threading
         import multiprocessing
         import queue
 
-
+        self.session      =   session
         self.stdout       =   queue.Queue()
         self.stderr       =   queue.Queue()
         self.get_std_err  =   threading.Thread(target=self.collect_err)
@@ -3478,25 +3549,36 @@ class Run_command_in_thread(object):
         if self.ssh_client != None:
             self.proc.output(self.stdout,self.stderr)
         else:
-            for stdout in iter(self.proc.stdout.readline, ''):
-                if len(stdout)>0:
-                    self.stdout.put(stdout,False)
+            if self.session.status!=0:
+                for stdout in iter(self.proc.stdout.readline, ''):
+                    if self.session.status!=0:
+                        if len(stdout)>0:
+                            self.stdout.put(stdout,False)
+                    else:
+                        break
 
     def collect_err(self):
-        for stderr in iter(self.proc.stderr.readline, ''):
-            if len(stderr)>0:
-                self.stderr.put(stderr,False)
+        if self.session.status!=0:
+            for stderr in iter(self.proc.stderr.readline, ''):
+                if self.session.status!=0:
+                    if len(stderr)>0:
+                        self.stderr.put(stderr,False)
+                else:
+                    break
 
     def Run(self):
         if self.ssh_client != None:
-            self.proc = Popen_SSH(self.ssh_client,self.Run_command,self.shell)
+            self.proc = Popen_SSH(self.session,self.ssh_client,self.Run_command,self.shell)
+            self.get_std_out.daemon = True
             self.get_std_out.start()
             # self.get_std_err.start()
         else:
             from subprocess import Popen, PIPE, STDOUT
             self.proc = Popen(self.Run_command , shell=self.shell, executable='/bin/bash', stdout=PIPE, stderr=PIPE,
                                  universal_newlines=True)
+            self.get_std_out.daemon = True
             self.get_std_out.start()
+            self.get_std_err.daemon = True
             self.get_std_err.start()
 
     def Stop(self):
@@ -3509,18 +3591,19 @@ class Run_command_in_thread(object):
         import time
         all_out = ''
         all_err = ''
-        while self.stdout.empty()==False:
+        
+        while (self.stdout.empty()==False) and (self.session.status!=0):
             out = self.stdout.get()
             all_out = all_out + out
             self.stdout.task_done()
-
+        
         out=all_out
-
-        while self.stderr.empty()==False:
+        
+        while (self.stderr.empty()==False) and (self.session.status!=0):
             err = self.stderr.get()
             all_err = all_err + err
             self.stderr.task_done()
-
+        
         err=all_err
         time.sleep(0.000001)
         return [ out , err]
@@ -3949,7 +4032,8 @@ if __name__ == '__main__':
                 if keep_runing:
                     print(' Keep going ')
         try:
-            flx.stop()
+            #flx.stop()
+            sys.exit(1)
         except :
             sys.exit(1)
     else:
