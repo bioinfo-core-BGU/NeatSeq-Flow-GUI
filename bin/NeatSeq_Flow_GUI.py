@@ -422,16 +422,25 @@ class Step_Tree_Class(ui.Widget):
         with ui.HSplit() as self.main_lay:
             with ui.VSplit(flex=0.25) as self.tree_lay:
                 with ui.GroupWidget(flex=0.05,title='Step Editing Panel'):
-                    with ui.HSplit(flex=0.1):
-                        with ui.FormLayout(flex=0.01) as self.form:
-                            self.tree_key_b           = ui.LineEdit(title='Key:', text='')
-                            #self.tree_value_b         = ui.LineEdit(title='Value:', text='')
-                            with ui.VSplit(title='Value:',flex=0.0001):
-                                self.tree_value_b     = Documentation_Editor('',False,False,False,style='border: 1px solid gray; min-height: 50px;min-width: 100px;overflow-y: auto; ')
-                            self.tree_value_options_b = ui.ComboBox(title='Value options:', editable=False, text='',
-                                                                    placeholder_text='Value options:')
-                            self.tree_add_option_b = ui.Button(text='Add')
-                        with ui.VSplit(spacing=2,flex=0.0035,style='min-width: 100px; max-width: 100px;'):
+                    with ui.HSplit(spacing=2,padding=0):
+                        with ui.VSplit(spacing=2,padding=1) as self.form:
+                            with ui.HSplit(spacing=0,padding=1,style='max-height: 30px; min-height: 30px;'):
+                                ui.Label(text='Key:',style='min-width: 100px; max-width: 100px;')
+                                self.tree_key_b       = ui.LineEdit(title='Key:', text='')
+                            with ui.HSplit(spacing=0,padding=1):
+                                ui.Label(text='Value:',style='min-width: 100px; max-width: 100px;')
+                                self.tree_value_b     = Documentation_Editor('',False,False,True,style='border: 1px solid gray; min-height: 50px;min-width: 100px;overflow-y: auto; ')
+                            with ui.HSplit(spacing=0,padding=1,style='max-height: 30px; min-height: 30px;'):
+                                ui.Label(text='Value options:',style='min-width: 100px; max-width: 100px;align-content: stretch;')
+                                self.tree_value_options_b = ui.ComboBox(title='Value options:',
+                                                                        style='max-height: 30px; min-height: 30px;border: 0px solid gray;',
+                                                                        editable=False,
+                                                                        text='',
+                                                                        placeholder_text='Value options:')
+                            with ui.HSplit(spacing=0,padding=1,style='max-height: 30px; min-height: 30px;'):
+                                ui.Label(text='',style='min-width: 100px; max-width: 100px;align-content: stretch;')
+                                self.tree_add_option_b = ui.Button(text='Add',style='max-height: 25px; min-height: 25px;')
+                        with ui.VSplit(spacing=2,padding=0,flex=0.0035,style='min-width: 100px; max-width: 100px;'):
                             self.tree_submit_b      = ui.Button(text='Apply')
                             self.tree_new_b         = ui.Button(text='New')
                             self.file_path_b        = ui.Button(text='Browse')
@@ -451,10 +460,10 @@ class Step_Tree_Class(ui.Widget):
             with ui.VSplit(flex=0.6) as self.canvas_lay:
                 with ui.Layout(flex=0.03, style='min-height: 70px; max-height: 75px;'):
                     with ui.HSplit():
-                        with ui.GroupWidget(title='Add New Step',style='min-width: 500px;border: 2px solid purple;'):
+                        with ui.GroupWidget(title='Add New Step',style='min-width: 400px;border: 2px solid purple;'):
                             with ui.HSplit(spacing=2):
                                 self.tree_module_b = ui.ComboBox(title='Use Module:', editable=True,
-                                                                 style='min-width: 380px;border: 1px solid red;',
+                                                                 style='min-width: 280px;border: 1px solid red;',
                                                                  placeholder_text='Choose a Step Template',
                                                                  options=MODULES_TEMPLATES.keys())
                                 self.Help_b = ui.Button(text='About',style=' min-width: 80px;max-width: 80px;font-size: 100% ;')
@@ -2568,124 +2577,130 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         errs  = ''
         outs  = ''
         Error = ''
-        
-        if len(Project_dir) == 0:
-            Error = Error + '[Error]: No Project Directory\n'
-        
-        if len(conda_bin) > 0:
-            if self.ssh_client != None:
-                try:
-                    signal.alarm(5)
-                    self.sftp = self.ssh_client.open_sftp()
-                    listdir   = self.sftp.listdir(conda_bin)
-                    signal.alarm(0)
-                except:
-                    listdir   = []
-            else:
-                try:
-                    listdir   = os.listdir(conda_bin)
-                except:
-                    listdir   = []
-            if not (('conda' in listdir) and ('activate' in listdir)):
-                Error = Error + '[Error]: Your Conda Bin is incorrect\n[Error]: Make Sure the Programs: "conda" and "activate" are located within the Conda Bin Directory\n'
-        
-        if (self.ssh_client != None) and (len(conda_env)==0) and (len(Error))==0:
-            if len(conda_bin) > 0:
-                options = self.conda_env_options(conda_bin)
-            else:
-                options = self.conda_env_options('')
-            if len(options)>0:
-                if NeatSeq_Flow_Conda_env in options:
-                    conda_env = NeatSeq_Flow_Conda_env
-        
-        if len(NeatSeq_bin) > 0:
-            temp_command = ''
-            if len(conda_env) > 0:
-                # temp_command = 'bash  '
-                temp_command = temp_command + ' source '
-                if len(conda_bin) > 0:
-                    temp_command = temp_command + os.path.join(conda_bin, 'activate') + ' ' + conda_env + ';'
-                    temp_command = temp_command + 'export CONDA_BASE=$(' + os.path.join(conda_bin,
-                                                                                        'conda') + ' info --root) ;'
-                else:
-                    temp_command = temp_command + 'activate' + ' ' + conda_env + ';'
-                    temp_command = temp_command + 'export CONDA_BASE=$(conda  info --root); '
-            elif self.ssh_client == None:
-                if 'CONDA_PREFIX' in os.environ.keys():
-                    temp_command = temp_command + 'export CONDA_BASE=$(conda  info --root); '
-
-            if NeatSeq_bin.startswith(os.sep):
-                temp_command = temp_command + ' python ' + NeatSeq_bin
-            else:
-                temp_command = temp_command + ' ' + NeatSeq_bin
-
-            if len(sample_file) > 0:
-                temp_command = temp_command + ' -s ' + sample_file
-            else:
-                Error = Error + '[Error]: No Sample File\n'
-
-            if len(parameter_file) > 0:
-                temp_command = temp_command + ' -p ' + parameter_file
-            else:
-                Error = Error + '[Error]: No Parameter File\n'
-
-            if len(Project_dir) > 0:
-                temp_command = temp_command + ' -d ' + Project_dir
-            else:
-                Error = Error + '[Error]:No Project directory \n'
+        if self.Generating_scripts==0:
+            if len(Project_dir) == 0:
+                Error = Error + '[Error]: No Project Directory\n'
             
-            if self.sftp!= None:
-                try:
-                    logs_files = list(filter(lambda x: len(re.findall('log_[0-9]+.txt$',x))>0,
-                                      list(self.sftp.listdir(self.sftp.normalize(os.path.join(Project_dir,'logs'))))))
-                except:
-                    logs_files = []
-                    
-                if len(logs_files)>0:
-                    temp_command = temp_command + ' -r curr '
-                    
-            else:
-                if os.path.exists(os.path.join(Project_dir,'logs')):
-                    logs_files = list(filter(lambda x: len(re.findall('log_[0-9]+.txt$',x))>0,
-                                        os.listdir(os.path.join(Project_dir,'logs') )))
+            if len(conda_bin) > 0:
+                if self.ssh_client != None:
+                    try:
+                        signal.alarm(5)
+                        self.sftp = self.ssh_client.open_sftp()
+                        listdir   = self.sftp.listdir(conda_bin)
+                        signal.alarm(0)
+                    except:
+                        listdir   = []
+                else:
+                    try:
+                        listdir   = os.listdir(conda_bin)
+                    except:
+                        listdir   = []
+                if not (('conda' in listdir) and ('activate' in listdir)):
+                    Error = Error + '[Error]: Your Conda Bin is incorrect\n[Error]: Make Sure the Programs: "conda" and "activate" are located within the Conda Bin Directory\n'
+            
+            if (self.ssh_client != None) and (len(conda_env)==0) and (len(Error))==0:
+                if len(conda_bin) > 0:
+                    options = self.conda_env_options(conda_bin)
+                else:
+                    options = self.conda_env_options('')
+                if len(options)>0:
+                    if NeatSeq_Flow_Conda_env in options:
+                        conda_env = NeatSeq_Flow_Conda_env
+            
+            if len(NeatSeq_bin) > 0:
+                temp_command = ''
+                if len(conda_env) > 0:
+                    # temp_command = 'bash  '
+                    temp_command = temp_command + ' source '
+                    if len(conda_bin) > 0:
+                        temp_command = temp_command + os.path.join(conda_bin, 'activate') + ' ' + conda_env + ';'
+                        temp_command = temp_command + 'export CONDA_BASE=$(' + os.path.join(conda_bin,
+                                                                                            'conda') + ' info --root) ;'
+                    else:
+                        temp_command = temp_command + 'activate' + ' ' + conda_env + ';'
+                        temp_command = temp_command + 'export CONDA_BASE=$(conda  info --root); '
+                elif self.ssh_client == None:
+                    if 'CONDA_PREFIX' in os.environ.keys():
+                        temp_command = temp_command + 'export CONDA_BASE=$(conda  info --root); '
+
+                if NeatSeq_bin.startswith(os.sep):
+                    temp_command = temp_command + ' python ' + NeatSeq_bin
+                else:
+                    temp_command = temp_command + ' ' + NeatSeq_bin
+
+                if len(sample_file) > 0:
+                    temp_command = temp_command + ' -s ' + sample_file
+                else:
+                    Error = Error + '[Error]: No Sample File\n'
+
+                if len(parameter_file) > 0:
+                    temp_command = temp_command + ' -p ' + parameter_file
+                else:
+                    Error = Error + '[Error]: No Parameter File\n'
+
+                if len(Project_dir) > 0:
+                    temp_command = temp_command + ' -d ' + Project_dir
+                else:
+                    Error = Error + '[Error]:No Project directory \n'
+                
+                if self.sftp!= None:
+                    try:
+                        logs_files = list(filter(lambda x: len(re.findall('log_[0-9]+.txt$',x))>0,
+                                          list(self.sftp.listdir(self.sftp.normalize(os.path.join(Project_dir,'logs'))))))
+                    except:
+                        logs_files = []
+                        
                     if len(logs_files)>0:
                         temp_command = temp_command + ' -r curr '
+                        
+                else:
+                    if os.path.exists(os.path.join(Project_dir,'logs')):
+                        logs_files = list(filter(lambda x: len(re.findall('log_[0-9]+.txt$',x))>0,
+                                            os.listdir(os.path.join(Project_dir,'logs') )))
+                        if len(logs_files)>0:
+                            temp_command = temp_command + ' -r curr '
 
 
-            if len(Error) == 0:
-                err_flag = False
-                try:
-                    
-                    self.Run.set_Terminal(self.Terminal_string + '[Generating scripts]:  Generating...\n')
-                    if self.ssh_client!= None:
-                        [outs, errs , exit_status] = Popen_SSH(self.session,self.ssh_client,temp_command,shell=True).output()
-                        if exit_status!=0:
-                            err_flag = True
-                    else:
-                        Generating_proc = Popen(temp_command, stdout=PIPE, stderr=PIPE, shell=True,
-                                                universal_newlines=True , executable='/bin/bash')
-                        outs, errs = Generating_proc.communicate(timeout=25)
+                if len(Error) == 0:
+                    err_flag = False
+                    try:
+                        self.Run.set_Terminal(self.Terminal_string + '[Generating_scripts]:  Generating...\n')
+                        self.Running_Commands['Generating_scripts'] =  Run_command_in_thread(self.session,temp_command,self.ssh_client)
+                        self.Running_Commands['Generating_scripts'].Run()
+                        self.set_Generating_scripts(self.Generating_scripts+1)
+                    except:
+                        pass
+                        
+                        # self.Run.set_Terminal(self.Terminal_string + '[Generating scripts]:  Generating...\n')
+                        # if self.ssh_client!= None:
+                            # [outs, errs , exit_status] = Popen_SSH(self.session,self.ssh_client,temp_command,shell=True).output()
+                            # if exit_status!=0:
+                                # err_flag = True
+                        # else:
+                            # Generating_proc = Popen(temp_command, stdout=PIPE, stderr=PIPE, shell=True,
+                                                    # universal_newlines=True , executable='/bin/bash')
+                            # outs, errs = Generating_proc.communicate(timeout=25)
 
-                except :
-                    err_flag = True
-                    if self.ssh_client== None:
-                        Generating_proc.kill()
-                        outs, errs = Generating_proc.communicate()
+                    # except :
+                        # err_flag = True
+                        # if self.ssh_client== None:
+                            # Generating_proc.kill()
+                            # outs, errs = Generating_proc.communicate()
 
-                if len(errs) > 0:
-                    for line in errs.split('\n'):
-                        if len(line)>0:
-                            self.Terminal_string = self.Terminal_string + '[Generating scripts]:  ' + line + '\n'
-                if len(outs) > 0:
-                    for line in outs.split('\n'):
-                        if len(line)>0:
-                            self.Terminal_string = self.Terminal_string + '[Generating scripts]:  ' + line + '\n'
-                if err_flag:
-                    self.Terminal_string = self.Terminal_string + '[Generating scripts] : Finished with Error!! \n'
-                self.Run.set_Terminal(self.Terminal_string)
+                    # if len(errs) > 0:
+                        # for line in errs.split('\n'):
+                            # if len(line)>0:
+                                # self.Terminal_string = self.Terminal_string + '[Generating scripts]:  ' + line + '\n'
+                    # if len(outs) > 0:
+                        # for line in outs.split('\n'):
+                            # if len(line)>0:
+                                # self.Terminal_string = self.Terminal_string + '[Generating scripts]:  ' + line + '\n'
+                    # if err_flag:
+                        # self.Terminal_string = self.Terminal_string + '[Generating scripts] : Finished with Error!! \n'
+                    # self.Run.set_Terminal(self.Terminal_string)
 
-            else:
-                self.Run.set_Terminal(Error)
+                else:
+                    self.Run.set_Terminal(Error)
     
     def Search_Tags(self,Project_dir):
         import os,re
@@ -2710,8 +2725,6 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         import os
         from subprocess import Popen, PIPE, STDOUT, TimeoutExpired
         
-        # if len(Project_dir) == 0:
-            # Project_dir=os.getcwd()
         Error = ''
         temp_command = ''
             
@@ -2763,9 +2776,6 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         import os
         from subprocess import Popen, PIPE, STDOUT, TimeoutExpired
 
-        # if len(Project_dir) == 0:
-            # Project_dir=os.getcwd()
-
         Error = ''
         temp_command = ''
         if len(Project_dir) > 0:
@@ -2815,9 +2825,6 @@ class NeatSeq_Flow_GUI(app.PyComponent):
     def Locate_Failures_command(self,Project_dir):
         import os
         from subprocess import Popen, PIPE, STDOUT, TimeoutExpired
-
-        # if len(Project_dir) == 0:
-            # Project_dir=os.getcwd()
 
         Error = ''
         temp_command = ''
@@ -2869,10 +2876,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
     def Recovery_command(self,Project_dir):
         import os
         from subprocess import Popen, PIPE, STDOUT, TimeoutExpired
-    
-        # if len(Project_dir) == 0:
-            # Project_dir=os.getcwd()
-    
+        
         Error = ''
         temp_command = ''
         if len(Project_dir) > 0:
@@ -2938,9 +2942,6 @@ class NeatSeq_Flow_GUI(app.PyComponent):
 
         Error = ''
 
-        # if len(Project_dir) == 0:
-            # Project_dir=os.getcwd()
-
         parser = argparse.ArgumentParser(description='Neatseq-flow Monitor By Liron Levin ')
         parser.add_argument('-D', dest='directory',metavar="STR", type=str,default=Project_dir,
                             help='Neatseq-flow project directory ')
@@ -2979,7 +2980,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
     def change_value(self,obj,prop_name,value):
         obj._mutate(prop_name,value)
     
-    @event.reaction('Running_script','Kill_Run','Recovery','Locate_Failures')
+    @event.reaction('Running_script','Kill_Run','Recovery','Locate_Failures','Generating_scripts')
     def update_Terminal(self, *events):
         for ev in events:
             if ev.new_value>0:
@@ -3086,8 +3087,11 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                         self.Run.set_sample_file(self.samples_info.save_samples_file)
                         self.samples_info.set_title('Samples - '+os.path.basename(self.samples_info.save_samples_file[0][0]))
                         self.samples_info.set_save_samples_file([])
-                    except:
-                        pass
+                    except Exception as e: 
+                        if SERVE:
+                            self.send_massage.set_massage(str(e))
+                        else:
+                            dialite.fail('Saving Sample file Error', str(e))
     
     @event.reaction('samples_info.load_samples_file')
     def load_sample_file(self, *events):
@@ -3105,11 +3109,14 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                     else:
                         from neatseq_flow_gui.modules.parse_sample_data import parse_sample_file
                         samples_data = parse_sample_file(self.samples_info.load_samples_file[0][0])
-                except:
+                except Exception as e: 
+                    if SERVE:
+                        self.send_massage.set_massage(str(e))
+                    else:
+                        dialite.fail('Loading Sample file Error', str(e))
                     samples_data = []
                     self.samples_info.set_load_samples_file([])
-                    if not SERVE:
-                        dialite.fail('Load Error', 'Error loading sample file')
+
                 if len(samples_data) > 0:
                     self.update_samples_data(samples_data)
                     self.Run.set_sample_file(self.samples_info.load_samples_file)
@@ -3149,12 +3156,13 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                         step_data['Step'] = self.fix_order_dict(self.step_info.step2export)
                         yaml.dump(step_data['Step'], outfile, default_flow_style=False,width=float("inf"), indent=4)
 
-
-                except:
+                except Exception as e: 
+                    if SERVE:
+                        self.send_massage.set_massage(str(e))
+                    else:
+                        dialite.fail('Saving Step file Error', str(e))
                     err_flag=False
-                    if not SERVE:
-                        dialite.fail('Save Error', 'Error saving workflow file')
-                
+                    
                 if self.sftp!=None:
                     file_object.close()
             
@@ -3173,10 +3181,13 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                         file_object = open(file_name,'r')
                     Step_data   = yaml.load(file_object, yaml.SafeLoader)
                     file_object.close()
-                except:
+                except Exception as e: 
+                    if SERVE:
+                        self.send_massage.set_massage(str(e))
+                    else:
+                        dialite.fail('Loading Step file Error', str(e))
                     Step_data = OrderedDict()
-                    if not SERVE:
-                        dialite.fail('Load Error', 'Error loading Step file')
+                    
                 self.step_info.set_Load_step_file([])
                 if len(Step_data.keys()) > 0:
                     converter = OrderedDict()
@@ -3198,11 +3209,14 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                     else:
                         from neatseq_flow_gui.modules.parse_param_data import parse_param_file
                         param_data = parse_param_file(self.step_info.workflow_file[0][0])
-                except:
+                except Exception as e: 
+                    if SERVE:
+                        self.send_massage.set_massage(str(e))
+                    else:
+                        dialite.fail('Load WorkFlow Error', str(e))
                     param_data = []
                     self.step_info.set_workflow_file([])
-                    if not SERVE:
-                        dialite.fail('Load Error', 'Error loading workflow file')
+                        
                 if len(param_data) > 0:
 
                     if 'Step_params' in param_data.keys():
@@ -3263,11 +3277,13 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                         param_data['Step_params'] = self.fix_order_dict(self.step_info.Data)
                         yaml.dump(param_data, outfile, default_flow_style=False,width=float("inf"), indent=4)
 
-
-                except:
+                except Exception as e: 
+                    if SERVE:
+                        self.send_massage.set_massage(str(e))
+                    else:
+                        dialite.fail('Save WorkFlow Error', str(e))
                     err_flag=False
-                    if not SERVE:
-                        dialite.fail('Save Error', 'Error saving workflow file')
+                    
                 
                 if self.sftp!=None:
                     file_object.close()
@@ -3466,7 +3482,7 @@ class Popen_SSH(object):
                             break
                         if (time.time() - self.time) > self.timeout:
                             if self.session.status!=0:
-                                out_queue.put('\nTime Out\n')
+                                out_queue.put('\n [Error]: Time Out\n')
                             break
                     if self.ssh_session.exit_status_ready():
                         if (len(out)!=0) or (len(err)!=0) or (self.ssh_session.recv_ready()) or (self.ssh_session.recv_stderr_ready()):
@@ -3703,6 +3719,7 @@ class Run_NeatSeq_Flow_GUI(app.PyComponent):
         super().init()
         import os , datetime
         ssh_client = None
+        self.UserName = ''
         Users={}
         if (SMTPserver!=None) and (SSH_HOST==None) and (USERSFILE!=None):
             try:
@@ -3805,6 +3822,7 @@ class Run_NeatSeq_Flow_GUI(app.PyComponent):
                         self.redirect.go()
                         return
                     path = ''
+            self.UserName = ARG1
             self.session.set_cookie('ARG1', None)
             self.session.set_cookie('ARG2', None)
             self.session.set_cookie('ARG3', None)
@@ -3883,6 +3901,42 @@ def set_gmail_connection():
     #SMTPserver.quit()
     return [SMTPserver,password,sender_email]
     
+class Manage_Participants(flx.Component):
+    
+    def init(self,app_name,LOG_DIR=None,max_count=30,refreshrate=1):
+        self.app_name    = app_name
+        self.refreshrate = refreshrate
+        self.LOG_DIR     = LOG_DIR
+        self.names       = []
+        self.count       = 0
+        self.max_count   = max_count
+        self.update_participants()
+        
+    def update_participants(self):
+        import datetime
+        # Query the app manager to see who's Logedin 
+        sessions    = flx.manager.get_connections(self.app_name)
+        names       = [s.app.UserName for s in sessions]
+        sessions_id = [s.id for s in sessions]
+        if self.names != names:
+            self.names = names
+            self.count =self.max_count
+            print(names)
+            
+        if (self.LOG_DIR!=None) and (self.count==self.max_count):
+            if (os.path.exists(self.LOG_DIR)):
+                self.count = 0
+                date = datetime.datetime.now()
+                try:
+                    with open(os.path.join(self.LOG_DIR,date.strftime("%x").replace('/','.')), 'a') as file:
+                        for name in zip(names,sessions_id):
+                            file.write(name[0]+'\t'+name[1]+'\t'+date.strftime("%x")+'\t'+date.strftime("%X")+'\n')
+                except:
+                    pass
+        self.count = self.count + 1
+        del sessions
+        asyncio.get_event_loop().call_later(self.refreshrate, self.update_participants)
+
 if __name__ == '__main__':
     #getting arguments from the user 
     import argparse
@@ -3927,8 +3981,13 @@ if __name__ == '__main__':
                                 If --SSH_HOST is set, the Path needs to be in the remote host.
                         ''')
     parser.add_argument('--CONDA_BIN',dest='CONDA_BIN',metavar="CHAR",type=str,default='',
-                        help='''A Path to a the CONDA bin location. 
+                        help='''A path to a the CONDA bin location. 
                                 If --SSH_HOST is set, the Path needs to be in the remote host.
+                        ''')
+    parser.add_argument('--LOG_DIR',dest='LOG_DIR',metavar="CHAR",type=str,default='',
+                        help='''A path to a directory to save log files about users statistics. 
+                                Only woks If --Server is set.
+                                In any way the path needs to be at the local host.
                         ''')
     args          = parser.parse_args()
     SERVE         = args.Server
@@ -3944,6 +4003,14 @@ if __name__ == '__main__':
     if args.Server:
         import socket 
         from tornado.web import create_signed_value
+        LOG_DIR = None
+        if args.LOG_DIR!='':
+            if (os.path.exists(args.LOG_DIR)) and (os.path.isdir(args.LOG_DIR)):
+                LOG_DIR = args.LOG_DIR
+            else:
+                print('The LOG_DIR you entered does not exists or it is not a directory')
+                sys.exit(1)
+        
         flx.config.cookie_secret = get_random_string()
         if args.HOST!=None:
             Host = args.HOST
@@ -4015,6 +4082,7 @@ if __name__ == '__main__':
 
         app.create_server(host=Host,port=args.PORT)
         m.serve('')
+        Manage_Participants(m.name,LOG_DIR)
         keep_runing = True
         import signal
         while keep_runing:

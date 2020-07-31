@@ -457,6 +457,7 @@ class nsfgm(flx.PyComponent):
         try:
             # read log file to a Data-Frame
             if read_from_disk:
+                assert  len(runlog_file)!=0 , 'No log File'
                 if ssh_client!=None:
                     import paramiko
                     transport  = ssh_client.get_transport()
@@ -638,7 +639,7 @@ class nsfgm(flx.PyComponent):
                 self.items["#ERRORs"]=logpiv["Status"].values
                 self.rowmode=list(map(lambda x,y: 2 if x>0 else y, self.items["#ERRORs"],self.rowmode))
 
-        except : #IOError: #ValueError: #
+        except Exception as e: #IOError: #ValueError: #
             if Instance==True:
                 self.items=pd.DataFrame(columns=["Steps","Progress","Started","Finished","#Started","#Finished","#Running"])
             else:
