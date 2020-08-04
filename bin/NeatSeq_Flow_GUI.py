@@ -425,20 +425,20 @@ class Step_Tree_Class(ui.Widget):
                     with ui.HSplit(spacing=2,padding=0):
                         with ui.VSplit(spacing=2,padding=1) as self.form:
                             with ui.HSplit(spacing=0,padding=1,style='max-height: 30px; min-height: 30px;'):
-                                ui.Label(text='Key:',style='min-width: 100px; max-width: 100px;')
+                                ui.Label(text='Key:',style='min-width: 110px; max-width: 110px;')
                                 self.tree_key_b       = ui.LineEdit(title='Key:', text='')
                             with ui.HSplit(spacing=0,padding=1):
-                                ui.Label(text='Value:',style='min-width: 100px; max-width: 100px;')
+                                ui.Label(text='Value:',style='min-width: 110px; max-width: 110px;')
                                 self.tree_value_b     = Documentation_Editor('',False,False,True,style='border: 1px solid gray; min-height: 50px;min-width: 100px;overflow-y: auto; ')
                             with ui.HSplit(spacing=0,padding=1,style='max-height: 30px; min-height: 30px;'):
-                                ui.Label(text='Value options:',style='min-width: 100px; max-width: 100px;align-content: stretch;')
+                                ui.Label(text='Value options: ',style='min-width: 110px; max-width: 110px;align-content: stretch;')
                                 self.tree_value_options_b = ui.ComboBox(title='Value options:',
-                                                                        style='max-height: 30px; min-height: 30px;border: 0px solid gray;',
+                                                                        style='max-height: 30px; min-height: 30px;border: 1px solid gray;',
                                                                         editable=False,
                                                                         text='',
                                                                         placeholder_text='Value options:')
                             with ui.HSplit(spacing=0,padding=1,style='max-height: 30px; min-height: 30px;'):
-                                ui.Label(text='',style='min-width: 100px; max-width: 100px;align-content: stretch;')
+                                ui.Label(text='',style='min-width: 110px; max-width: 110px;align-content: stretch;')
                                 self.tree_add_option_b = ui.Button(text='Add',style='max-height: 25px; min-height: 25px;')
                         with ui.VSplit(spacing=2,padding=0,flex=0.0035,style='min-width: 100px; max-width: 100px;'):
                             self.tree_submit_b      = ui.Button(text='Apply')
@@ -3930,7 +3930,8 @@ class Manage_Participants(flx.Component):
                 try:
                     with open(os.path.join(self.LOG_DIR,date.strftime("%x").replace('/','.')), 'a') as file:
                         for name in zip(names,sessions_id):
-                            file.write(name[0]+'\t'+name[1]+'\t'+date.strftime("%x")+'\t'+date.strftime("%X")+'\n')
+                            if name[0]!='':
+                                file.write(name[0]+'\t'+name[1]+'\t'+date.strftime("%x")+'\t'+date.strftime("%X")+'\n')
                 except:
                     pass
         self.count = self.count + 1
