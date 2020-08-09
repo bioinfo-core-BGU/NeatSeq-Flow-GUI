@@ -2606,18 +2606,24 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 if len(options)>0:
                     if NeatSeq_Flow_Conda_env in options:
                         conda_env = NeatSeq_Flow_Conda_env
-            
+                        self.Run.set_Terminal(self.Terminal_string + '[Note]: The Conda Environment '+ NeatSeq_Flow_Conda_env+' Was Detected and will be used to Generated Scripts\n[Note]:If You want to use a different NeatSeq Flow Environment, Choose an Environment from the "Conda environment to use" Drop-Down Menu\n')
+                    else:
+                        self.Run.set_Terminal(self.Terminal_string + '[Note]: A NeatSeq-Flow Conda Environment Could NOT be Detected!!! \n[Note]: You Can Look for a NeatSeq Flow Environment from the "Conda environment to use" Drop-Down Menu\n')
+                        
             if len(NeatSeq_bin) > 0:
                 temp_command = ''
                 if len(conda_env) > 0:
                     # temp_command = 'bash  '
-                    temp_command = temp_command + ' source '
+                    # temp_command = temp_command + 'source '
                     if len(conda_bin) > 0:
+                        temp_command = temp_command + 'source '
+                        temp_command = temp_command + os.path.join(conda_bin, 'deactivate')+';;source '
                         temp_command = temp_command + os.path.join(conda_bin, 'activate') + ' ' + conda_env + ';'
                         temp_command = temp_command + 'export CONDA_BASE=$(' + os.path.join(conda_bin,
                                                                                             'conda') + ' info --root) ;'
                     else:
-                        temp_command = temp_command + 'activate' + ' ' + conda_env + ';'
+                        temp_command = temp_command + 'source activate '+ conda_env + ';;'
+                        temp_command = temp_command + 'source activate '+ conda_env + ';;'
                         temp_command = temp_command + 'export CONDA_BASE=$(conda  info --root); '
                 elif self.ssh_client == None:
                     if 'CONDA_PREFIX' in os.environ.keys():
@@ -3012,7 +3018,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                         Title = Title  + errs
 
                     if Task_End:
-                        Title = Title + ' Finished!!'
+                        Title = Title + '\n<p style="color:CadetBlue;"><b>The Task has Finished [ Look for Successful Run or Possible Errors ]</b></p>\n'
 
                     if len(Title) > 0:
 
@@ -3423,7 +3429,7 @@ class Popen_SSH(object):
                         self.ssh_session.invoke_shell()
                         self.Done = False
                         self.ssh_session.send("stty -echo\n")
-                        command = "bash ; " + command + "; echo " + self.EFC
+                        command = "bash;" + command + "; echo " + self.EFC
                         command = command.replace(';','\n')
                         for line in command.split('\n'):
                             self.ssh_session.send(line+'\n')
@@ -3442,6 +3448,9 @@ class Popen_SSH(object):
             
     def output(self,out_queue=None,err_queue=None):
         import time
+        import string
+        printable = set(string.printable)
+        
         keep_running = False
         if not self.err_flag:
             try:
@@ -3450,6 +3459,7 @@ class Popen_SSH(object):
                     err = ''
                     if self.ssh_session.recv_ready() or keep_running:
                         out = self.ssh_session.recv(self.nbytes).decode('utf-8')
+                        out = ''.join(filter(lambda x: x in printable, out))
                         self.stdout_data.extend(out)
                         if (out_queue!=None):
                             if self.shell:
@@ -3457,6 +3467,7 @@ class Popen_SSH(object):
                                     if len(out.split(self.EFC))==2:
                                         if self.session.status!=0:
                                             out_queue.put(out.split(self.EFC)[1])
+                                            
                                     else:
                                         if self.session.status!=0:
                                             out_queue.put(out)
@@ -3472,6 +3483,7 @@ class Popen_SSH(object):
                                     out_queue.put(out)
                     if self.ssh_session.recv_stderr_ready() or keep_running:
                         err = self.ssh_session.recv_stderr(self.nbytes).decode('utf-8')
+                        err = ''.join(filter(lambda x: x in printable, err))
                         self.stderr_data.extend(err)
                         if err_queue!=None:
                             if self.shell:
@@ -3505,7 +3517,7 @@ class Popen_SSH(object):
                     self.stderr_data = ''.join(self.stderr_data)
                 self.Done = True
             except Exception as e: 
-                # print(str(e))
+                print(str(e))
                 self.err_flag = True
                 self.Done = True
             if self.err_flag:
