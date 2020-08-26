@@ -10,6 +10,7 @@ __affiliation__ = "Bioinformatics Core Unit, NIBN, Ben Gurion University"
 
 
 from flexx import app, event, ui, flx 
+from pscript import RawJS
 import os,sys,dialite
 from collections import OrderedDict
 import asyncio
@@ -97,7 +98,7 @@ Here you can document your workflow and add notes.
 html_cite              = '''
     <p class=MsoNormal dir=LTR style='color:CadetBlue;margin-top:0cm;margin-bottom:0cm;margin-bottom:.0000pt;
     text-align:left;line-height:normal;direction:ltr;unicode-bidi:embed'><b>NeatSeq-Flow
-    was Created by the Bioinformatics Core Unit at the Ben Gurion University, Israel</b><br>
+    was Created by the Bioinformatics Core Facility at the Ben Gurion University, Israel</b><br>
     <span style='font-size:10.0pt'>If you are using NeatSeq-Flow, please cite:</span></p>
 
     <p class=MsoNormal dir=LTR style='margin-top:0cm;margin-right:0cm;margin-bottom:
@@ -113,7 +114,34 @@ html_cite              = '''
     doi: https://doi.org/10.1101/173005</span></p>
       '''
 
+TOOLTIP                = True
 
+HELP                   = {'login'             :'Click to Log-in',
+                          
+                          'order_steps'       :'Click to Re-Order the Steps in the Steps Tree to their Hierarchical Order at the Work-Flow',
+                          'step_dropdown'     :'Choose a Step Template to be Added to the Work-Flow.',
+                          'about'             :'Select a Template Step at the Drop-Down Menu on the Left and Click Here to See Information About it',
+                          'add_step'          :'Select a Template Step at the Drop-Down Menu on the Left and Click Here to Add it to the Work-Flow',
+                          'load_step'         :'Click to Choose a Step File to be Added to the Work-Flow',
+                          'color_steps_by'    :'Choose How to Color the Steps in the Work-Flow',
+                          'load_workflow'     :'Click to Choose a Work-Flow Parameter File to be Loaded',
+                          'save_workflow'     :'Click to Choose a Location and a File Name to Save The Work-Flow as a Parameter File',
+                          'apply'             :'Click to Set the Values Entered/Changed in the Step Editing Panel',
+                          'new'               :'Click to Create a New Sub Option. Make Sure You select a Field in the Tree Options Below',
+                          'browse'            :'Click to Choose a File Path to Add to the Value Field',
+                          'duplicate'         :'Click to Duplicate the Selected Field in the Tree Options Below. It is Possible to Duplicate a Step by Selecting the Step`s Name',
+                          'remove'            :'Click to Remove the Selected Field in the Tree Options Below. It is Possible to Remove a Step by Selecting the Step`s Name',
+                          'export'            :'Click to Export a Selected Step to a File. Select the Step`s Name You Want to Export in the Tree Options Below',
+                          'options_dropdown'  :'Choose an Option that can be Added to the Option Value Field. The Options Depend on the Selected Field in the Tree Options Below',
+                          'add'               :'Click to Add the Option Selected at the Above Drop-Down Menu to the Value Field',
+                          
+                          'load_sample_file'  :'Click to Choose a Sample File to be Loaded',
+                          'save_sample_file'  :'Click to Choose a Location and a File Name to Save The Sample File',
+                          'select_s_files'    :'Click to Choose and Add Sample Level Files',
+                          'select_p_files'    :'Click to Choose and Add Project Level Files',
+                          
+                          'cite'              :'Click to See How to Cite NeatSeq-Flow'
+                         }
 # Associate CodeMirror's assets with this module so that Flexx will load
 # them when (things from) this module is used.
 
@@ -136,6 +164,146 @@ except :
     flx.assets.associate_asset(__name__, base_url + 'addon/edit/matchbrackets.js')
     flx.assets.associate_asset(__name__, base_url + 'addon/edit/continuelist.js')
 
+try:
+    flx.assets.associate_asset(__name__,"https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js")
+    flx.assets.associate_asset(__name__,"https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js")
+    #flx.assets.associate_asset(__name__,"https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css")
+except:
+    TOOLTIP = False
+
+class Add_Tooltip(app.JsComponent):
+    CSS = '''
+                 
+    .tooltip{position:absolute;
+            z-index:1070;
+            display:block;
+            font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
+            font-style:normal;
+            font-weight:400;
+            line-height:1.42857143;
+            line-break:auto;
+            text-align:left;
+            text-align:start;
+            text-decoration:none;
+            text-shadow:none;
+            text-transform:none;
+            letter-spacing:normal;
+            word-break:normal;
+            word-spacing:normal;
+            word-wrap:normal;
+            white-space:normal;
+            font-size:18px;
+            filter:alpha(opacity=0);
+            opacity:0}.tooltip.in{
+            filter:alpha(opacity=90);
+            opacity:.9
+            }
+    .tooltip.top{
+            padding:5px 0;
+            margin-top:-3px
+            }
+    .tooltip.right{
+            padding:0 5px;
+            margin-left:3px
+            }
+    .tooltip.bottom{
+            padding:5px 0;
+            margin-top:3px
+            }
+    .tooltip.left{
+            padding:0 5px;
+            margin-left:-3px
+            }
+    .tooltip.top .tooltip-arrow{
+            bottom:0;
+            left:50%;
+            margin-left:-5px;
+            border-width:5px 5px 0;
+            border-top-color:#000
+            }
+    .tooltip.top-left .tooltip-arrow{
+            right:5px;
+            bottom:0;
+            margin-bottom:-5px;
+            border-width:5px 5px 0;
+            border-top-color:#000
+            }
+    .tooltip.top-right .tooltip-arrow{
+            bottom:0;
+            left:5px;
+            margin-bottom:-5px;
+            border-width:5px 5px 0;
+            border-top-color:#000
+            }
+    .tooltip.right .tooltip-arrow{
+            top:50%;
+            left:0;
+            margin-top:-5px;
+            border-width:5px 5px 5px 0;
+            border-right-color:#000
+            }
+    .tooltip.left .tooltip-arrow{
+            top:50%;
+            right:0;
+            margin-top:-5px;
+            border-width:5px 0 5px 5px;
+            border-left-color:#000
+            }
+    .tooltip.bottom .tooltip-arrow{
+            top:0;
+            left:50%;
+            margin-left:-5px;
+            border-width:0 5px 5px;
+            border-bottom-color:#000
+            }
+    .tooltip.bottom-left .tooltip-arrow{
+            top:0;
+            right:5px;
+            margin-top:-5px;
+            border-width:0 5px 5px;
+            border-bottom-color:#000
+            }
+    .tooltip.bottom-right .tooltip-arrow{
+            top:0;
+            left:5px;
+            margin-top:-5px;
+            border-width:0 5px 5px;
+            border-bottom-color:#000
+            }
+    .tooltip-inner{
+            max-width:200px;
+            padding:3px 8px;
+            color:#fff;
+            text-align:center;
+            background-color:#000;
+            border: 2px solid orange;
+            border-radius:4px;
+            opacity:1
+            }
+    .tooltip-arrow{
+            position:absolute;
+            width:0;
+            height:0;
+            border-color:transparent;
+            border-style:solid
+            }
+        
+    '''
+    def init(self,element,help,placement='auto'):
+        if TOOLTIP:
+            # global window
+            RawJS('''
+                    $(document).ready(function(){
+                    $('[data-toggle="tooltip"]').tooltip({html: true});
+                    });
+                    ''')
+            node  = element.node
+            node.setAttribute('data-container',"body")
+            node.setAttribute('data-toggle',"tooltip")
+            node.setAttribute('data-placement',placement)
+            node.setAttribute('title',help)
+        else:
+            pass
 
 class Graphical_panel(ui.CanvasWidget):
     Selected_step    = event.StringProp('', settable=True)
@@ -419,6 +587,7 @@ class Step_Tree_Class(ui.Widget):
     
     def init(self):
         self.current_selected = None
+        
         with ui.HSplit() as self.main_lay:
             with ui.VSplit(flex=0.25) as self.tree_lay:
                 with ui.GroupWidget(flex=0.05,title='Step Editing Panel'):
@@ -437,9 +606,11 @@ class Step_Tree_Class(ui.Widget):
                                                                         editable=False,
                                                                         text='',
                                                                         placeholder_text='Value options:')
+                                Add_Tooltip(self.tree_value_options_b,HELP['options_dropdown'],'right')
                             with ui.HSplit(spacing=0,padding=1,style='max-height: 30px; min-height: 30px;'):
                                 ui.Label(text='',style='min-width: 110px; max-width: 110px;align-content: stretch;')
                                 self.tree_add_option_b = ui.Button(text='Add',style='max-height: 25px; min-height: 25px;')
+                                Add_Tooltip(self.tree_add_option_b,HELP['add'],'right')
                         with ui.VSplit(spacing=2,padding=0,flex=0.0035,style='min-width: 100px; max-width: 100px;'):
                             self.tree_submit_b      = ui.Button(text='Apply')
                             self.tree_new_b         = ui.Button(text='New')
@@ -447,12 +618,18 @@ class Step_Tree_Class(ui.Widget):
                             self.tree_duplicate_b   = ui.Button(text='Duplicate')
                             self.tree_remove_b      = ui.Button(text='Remove')
                             self.tree_export_b      = ui.Button(text='Export Step')
-
+                            Add_Tooltip(self.tree_submit_b,HELP['apply'],'right')
+                            Add_Tooltip(self.tree_new_b,HELP['new'],'right')
+                            Add_Tooltip(self.file_path_b,HELP['browse'],'right')
+                            Add_Tooltip(self.tree_duplicate_b,HELP['duplicate'],'right')
+                            Add_Tooltip(self.tree_remove_b,HELP['remove'],'right')
+                            Add_Tooltip(self.tree_export_b,HELP['export'],'right')
                 self.tree           = ui.TreeWidget(flex=0.1, max_selected=1)
                 self.tree.text      = 'Top_level'
                 self.Order_Steps_b  = ui.Button(text='Order Steps',style='font-size: 80%;')
                 self.info_lable     = ui.Label(text='Help box:',style='max-height: 20px; min-height: 20px;')
                 self.info           = Documentation_Editor(DEFAULT_HELP_BOX_TEXT,True,False,True,flex=0.05,style='border: 1px solid red;min-height: 50px;min-width: 100px; ')
+                Add_Tooltip(self.Order_Steps_b,HELP['order_steps'],'right')
                 self.info_lable.set_capture_mouse(2)
                 self.info.set_capture_mouse(2)
                 self.main_lay.set_capture_mouse(2)
@@ -466,9 +643,13 @@ class Step_Tree_Class(ui.Widget):
                                                                  style='min-width: 280px;border: 1px solid red;',
                                                                  placeholder_text='Choose a Step Template',
                                                                  options=MODULES_TEMPLATES.keys())
+                                Add_Tooltip(self.tree_module_b,HELP['step_dropdown'],'top')
                                 self.Help_b = ui.Button(text='About',style=' min-width: 80px;max-width: 80px;font-size: 100% ;')
+                                Add_Tooltip(self.Help_b,HELP['about'],'bottom')
                                 self.tree_create_new_step_b = ui.Button(text='Add',style=' min-width: 80px;max-width: 80px;')
+                                Add_Tooltip(self.tree_create_new_step_b,HELP['add_step'],'bottom')
                                 self.tree_Load_step_from_file_b = ui.Button(text='Load Step From File',style=' min-width: 160px;max-width: 160px;')
+                                Add_Tooltip(self.tree_Load_step_from_file_b,HELP['load_step'],'bottom')
                         with ui.GroupWidget(title='Color Steps By',style='border: 2px solid pink;'):
                             with ui.HSplit():
                                 self.Color_by_b = ui.ComboBox(title='Color by:', editable=False,
@@ -476,9 +657,12 @@ class Step_Tree_Class(ui.Widget):
                                                                  placeholder_text='Color by:',
                                                                  selected_index=0,
                                                                  options=list(map(lambda x: x.capitalize(),COLOR_BY)) )
+                                Add_Tooltip(self.Color_by_b,HELP['color_steps_by'],'top')
                         with ui.VSplit(spacing=2):
                             self.tree_Load_WorkFlow_b = ui.Button(text='Load WorkFlow',style='max-height: 30px; max-width: 150px;')
                             self.tree_save_WorkFlow_b = ui.Button(text='Save WorkFlow',style='max-height: 30px; max-width: 150px;')
+                            Add_Tooltip(self.tree_Load_WorkFlow_b,HELP['load_workflow'],'left')
+                            Add_Tooltip(self.tree_save_WorkFlow_b,HELP['save_workflow'],'left')
                 self.Graphical_panel = Graphical_panel(flex=0.5, style='min-height:600px; overflow-y: auto; overflow-x: auto;')
                 with self.tree:
                     self.create_tree(self.Graphical_panel.Steps_Data)
@@ -1794,24 +1978,28 @@ class File_Browser(flx.GroupWidget):
     New_Dir       = event.StringProp('', settable=True)
     #main program
     def init(self,base_path,upper_panel=True,show_size=True):
+        self._legend.style.fontSize = 'xx-large'
         self.Upper_Panel       = upper_panel
         self.Show_Size         = show_size
-        self.New_Directory_str = 'New Directory'
+        self.New_Directory_str = 'Create New Directory'
         self.Parent_Dir_str    = '..'
         self.Path_Label_str    = 'Enter Path'
         self.set_Path(base_path)
-        with ui.VFix():
+        with ui.VFix(spacing=10):
             if self.Upper_Panel:
                 with ui.HSplit(style='max-height: 30px;'):
                     self.Parent_Dir        = ui.Button(text=self.Parent_Dir_str,style='max-width: 30px;')
                     self.Path_Label        = ui.LineEdit(text=self.Path, placeholder_text = self.Path_Label_str,disabled=LOCK_USER_DIR)
-                    self.New_Dir_Button    = ui.Button(text=self.New_Directory_str,style='max-width: 150px;')
-                    self.New_Dir_Name_Edit = ui.LineEdit(style='max-height: 30px;',disabled=False)
+                    self.New_Dir_Button    = ui.Button(text=self.New_Directory_str,style='max-width: 200px;')
+                    self.New_Dir_Name_Edit = ui.LineEdit(placeholder_text = 'Enter New Directory Name',style='max-height: 30px;max-width: 250px;',disabled=False)
                 
             with flx.Layout(style='border: 0px solid gray; overflow-y:scroll;') as self.Browser:
                 with ui.HSplit(style='background: white; border: 0px solid gray;') as self.Data:
                     self.set_update(True)
-            self.File_Name_Edit = ui.LineEdit(style='max-height: 30px;',disabled=True)
+            with ui.HSplit(style='max-height: 30px;'):
+                self.File_Name_title = ui.Label(text='File Name:',style='font-size: 120%;max-width: 100px;color:red;')
+                self.File_Name_Edit  = ui.LineEdit(placeholder_text = 'Enter a File Name to Save',style='border: 2px solid red;color:red;',disabled=True)
+            self.File_Name_title.apply_style('visibility: hidden;')
             self.File_Name_Edit.apply_style('visibility: hidden;')
             if self.Browser_Type['select_type']=='Save':
                 self.File_Name_Edit.set_disabled(False)
@@ -1895,9 +2083,11 @@ class File_Browser(flx.GroupWidget):
         if self.Browser_Type['select_type']=='Save':
             self.File_Name_Edit.set_disabled(False)
             self.File_Name_Edit.apply_style('visibility: visible;')
+            self.File_Name_title.apply_style('visibility: visible;')
         else:
             self.File_Name_Edit.set_disabled(True)
             self.File_Name_Edit.apply_style('visibility: hidden;')
+            self.File_Name_title.apply_style('visibility: hidden;')
         if self.Browser_Type['select_type']=='Open':
             if self.Browser_Type['select_style']=='Single':
                 self.OK.set_text('Open')
@@ -2167,7 +2357,6 @@ def Reconnect_SSH(ssh_client):
     
 class NeatSeq_Flow_GUI(app.PyComponent):
     CSS = """
-
         .flx-LineEdit {
             border: 2px solid #9d9;
             border-radius: 5px;
@@ -2308,7 +2497,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
             try:
                 from stat import S_ISDIR, S_ISREG
                 self.sftp = self.ssh_client.open_sftp()
-                # Test_sftp_alive(self.ssh_client)
+                Test_sftp_alive(self.ssh_client)
             except:
                 self.sftp = None
         else:
@@ -2335,7 +2524,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                                 self.monitor = Monitor_GUI.Monitor_GUI(path)
                     self.Help = ui.IFrame(url=Base_Help_URL,
                                           title='Help')
-                    
+                
                 self.label = ui.Label(text='NeatSeq-Flow Graphical User Interface By Liron Levin',
                                       style='padding-left: 40px; background: #e8eaff; min-height: 15px; font-size:15px; transition: all 0.5s;')
                 self.label.set_capture_mouse(2)
@@ -2343,7 +2532,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 self.TabLayout.set_capture_mouse(2)
                 self.TabLayout2.set_capture_mouse(2)
                 self.Terminal_string = ''
-                
+                Add_Tooltip(self.label,HELP['cite'])
             with  ui.Widget(flex=1) as self.Browser_W:
                 self.Browser         = Run_File_Browser(path,self.ssh_client)
             if (WOKFLOW_DIR != None) and (SERVE):
@@ -2744,7 +2933,8 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                     fname    = '00.workflow.commands.sh'
                 try:
                     if fname in self.sftp.listdir( self.sftp.normalize(dname) ):
-                        temp_command = 'bash ' + os.path.join(self.sftp.normalize(dname),fname)
+                        temp_command = temp_command + 'source deactivate ;;'
+                        temp_command = temp_command + 'bash ' + os.path.join(self.sftp.normalize(dname),fname)
                 except:
                         Error = Error + 'Error:\n You first need to generate the scripts \n'
             else:
@@ -2753,7 +2943,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 else:
                     fname = os.path.join(Project_dir,'scripts', '00.workflow.commands.sh')
                 if os.path.isfile(fname):
-                    temp_command = 'bash ' + fname
+                    temp_command = temp_command + 'bash ' + fname
                 else:
                     Error = Error + 'Error:\n You first need to generate the scripts \n'
         else:
@@ -2789,7 +2979,8 @@ class NeatSeq_Flow_GUI(app.PyComponent):
             dname = os.path.join(Project_dir,'scripts')
             if self.sftp!= None:
                 if fname in self.sftp.listdir( self.sftp.normalize(dname) ):
-                    temp_command = 'bash ' + os.path.join(self.sftp.normalize(dname),fname)
+                    temp_command = temp_command + 'source deactivate ;;'
+                    temp_command = temp_command + 'bash ' + os.path.join(self.sftp.normalize(dname),fname)
                 else:
                     Error = Error + 'Error:\n You first need to generate and run the scripts \n'
             else:
@@ -2839,7 +3030,8 @@ class NeatSeq_Flow_GUI(app.PyComponent):
             dname = os.path.join(Project_dir,'scripts')
             if self.sftp!= None:
                 if fname in self.sftp.listdir( self.sftp.normalize(dname) ):
-                    temp_command = '. ' + os.path.join(self.sftp.normalize(dname),fname) + ' ; recover_run '
+                    temp_command = temp_command + 'source deactivate ;;'
+                    temp_command = temp_command + '. ' + os.path.join(self.sftp.normalize(dname),fname) + ' ; recover_run '
                 else:
                     Error = Error + 'Error:\n You first need to generate and run the scripts \n'
             else:
@@ -2892,7 +3084,8 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 if fname in self.sftp.listdir( self.sftp.normalize(dname) ):
                     fname = 'AA.Recovery_script.sh'
                     if fname in self.sftp.listdir( self.sftp.normalize(dname) ):
-                        temp_command = 'bash ' + os.path.join(self.sftp.normalize(dname),fname)
+                        temp_command = temp_command + 'source deactivate ;;'
+                        temp_command = temp_command + 'bash ' + os.path.join(self.sftp.normalize(dname),fname)
                     else:
                         Error = Error + 'Error:\n You first need to "Locate Failures" \n'
                 else:
@@ -3068,40 +3261,45 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         for ev in events:
             if len(self.samples_info.save_samples_file) > 0:
                 if len(self.samples_info.samples_data.keys()) > 0:
-                    try:
-                        if self.sftp!=None:
-                            sample_file = self.sftp.open(self.samples_info.save_samples_file[0][0],mode='w')
-                        else:
-                            sample_file = open(self.samples_info.save_samples_file[0][0], 'w')
-                        sample_file.write('Title\t' + self.samples_info.samples_data.setdefault("Title", "Untitled") + '\n')
-                        sample_file.write('\n')
-                        if "project_data" in self.samples_info.samples_data.keys():
-                            sample_file.write('#Type\tPath' + '\n')
-                            for project_types in self.samples_info.samples_data["project_data"].keys():
-                                for project_path in self.samples_info.samples_data["project_data"][project_types]:
-                                    sample_file.write(project_types + '\t' + project_path + '\n')
-                        sample_file.write('\n')
-                        sample_file.write('#SampleID\tType\tPath' + '\n')
-                        for sample_name in self.samples_info.samples_data.keys():
-                            if sample_name not in ['project_data', 'Title']:
-                                for sample_types in self.samples_info.samples_data[sample_name].keys():
-                                    for sample_path in self.samples_info.samples_data[sample_name][sample_types]:
-                                        if sample_path=='':
-                                            sample_path='""'
-                                        sample_file.write(sample_name + '\t' + sample_types + '\t' + sample_path + '\n')
-                        sample_file.close()
-                        self.Run.set_sample_file(self.samples_info.save_samples_file)
-                        self.samples_info.set_title('Samples - '+os.path.basename(self.samples_info.save_samples_file[0][0]))
-                        self.samples_info.set_save_samples_file([])
-                    except Exception as e: 
+                    if self.samples_info.save_samples_file[0][0].endswith(os.sep):
                         if SERVE:
-                            self.send_massage.set_massage(str(e))
+                            self.send_massage.set_massage('[Saving Sample file Error]: No File Name Was Identified')
                         else:
-                            dialite.fail('Saving Sample file Error', str(e))
+                            dialite.fail('Saving Sample file Error','No File Name Was Identified' )
+                    else:
+                        try:
+                            if self.sftp!=None:
+                                sample_file = self.sftp.open(self.samples_info.save_samples_file[0][0],mode='w')
+                            else:
+                                sample_file = open(self.samples_info.save_samples_file[0][0], 'w')
+                            sample_file.write('Title\t' + self.samples_info.samples_data.setdefault("Title", "Untitled") + '\n')
+                            sample_file.write('\n')
+                            if "project_data" in self.samples_info.samples_data.keys():
+                                sample_file.write('#Type\tPath' + '\n')
+                                for project_types in self.samples_info.samples_data["project_data"].keys():
+                                    for project_path in self.samples_info.samples_data["project_data"][project_types]:
+                                        sample_file.write(project_types + '\t' + project_path + '\n')
+                            sample_file.write('\n')
+                            sample_file.write('#SampleID\tType\tPath' + '\n')
+                            for sample_name in self.samples_info.samples_data.keys():
+                                if sample_name not in ['project_data', 'Title']:
+                                    for sample_types in self.samples_info.samples_data[sample_name].keys():
+                                        for sample_path in self.samples_info.samples_data[sample_name][sample_types]:
+                                            if sample_path=='':
+                                                sample_path='""'
+                                            sample_file.write(sample_name + '\t' + sample_types + '\t' + sample_path + '\n')
+                            sample_file.close()
+                            self.Run.set_sample_file(self.samples_info.save_samples_file)
+                            self.samples_info.set_title('Samples - '+os.path.basename(self.samples_info.save_samples_file[0][0]))
+                            self.samples_info.set_save_samples_file([])
+                        except Exception as e: 
+                            if SERVE:
+                                self.send_massage.set_massage(str(e))
+                            else:
+                                dialite.fail('Saving Sample file Error', str(e))
     
     @event.reaction('samples_info.load_samples_file')
     def load_sample_file(self, *events):
-        
         samples_data = self.samples_info.samples_data
         for ev in events:
             if len(self.samples_info.load_samples_file) > 0:
@@ -3117,7 +3315,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                         samples_data = parse_sample_file(self.samples_info.load_samples_file[0][0])
                 except Exception as e: 
                     if SERVE:
-                        self.send_massage.set_massage(str(e))
+                        self.send_massage.set_massage('[Loading Sample file Error]:'+str(e))
                     else:
                         dialite.fail('Loading Sample file Error', str(e))
                     samples_data = []
@@ -3144,34 +3342,43 @@ class NeatSeq_Flow_GUI(app.PyComponent):
 
         for ev in events:
             if len(self.step_info.step_export_file) > 0:
-                err_flag=True
-                try:
-                    if self.sftp!=None:
-                        file_name   = self.step_info.step_export_file[0][0]
-                        if not file_name.endswith('.step'):
-                            file_name = file_name + '.step'
-                        file_object = self.sftp.open(file_name,mode='w')
-                    else:
-                        file_name   = self.step_info.step_export_file[0][0]
-                        if not file_name.endswith('.step'):
-                            file_name = file_name + '.step'
-                        file_object = open(file_name, 'w')
-                        
-                    with file_object as outfile:
-                        step_data         = OrderedDict()
-                        step_data['Step'] = self.fix_order_dict(self.step_info.step2export)
-                        yaml.dump(step_data['Step'], outfile, default_flow_style=False,width=float("inf"), indent=4)
-
-                except Exception as e: 
+                if self.step_info.step_export_file[0][0].endswith(os.sep):
                     if SERVE:
-                        self.send_massage.set_massage(str(e))
+                        self.send_massage.set_massage('[Saving Step file Error]:No File Name Was Identified')
                     else:
-                        dialite.fail('Saving Step file Error', str(e))
+                        dialite.fail('Saving Step file Error','No File Name Was Identified' )
                     err_flag=False
+                else:
+                    err_flag=True
+                    try:
+                        if self.sftp!=None:
+                            file_name   = self.step_info.step_export_file[0][0]
+                            if not file_name.endswith('.step'):
+                                file_name = file_name + '.step'
+                            file_object = self.sftp.open(file_name,mode='w')
+                        else:
+                            file_name   = self.step_info.step_export_file[0][0]
+                            if not file_name.endswith('.step'):
+                                file_name = file_name + '.step'
+                            file_object = open(file_name, 'w')
+                            
+                        with file_object as outfile:
+                            step_data         = OrderedDict()
+                            step_data['Step'] = self.fix_order_dict(self.step_info.step2export)
+                            yaml.dump(step_data['Step'], outfile, default_flow_style=False,width=float("inf"), indent=4)
+
+                    except Exception as e: 
+                        if SERVE:
+                            self.send_massage.set_massage('[Saving Step file Error]:'+str(e))
+                        else:
+                            dialite.fail('Saving Step file Error', str(e))
+                        err_flag=False
                     
                 if self.sftp!=None:
-                    file_object.close()
-            
+                    try:
+                        file_object.close()
+                    except:
+                        pass
                 self.step_info.set_step_export_file([])
     
     @event.reaction('step_info.Load_step_file')
@@ -3189,7 +3396,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                     file_object.close()
                 except Exception as e: 
                     if SERVE:
-                        self.send_massage.set_massage(str(e))
+                        self.send_massage.set_massage('[Loading Step file Error]:'+str(e))
                     else:
                         dialite.fail('Loading Step file Error', str(e))
                     Step_data = OrderedDict()
@@ -3217,7 +3424,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                         param_data = parse_param_file(self.step_info.workflow_file[0][0])
                 except Exception as e: 
                     if SERVE:
-                        self.send_massage.set_massage(str(e))
+                        self.send_massage.set_massage('[Load WorkFlow Error]:'+str(e))
                     else:
                         dialite.fail('Load WorkFlow Error', str(e))
                     param_data = []
@@ -3248,52 +3455,61 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         import yaml,re
         from collections import OrderedDict
         setup_yaml(yaml, OrderedDict)
-
         for ev in events:
             if len(self.step_info.save_workflow_file) > 0:
-                err_flag=True
-                try:
-                    if self.sftp!=None:
-                        file_name   = self.step_info.save_workflow_file[0][0]
-                        file_object = self.sftp.open(file_name,mode='w')
-                    else:
-                        file_object = open(self.step_info.save_workflow_file[0][0], 'w')
-                        
-                    with file_object as outfile:
-                        param_data = OrderedDict()
-                        param_data['Documentation'] = re.sub(string=self.Documentation.value.rstrip('\t').replace('\t',"    "),
-                                                             pattern=' +\n',
-                                                             repl='\n').rstrip(' ').rstrip('\n')
-                        yaml.dump(param_data, outfile,
-                                  default_flow_style=False,
-                                  width=float("inf"),
-                                  default_style="|" ,
-                                  explicit_start = False,
-                                  explicit_end   = False,
-                                  #version=(1,2),
-                                  indent=4)
-
-                        param_data = OrderedDict()
-                        param_data['Global_params'] = self.fix_order_dict(self.cluster_info.Data)
-                        yaml.dump(param_data, outfile, default_flow_style=False,width=float("inf"), indent=4)
-                        param_data = OrderedDict()
-                        param_data['Vars'] = self.fix_order_dict(self.vars_info.Data)
-                        yaml.dump(param_data, outfile, default_flow_style=False,width=float("inf"), indent=4)
-                        param_data = OrderedDict()
-                        param_data['Step_params'] = self.fix_order_dict(self.step_info.Data)
-                        yaml.dump(param_data, outfile, default_flow_style=False,width=float("inf"), indent=4)
-
-                except Exception as e: 
+                
+                if self.step_info.save_workflow_file[0][0].endswith(os.sep):
                     if SERVE:
-                        self.send_massage.set_massage(str(e))
+                        self.send_massage.set_massage('[Save WorkFlow Error]:No File Name Was Identified')
                     else:
-                        dialite.fail('Save WorkFlow Error', str(e))
+                        dialite.fail('Save WorkFlow Error','No File Name Was Identified' )
                     err_flag=False
-                    
+                else:
+                    err_flag=True
+                    try:
+                        if self.sftp!=None:
+                            file_name   = self.step_info.save_workflow_file[0][0]
+                            file_object = self.sftp.open(file_name,mode='w')
+                        else:
+                            file_object = open(self.step_info.save_workflow_file[0][0], 'w')
+                            
+                        with file_object as outfile:
+                            param_data = OrderedDict()
+                            param_data['Documentation'] = re.sub(string=self.Documentation.value.rstrip('\t').replace('\t',"    "),
+                                                                 pattern=' +\n',
+                                                                 repl='\n').rstrip(' ').rstrip('\n')
+                            yaml.dump(param_data, outfile,
+                                      default_flow_style=False,
+                                      width=float("inf"),
+                                      default_style="|" ,
+                                      explicit_start = False,
+                                      explicit_end   = False,
+                                      #version=(1,2),
+                                      indent=4)
+
+                            param_data = OrderedDict()
+                            param_data['Global_params'] = self.fix_order_dict(self.cluster_info.Data)
+                            yaml.dump(param_data, outfile, default_flow_style=False,width=float("inf"), indent=4)
+                            param_data = OrderedDict()
+                            param_data['Vars'] = self.fix_order_dict(self.vars_info.Data)
+                            yaml.dump(param_data, outfile, default_flow_style=False,width=float("inf"), indent=4)
+                            param_data = OrderedDict()
+                            param_data['Step_params'] = self.fix_order_dict(self.step_info.Data)
+                            yaml.dump(param_data, outfile, default_flow_style=False,width=float("inf"), indent=4)
+
+                    except Exception as e: 
+                        if SERVE:
+                            self.send_massage.set_massage('[Save WorkFlow Error]:'+str(e))
+                        else:
+                            dialite.fail('Save WorkFlow Error', str(e))
+                        err_flag=False
+                        
                 
                 if self.sftp!=None:
-                    file_object.close()
-                    
+                    try:
+                        file_object.close()
+                    except:
+                        pass
                 if err_flag:
                     self.Run.set_parameter_file(self.step_info.save_workflow_file)
                     self.TabLayout.set_title('Work-Flow - '+os.path.basename(self.step_info.save_workflow_file[0][0]))
@@ -3683,8 +3899,8 @@ class Test_sftp_alive(flx.PyComponent):
         self.keep_running = False
 
     def close_session(self):
-        if self.session.status!=0:
-            self.redirect.go()
+        self.ssh_client.close()
+        self.redirect.go()
 
 class Redirect(flx.JsComponent):
 
@@ -3715,6 +3931,7 @@ class Login(flx.PyComponent):
                             self.input2 = flx.LineEdit(title='Password',password_mode=True)
                         ui.Widget()  # Spacing
                         self.b1 = flx.Button(text='Login')
+                        Add_Tooltip(self.b1,HELP['login'])
                         ui.Widget()  # Spacing
                 ui.Layout( )
             ui.Layout()
