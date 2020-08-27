@@ -18,6 +18,7 @@ dependencies:
 # Software
   - curl
   - git
+  - pip
 #Neatseq_Flow
   - pip:
     - git+https://github.com/bioinfo-core-BGU/neatseq-flow.git@master
