@@ -2138,7 +2138,7 @@ class Empty_class(flx.PyComponent):
     Done          = event.BoolProp(False, settable=True)
     def init(self):
         pass
-    
+
 class Run_File_Browser(flx.PyComponent):
     Done          = event.BoolProp(False, settable=True)
     Browser_Type  = event.DictProp({'select_style':'Single','select_type':'Dir','Regular':'.+'}, settable=True)
@@ -2311,9 +2311,9 @@ class Run_File_Browser(flx.PyComponent):
                     self.File_Browser.set_Path(Path)
                     self.Path = Path
                     self.File_Browser.set_Dir(Dir)
-                except :     
-                    # self.ssh_client = Reconnect_SSH(self.ssh_client)
-                    self.sftp   = self.ssh_client.open_sftp()
+                except :
+                    if self.ssh_client!=None:
+                        self.sftp   = self.ssh_client.open_sftp()
                     self.File_Browser.set_Path(self.Path)
                 self.File_Browser.set_update(False)
         
@@ -2354,7 +2354,7 @@ def Reconnect_SSH(ssh_client):
     except:
         ssh_client.close()
     return   ssh_client
-    
+
 class NeatSeq_Flow_GUI(app.PyComponent):
     CSS = """
         .flx-LineEdit {
