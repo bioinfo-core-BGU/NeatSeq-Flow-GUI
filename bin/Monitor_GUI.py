@@ -687,6 +687,9 @@ class Relay_log_files(flx.PyComponent):
                 log=self.q.get(True)
                 self.Table_H.set_items(log['items'])
                 self.Table_H.set_rowmode([1]*log['rowmode'])
+                if self.Table_H.choice==-1:
+                    if log['rowmode']>0:
+                        self.Table_H.set_choice(0)
         if self.Process!=None:
             if not self.Process.is_alive():
                 self.running = False
@@ -695,7 +698,7 @@ class Relay_log_files(flx.PyComponent):
 
     def close(self):
         self.keep_running = False
-        
+
 class Relay_log_data(flx.PyComponent):
     runlog_file           = event.StringProp('', settable=True)
     
@@ -738,7 +741,7 @@ class Relay_log_data(flx.PyComponent):
                 
     def close(self):
         self.keep_running = False
-    
+
 class Relay_sample_menu(flx.PyComponent):
     instances   = event.StringProp('', settable=True)
     runlog_file = event.StringProp('', settable=True)
@@ -805,9 +808,15 @@ class Test_sftp_alive(flx.PyComponent):
                 self.set_Kill_session(True)
         if (self.session.status!=0) and (self.keep_running):
             asyncio.get_event_loop().call_later(self.refreshrate, self.sftp_alive)
-                
+        else:
+            self.set_Kill_session(True)
+            self.close_session()
+
     def close(self):
         self.keep_running = False
+
+    def close_session(self):
+        self.ssh_client.close()
 
 class Redirect(flx.JsComponent):
 
@@ -945,7 +954,6 @@ class Monitor_GUI(flx.PyComponent):
         for ev in events:
             if ev.new_value!=self.main_menu.choice:
                 self.Relay_sample.set_instances('')
-
 
 if __name__ == '__main__':
     #getting arguments from the user
