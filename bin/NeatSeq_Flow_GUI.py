@@ -142,6 +142,12 @@ HELP                   = {'login'             :'Click to Log-in',
                           
                           'cite'              :'Click to See How to Cite NeatSeq-Flow'
                          }
+
+Download_FileName      = 'Download_File'
+
+Download_Size_Limit    = 150 # in MB
+
+Download_TimeOut       = 30
 # Associate CodeMirror's assets with this module so that Flexx will load
 # them when (things from) this module is used.
 
@@ -1898,7 +1904,7 @@ class Documentation_Editor(flx.Widget):
     disabled  = event.BoolProp(False, settable=True)
     readOnly  = event.BoolProp(False, settable=True)
 
-    def init(self,value=Documentation,readOnly=False,lineNumbers=True,multiline=True):
+    def init(self,value=Documentation,readOnly=False,lineNumbers=True,multiline=True,styleActiveLine=True):
         global window
         self.set_value(value)
         self.set_multiline(multiline)
@@ -1914,7 +1920,7 @@ class Documentation_Editor(flx.Widget):
                         tokenTypeOverrides=True,
                         allowAtxHeaderWithoutSpace=True,
                         autofocus=True,
-                        styleActiveLine=True,
+                        styleActiveLine=styleActiveLine,
                         matchBrackets=True,
                         indentUnit=4,
                         smartIndent=True,
@@ -1952,7 +1958,6 @@ class Documentation_Editor(flx.Widget):
             self.cm.refresh()
             self.set_load_flag(False)
 
-
     @flx.reaction('disabled')
     def disable(self, *events):
         if self.disabled:
@@ -1976,6 +1981,8 @@ class File_Browser(flx.GroupWidget):
     Done          = event.BoolProp(False, settable=True)
     Selected_Path = event.ListProp([],settable=True)
     New_Dir       = event.StringProp('', settable=True)
+    Preview_Path  = event.ListProp([],settable=True)
+    
     #main program
     def init(self,base_path,upper_panel=True,show_size=True):
         self._legend.style.fontSize = 'xx-large'
@@ -1984,6 +1991,7 @@ class File_Browser(flx.GroupWidget):
         self.New_Directory_str = 'Create New Directory'
         self.Parent_Dir_str    = '..'
         self.Path_Label_str    = 'Enter Path'
+        
         self.set_Path(base_path)
         with ui.VFix(spacing=10):
             if self.Upper_Panel:
@@ -2004,8 +2012,10 @@ class File_Browser(flx.GroupWidget):
             if self.Browser_Type['select_type']=='Save':
                 self.File_Name_Edit.set_disabled(False)
             with ui.HBox(style='max-height: 40px;'):
-                self.Cancel = ui.Button(text='Cancel',style='min-width: 150px;')
-                self.OK     = ui.Button(text='OK',style='min-width: 150px;')
+                self.Cancel   = ui.Button(text='Cancel',style='min-width: 150px;',disabled=False)
+                self.Download = ui.Button(text='Download',style='min-width: 150px;',disabled=True)
+                self.OK       = ui.Button(text='OK',style='min-width: 150px;',disabled=False)
+                self.Download.apply_style('visibility: hidden;')
                 if self.Browser_Type['select_type']=='Open':
                     if self.Browser_Type['select_style']=='Single':
                         self.OK.set_text('Open')
@@ -2013,8 +2023,36 @@ class File_Browser(flx.GroupWidget):
                         self.OK.set_text('Select')
                 elif self.Browser_Type['select_type']=='Save':
                     self.OK.set_text('Save')
+                elif self.Browser_Type['select_type']=='Download':
+                    self.Cancel.set_disabled(True)
+                    self.Cancel.apply_style('visibility: hidden;')
+                    self.OK.set_disabled(True)
+                    self.OK.apply_style('visibility: hidden;')
+                    self.Download.set_disabled(False)
+                    self.Download.apply_style('visibility: visible;')
+                    
+                    
             flx.Layout(style='max-height: 10px;')
-        
+
+    @event.reaction('Download.pointer_click')
+    def Download_Button_click(self):
+        selected_path=[]
+        for button in self.Files.children:
+            if button.checked:
+                selected_path.append(button.text)
+                
+        self.set_Selected_Path(selected_path)
+        if self.Done:
+            self.set_Done(False)
+        else:
+            self.set_Done(True)
+            
+    @event.reaction('!children**.checked')
+    def radio_changed(self, *events):
+        ev = events[-1]
+        if ev.source.text!='':
+            self.set_Preview_Path([self.Path,ev.source.text])
+    
     @event.reaction('Path')
     def update_path_label(self):
         if self.Upper_Panel:
@@ -2080,6 +2118,14 @@ class File_Browser(flx.GroupWidget):
     def update_Dir(self, *events):
         
         self.Data.dispose()
+        if self.Browser_Type['select_type']=='Download':
+            self.Cancel.set_disabled(True)
+            self.Cancel.apply_style('visibility: hidden;')
+            self.OK.set_disabled(True)
+            self.OK.apply_style('visibility: hidden;')
+            self.Download.set_disabled(False)
+            self.Download.apply_style('visibility: visible;')
+            self.Browser_Type['select_style']='Single'
         if self.Browser_Type['select_type']=='Save':
             self.File_Name_Edit.set_disabled(False)
             self.File_Name_Edit.apply_style('visibility: visible;')
@@ -2095,7 +2141,7 @@ class File_Browser(flx.GroupWidget):
                 self.OK.set_text('Select')
         elif self.Browser_Type['select_type']=='Save':
             self.OK.set_text('Save')
-            
+        
         with self.Browser:
             with ui.HFix(spacing=1,style='background: white; border: 0px solid gray;') as self.Data:
                 with ui.VFix(spacing=0,style='background: white; border: 0px solid gray;'):
@@ -2110,7 +2156,7 @@ class File_Browser(flx.GroupWidget):
                             files_list = list(self.Dir['File'].keys())
                             files_list.sort()
                             for files in files_list: 
-                                if self.Browser_Type['select_type']=='Open':
+                                if (self.Browser_Type['select_type']=='Open') or (self.Browser_Type['select_type']=='Download'):
                                     if self.Browser_Type['select_style']=='Single':
                                         ui.RadioButton(text=files,style='color: black; max-height: 30px;min-height: 30px;border: 0px solid gray;')
                                     else:
@@ -2133,28 +2179,25 @@ class File_Browser(flx.GroupWidget):
                         files_list.sort()
                         for files in files_list: 
                             ui.Button(text=self.Dir['File'][files],disabled=True,style=size_style+'color: black; background: white;border: 0px solid gray;max-height: 30px;min-height: 30px;max-width: 100px;text-align:right;')
-
-class Empty_class(flx.PyComponent):
-    Done          = event.BoolProp(False, settable=True)
-    def init(self):
-        pass
-
+        
 class Run_File_Browser(flx.PyComponent):
     Done          = event.BoolProp(False, settable=True)
     Browser_Type  = event.DictProp({'select_style':'Single','select_type':'Dir','Regular':'.+'}, settable=True)
     Selected_Path = event.ListProp([],settable=True)
     
     #main program
-    def init(self,base_path,ssh_client=None,Title='File Browser',Regular = '.+',upper_panel=True,show_size=True,show_dir=True):
+    def init(self,base_path,ssh_client=None,Title='File Browser',Regular = '.+',upper_panel=True,show_size=True,show_dir=True,Preview=False):
         import os,re
         import signal
         signal.signal(signal.SIGALRM, lambda x,y: 1/0 )
-        self.show_dir     = show_dir
-        self.timeout      = 5
-        self.ssh_client   = ssh_client
-        self.sftp         = None
-        self.Path         = ''
-        
+        self.show_dir            = show_dir
+        self.timeout             = 5
+        self.ssh_client          = ssh_client
+        self.sftp                = None
+        self.Path                = ''
+        self.Preview             = Preview
+        self.Download            = Download_Link()
+        self.massage             = send_massage()
         try:
             self.Regular  = re.compile(Regular)
         except:
@@ -2186,7 +2229,6 @@ class Run_File_Browser(flx.PyComponent):
                 signal.alarm(0)
             except:
                 Redirect('/').go()
-                
         else:
             if os.path.isdir(base_path.strip()):
                 self.base_path=os.path.abspath(base_path)
@@ -2196,25 +2238,145 @@ class Run_File_Browser(flx.PyComponent):
                 else:
                     self.base_path=''
         self.Path = self.base_path
-        with ui.HSplit(spacing=1):
-            #flexx.ui.FileBrowserWidget()
-            ui.Layout(style='max-width: 400px;')
-            with ui.VSplit():
-                ui.Layout(style='max-height: 150px;')
-                self.File_Browser = File_Browser(self.base_path,upper_panel,show_size,title=Title,style='border: 4px solid purple;')
-                ui.Layout(style='max-height: 150px;')
-            ui.Layout(style='max-width: 400px;')
+        with ui.VSplit(spacing=10,padding=50):
+            ui.Layout(style='max-height: 10px;')
+            with ui.HSplit():
+                if self.Preview:
+                    self.File_Browser  = File_Browser(self.base_path,upper_panel,show_size,title=Title,style='border: 4px solid purple;')
+                    self.Preview_Panel = Preview_Panel(title='Preview',style='border: 4px solid purple;') 
+                else:
+                    ui.Layout(style='max-width: 150px;')
+                    self.File_Browser = File_Browser(self.base_path,upper_panel,show_size,title=Title,style='border: 4px solid purple;')
+                    ui.Layout(style='max-width: 150px;')
+            self.progress = ui.ProgressBar(min=0,
+                                           max=100,
+                                           text='{value}%',
+                                           style='max-height: 30px')
+            self.progress.apply_style('visibility: hidden;')
+            ui.Layout(style='max-height: 10px;')
     
+    @event.reaction('!File_Browser.Preview_Path')
+    def Preview_file(self, *events):
+        import os
+        if self.Preview:
+            if len(self.File_Browser.Preview_Path)==2:
+                path = os.path.join(self.File_Browser.Preview_Path[0],self.File_Browser.Preview_Path[1])
+
+                if self.ssh_client!=None:
+                    try:
+                        signal.alarm(self.timeout)
+                        self.sftp.normalize('')
+                        signal.alarm(0)
+                    except:
+                        self.sftp   = self.ssh_client.open_sftp()
+                    try:
+                        with self.sftp.file(path, mode='rb') as file:
+                            file_size = 1024#file.stat().st_size
+                            file.prefetch(file_size)
+                            file.set_pipelined()
+                            self.Preview_Panel.set_Document_STR(str(file.read(file_size).decode('utf-8')))
+                            file.close()
+                    except:
+                        self.Preview_Panel.set_Document_STR('')
+                    self.File_Browser.set_Preview_Path([])
+                else:
+                    try:
+                        with open(path, mode='rb') as file:
+                            file_size = 1024#file.stat().st_size
+                            self.Preview_Panel.set_Document_STR(str(file.read(file_size).decode('utf-8')))
+                            file.close()
+                    except:
+                        self.Preview_Panel.set_Document_STR('')
+                    self.File_Browser.set_Preview_Path([])
+
+    def Delet_Download_File(self):
+        if (self.session.status!=0):
+            if Download_FileName in self.session._data:
+                self.session.remove_data(Download_FileName)
+
     @event.reaction('File_Browser.Done')
     def when_Done(self, *events):
         import os
         if len(self.File_Browser.Selected_Path)>0:
             if self.Browser_Type['select_type']=='Dir':
                 self.set_Selected_Path([self.File_Browser.Selected_Path,self.File_Browser.Selected_Path])
+            elif self.Browser_Type['select_type']=='Download':
+                file_name = self.File_Browser.Selected_Path[-1]
+                path      = os.path.join(self.File_Browser.Path,file_name)
+                if self.ssh_client!=None:
+                    try:
+                        signal.alarm(self.timeout)
+                        self.sftp.normalize('')
+                        signal.alarm(0)
+                    except:
+                        self.sftp   = self.ssh_client.open_sftp()
+                    try:
+                        with self.sftp.file(path, mode='rb') as file:
+                            file_size = file.stat().st_size
+                            if round(file_size/1000000,2) <= Download_Size_Limit:
+                                file.prefetch()
+                                sessions    = flx.manager.get_connections(self.session._app_name)
+                                names = []
+                                [names.extend(list(s._data.keys())) for s in sessions]
+                                if Download_FileName not in names:
+                                    size = 0
+                                    total_data = bytes()
+                                    while True: 
+                                        data = file.read(32768) 
+                                        total_data += data 
+                                        if len(data) == 0: 
+                                          break 
+                                        size += len(data)
+                                        self.progress.set_value(round(size/file_size*100,1))
+                                    link = self.session.add_data(Download_FileName,
+                                                                 total_data)
+                                    file.close()
+                                    if (self.session.status!=0):
+                                        asyncio.get_event_loop().call_later(Download_TimeOut,self.Delet_Download_File)
+                                    self.Download.set_link([file_name,link])
+                                else:
+                                    self.massage.set_massage('''Another Download is in Progress\nTry Again Later.
+                                                             ''' )
+                            else:
+                                self.massage.set_massage('''The File Exceed the {size}MB Size Limit\nUse a Dedicated SCP Programs For large Files Transfer.
+                                                         '''.format(size = str(Download_Size_Limit)) )
+                    except:
+                        pass
+                else:
+                    try:
+                        with open(path, mode='rb') as file:
+                            file_size = os.stat(path).st_size
+                            if round(file_size/1000000,2) <= Download_Size_Limit:
+                                sessions    = flx.manager.get_connections(self.session._app_name)
+                                names = []
+                                [names.extend(list(s._data.keys())) for s in sessions]
+                                if Download_FileName not in names:
+                                    size = 0
+                                    total_data = bytes()
+                                    while True: 
+                                        data = file.read(32768) 
+                                        total_data += data 
+                                        if len(data) == 0: 
+                                          break 
+                                        size += len(data)
+                                        self.progress.set_value(round(size/file_size*100,1))
+                                    link = self.session.add_data(Download_FileName,
+                                                                 total_data)
+                                    file.close()
+                                    if (self.session.status!=0):
+                                        asyncio.get_event_loop().call_later(Download_TimeOut,self.Delet_Download_File)
+                                    self.Download.set_link([file_name,link])
+                                else:
+                                    self.massage.set_massage('''Another Download is in Progress\nTry Again Later.
+                                                             ''' )
+                            else:
+                                self.massage.set_massage('''The File Exceed the {size}MB Size Limit\nUse a Dedicated SCP Programs For large Files Transfer.
+                                                         '''.format(size = str(Download_Size_Limit)) )
+                    except:
+                        pass
             else:
                 files = []
                 for file in self.File_Browser.Selected_Path:
-                
                     files.append([os.path.join(self.File_Browser.Path,file), file])
                 self.set_Selected_Path(files)
         else:
@@ -2223,7 +2385,7 @@ class Run_File_Browser(flx.PyComponent):
             self.set_Done(False)
         else:
             self.set_Done(True)
-    
+
     @event.reaction('File_Browser.update')
     def update_file_sys(self, *events):
         if self.File_Browser.update:
@@ -2316,17 +2478,21 @@ class Run_File_Browser(flx.PyComponent):
                         self.sftp   = self.ssh_client.open_sftp()
                     self.File_Browser.set_Path(self.Path)
                 self.File_Browser.set_update(False)
-        
+
     @event.reaction('Browser_Type')
     def update_Browser_Type(self,*events):
         import re
+        if self.Browser_Type['select_type']=='Download':
+            self.progress.apply_style('visibility: visible;')
+        else:
+            self.progress.apply_style('visibility: hidden;')
         if 'Regular' in self.Browser_Type.keys():
             try:
                 self.Regular  = re.compile(self.Browser_Type['Regular'])
             except:
                 self.Regular  = re.compile('.+')
         self.File_Browser.set_Browser_Type(self.Browser_Type)
-    
+
     @event.reaction('File_Browser.New_Dir')
     def create_new_dir(self,*events):
         Path = os.path.abspath(self.File_Browser.Path)
@@ -2343,6 +2509,70 @@ class Run_File_Browser(flx.PyComponent):
                 self.sftp   = self.ssh_client.open_sftp()
 
         self.File_Browser.set_update(True)
+
+class Preview_Panel(flx.GroupWidget):
+    Document_STR = event.StringProp('', settable=True)
+    
+    def init(self):
+        with flx.Layout(style='border: 0px solid gray; overflow-y:scroll;'):
+            self._legend.style.fontSize = 'xx-large'
+            self.Document               = Documentation_Editor('',
+                                                             True,
+                                                             False,
+                                                             True,
+                                                             False,
+                                                             style='border: 0px solid red;')
+            #self.Document.set_disabled(True) 
+
+
+    @event.reaction('Document_STR')
+    def update_Document(self,*events):
+        self.Document.set_value(self.Document_STR)
+        self.Document.set_load_flag(True)
+
+class Empty_class(flx.PyComponent):
+    Done          = event.BoolProp(False, settable=True)
+    def init(self):
+        pass
+
+class Results(flx.PyComponent):
+    Done          = event.BoolProp(False, settable=True)
+    def init(self,path,ssh_client):
+        select_style = 'Single'
+        select_type  = 'Download'
+        wildcard     = '*'
+        Regular = wildcard.replace('*','.+')
+        with ui.Layout(title='Results'):
+            self.Browser  = Run_File_Browser(path,ssh_client,'File Browser','.+',True,True,True,True)
+        self.Browser.set_Browser_Type({'select_style':select_style,'select_type':select_type,'Regular':Regular})
+
+class Option_Menu(ui.HFix):
+    Done             = event.BoolProp(False, settable=True)
+    Selected_Option  = event.StringProp('', settable=True)
+    
+    def init(self,options = ['New Work-Flow','Load Work-Flow','Choose a Work-Flow From Repository']):
+        ui.Layout()
+        with ui.VFix():
+            ui.Layout()
+            with ui.GroupWidget(title='Option Menu',style='border: 4px solid purple;'):
+                with ui.VFix(padding=25):
+                    for Button in options:
+                        ui.RadioButton(text=Button)
+                    ui.Layout()
+                    self.Choose = ui.Button(text='Choose')
+            ui.Layout()
+        ui.Layout()
+
+    @event.reaction('!children**.checked')
+    def radio_changed(self, *events):
+        ev = events[-1]
+        if ev.source.text!='':
+            self.set_Selected_Option(ev.source.text)
+            
+    @event.reaction('Choose.pointer_click')
+    def Option_Selescted(self, *events):
+        if  self.Selected_Option!='':
+            self.set_Done(True)
 
 def Reconnect_SSH(ssh_client):
     try:
@@ -2522,7 +2752,8 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                         with ui.Widget(title='Monitor') as self.Monitor:
                             with ui.Layout() as self.Monitor_Widget:
                                 self.monitor = Monitor_GUI.Monitor_GUI(path)
-                    self.Help = ui.IFrame(url=Base_Help_URL,
+                        self.Results = Results(path,self.ssh_client)
+                    self.Help    = ui.IFrame(url=Base_Help_URL,
                                           title='Help')
                 
                 self.label = ui.Label(text='NeatSeq-Flow Graphical User Interface By Liron Levin',
@@ -2535,21 +2766,45 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 Add_Tooltip(self.label,HELP['cite'])
             with  ui.Widget(flex=1) as self.Browser_W:
                 self.Browser         = Run_File_Browser(path,self.ssh_client)
-            if (WOKFLOW_DIR != None) and (SERVE):
-                with ui.Widget(flex=1) as self.workflow_select_w:
-                    self.workflow_select = Run_File_Browser(WOKFLOW_DIR,self.ssh_client,'Select a Work-Flow','.+yaml$',False,False,False)
-                    self.filepicker_key  = 'workflow_file'
-                    self.workflow_select.set_Browser_Type({'select_style':'Single','select_type':'Open'})
-                    self.workflow_select_w.apply_style('font-size:140%;')
-                    self.stack.set_current(self.workflow_select_w)
+                
+            if SERVE:
+                with ui.Widget(flex=1) as self.Option_Menu_w:
+                    if (WOKFLOW_DIR != None):
+                        self.Option_Menu = Option_Menu(['New Work-Flow','Load Work-Flow','Choose a Work-Flow From Repository'])
+                    else:
+                        self.Option_Menu = Option_Menu(['New Work-Flow','Load Work-Flow'])
+                    self.Option_Menu_w.apply_style('font-size:150%;')
+                    self.stack.set_current(self.Option_Menu_w)
+                    
+                if (WOKFLOW_DIR != None):
+                    with ui.Widget(flex=1) as self.workflow_select_w:
+                        self.workflow_select = Run_File_Browser(WOKFLOW_DIR,self.ssh_client,'Select a Work-Flow','.+yaml$',False,False,False)
+                        self.workflow_select.set_Browser_Type({'select_style':'Single','select_type':'Open'})
+                        self.workflow_select_w.apply_style('font-size:140%;')
+                else:
+                    self.workflow_select = Empty_class()
             else:
                 self.workflow_select = Empty_class()
+                self.Option_Menu     = Empty_class()
                 
         if not SERVE:
             self.stack.apply_style('font-size:80%;')
     # @event.reaction('label.pointer_move')
     # def on_label_move(self, *events):
         # self.label.set_flex(0.2)
+    
+    @event.reaction('!Option_Menu.Done')
+    def Option_Menu_Done(self,*events):
+        for ev in events:
+            if ev.source.Done:
+                ev.source.set_Done(False)
+                if ev.source.Selected_Option=='Load Work-Flow':
+                    self.step_info.set_open_filepicker('workflow_file')
+                elif ev.source.Selected_Option=='Choose a Work-Flow From Repository':
+                    self.filepicker_key  = 'workflow_file'
+                    self.stack.set_current(self.workflow_select_w)
+                else:
+                    self.stack.set_current(self.MainStack)
     
     @event.reaction('Browser.Done','!workflow_select.Done')
     def when_File_Browser_Done(self,*events):
@@ -3868,6 +4123,22 @@ class send_massage(ui.Widget):
                         # var msg = ('{massage}');
                         # window.alert(msg);   
                                 # """.format(massage=ev.new_value) )
+
+class Download_Link(ui.Widget):
+    link = event.ListProp([], settable=True)
+    def init(self):
+        pass
+        
+    @event.reaction('link')
+    def Download(self, *events):
+        for ev in events:
+            if len(ev.new_value)==2:
+                global window
+                link = window.document.createElement('a')
+                link.download = ev.new_value[0]
+                link.href = ev.new_value[1]
+                link.click()
+                self.set_link([]) 
 
 class Test_sftp_alive(flx.PyComponent):
     Kill_session = event.BoolProp(False, settable=True)
