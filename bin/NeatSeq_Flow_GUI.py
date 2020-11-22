@@ -148,6 +148,8 @@ Download_FileName      = 'Download_File'
 Download_Size_Limit    = 150 # in MB
 
 Download_TimeOut       = 30
+
+Preview_Buffer         = 10000
 # Associate CodeMirror's assets with this module so that Flexx will load
 # them when (things from) this module is used.
 
@@ -1669,52 +1671,56 @@ class Run_NeatSeq_Flow(ui.Widget):
     
     def init(self,Server):
         self.Server = Server
-        with ui.Layout(style='padding: 30px;'):
+        with ui.VSplit(spacing=10,padding=50):
+            ui.Layout(style='max-height: 50px;')
             with ui.HSplit():
                 with ui.VSplit():
                     with ui.GroupWidget(title='Project Information', style='min-height: 230px; min-width: 250px; border: 2px solid blue; '):
                         with ui.VSplit():
+                            ui.Layout()
                             with ui.Layout(title='Project Directory', style='min-height: 70px; max-height: 70px;'):
                                 ui.Label(text='Project Directory:',style='padding-left: 0px; font-size: 120% ;')
                                 with ui.HSplit(style='min-height: 35px; max-height: 35px;'):
                                     self.Project_dir_L = ui.LineEdit(text='',disabled = (Server and LOCK_USER_DIR) )
                                     self.Project_dir_b = ui.Button(text='Browse', style='max-width: 100px; ')
-
+                            ui.Layout()
                             with ui.Layout(title='Sample File', style='min-height: 70px; max-height: 70px;'):
                                 ui.Label(text='Sample File:',style='padding-left: 0px; font-size: 120% ;')
                                 with ui.HSplit(style='min-height: 35px; max-height: 35px;'):
                                     self.sample_file_L = ui.LineEdit(text='',disabled = (Server and LOCK_USER_DIR))
                                     self.sample_file_b = ui.Button(text='Browse', style='max-width: 100px;')
-
+                            ui.Layout()
                             with ui.Layout(title='Parameter File', style='min-height: 70px; max-height: 70px;'):
                                 ui.Label(text='Parameter File:',style='padding-left: 0px; font-size: 120% ;')
                                 with ui.HSplit(style='min-height: 35px; max-height: 35px;'):
                                     self.parameter_file_L = ui.LineEdit(text='',disabled = (Server and LOCK_USER_DIR))
                                     self.parameter_file_b = ui.Button(text='Browse', style='max-width: 100px;')
-
+                            ui.Layout()
                     ui.Label(style='padding: 0px ;min-height: 20px; max-height: 20px; ')
+                    #ui.Layout()
                     with ui.GroupWidget(title='NeatSeq-Flow Information (For Advanced Users)', style='min-height: 230px; min-width: 250px; border: 2px solid green;'):
                         with ui.VSplit():
-
+                            ui.Layout()
                             with ui.Layout(title='NeatSeq-Flow script location', style='min-height: 70px; max-height: 70px;'):
                                 ui.Label(text='NeatSeq-Flow script location:',style='padding-left: 0px; font-size: 120% ;')
                                 with ui.HSplit(style='min-height: 35px; max-height: 35px;'):
                                     self.NeatSeq_bin_L = ui.LineEdit(text='neatseq_flow.py',disabled = (Server and LOCK_USER_DIR))
                                     self.NeatSeq_bin_b = ui.Button(text='Browse', style='max-width: 100px; ')
-
+                            ui.Layout()
                             with ui.Layout(title='Conda bin location', style='min-height: 70px; max-height: 70px;'):
                                 ui.Label(text='Conda bin location:',style='padding-left: 0px; font-size: 120% ;')
                                 with ui.HSplit(style='min-height: 35px; max-height: 35px;'):
                                     self.conda_bin_L = ui.LineEdit(text=CONDA_BIN,disabled = (Server and LOCK_USER_DIR))
                                     self.conda_bin_b = ui.Button(text='Browse', style='max-width: 100px; ')
-
+                            ui.Layout()
                             with ui.Layout(title='Conda environment to use', style='min-height: 70px; max-height: 70px;'):
                                 ui.Label(text='Conda environment to use:',style='padding-left: 0px; font-size: 120% ;')
                                 with ui.HSplit(style='min-height: 35px; max-height: 35px;'):
                                     self.conda_env_L = ui.ComboBox(editable= not (Server and LOCK_USER_DIR), text='',
                                                                    placeholder_text='Choose Conda Environment')
                                     self.conda_env_b = ui.Button(text='Search', style='max-width: 100px; ')
-
+                            ui.Layout()
+                    ui.Label(style='padding: 0px ;min-height: 5px; max-height: 5px; ')
                 with ui.VSplit():
 
                     with ui.HSplit():
@@ -1736,7 +1742,8 @@ class Run_NeatSeq_Flow(ui.Widget):
                         with ui.VFix():#ui.Layout( style='min-height: 460px; max-height: 460px; padding: 10px ;'):
                         #ui.Label(text='Terminal:',style='padding-left: 0px; padding-top: 10px; font-size: 120% ;max-height: 30px; min-height: 30px;')
                             self.label = ui.Label(style=' padding: 10px ; border: 0px solid gray; border-radius: 10px;   overflow-y: auto; overflow-x: auto;')
-            ui.Label(style='padding: 0px ; ')
+                    ui.Label(style='padding: 0px ;min-height: 5px; max-height: 5px; ')
+            ui.Layout(style='max-height: 50px;')
 
 
     @event.reaction('conda_env')
@@ -1903,6 +1910,7 @@ class Documentation_Editor(flx.Widget):
     multiline = event.BoolProp(True, settable=True)
     disabled  = event.BoolProp(False, settable=True)
     readOnly  = event.BoolProp(False, settable=True)
+    options   = event.ListProp([],settable=True)
 
     def init(self,value=Documentation,readOnly=False,lineNumbers=True,multiline=True,styleActiveLine=True):
         global window
@@ -1971,6 +1979,13 @@ class Documentation_Editor(flx.Widget):
                 self.cm.setOption('readOnly',self.disabled)
             self.cm.setOption('theme','default')
             self.cm.setOption('styleActiveLine',True)
+    
+    @flx.reaction('options')
+    def SetOption(self,*events):
+        if len(self.options)==2:
+            self.cm.setOption(self.options[0],self.options[1])
+            self.set_options([])
+        self.set_load_flag(True)
 
 class File_Browser(flx.GroupWidget):
     Dir           = event.DictProp({}, settable=True)
@@ -2271,7 +2286,7 @@ class Run_File_Browser(flx.PyComponent):
                         self.sftp   = self.ssh_client.open_sftp()
                     try:
                         with self.sftp.file(path, mode='rb') as file:
-                            file_size = 1024#file.stat().st_size
+                            file_size = Preview_Buffer
                             file.prefetch(file_size)
                             file.set_pipelined()
                             self.Preview_Panel.set_Document_STR(str(file.read(file_size).decode('utf-8')))
@@ -2282,7 +2297,7 @@ class Run_File_Browser(flx.PyComponent):
                 else:
                     try:
                         with open(path, mode='rb') as file:
-                            file_size = 1024#file.stat().st_size
+                            file_size = Preview_Buffer
                             self.Preview_Panel.set_Document_STR(str(file.read(file_size).decode('utf-8')))
                             file.close()
                     except:
@@ -2514,7 +2529,7 @@ class Preview_Panel(flx.GroupWidget):
     Document_STR = event.StringProp('', settable=True)
     
     def init(self):
-        with flx.Layout(style='border: 0px solid gray; overflow-y:scroll;'):
+        with flx.Layout(style='border: 0px solid gray; overflow-y:scroll; overflow-x:scroll;'):
             self._legend.style.fontSize = 'xx-large'
             self.Document               = Documentation_Editor('',
                                                              True,
@@ -2522,6 +2537,9 @@ class Preview_Panel(flx.GroupWidget):
                                                              True,
                                                              False,
                                                              style='border: 0px solid red;')
+            
+            self.Document.set_options(['mode','null'])
+            self.Document.set_options(['lineWrapping',False])
             #self.Document.set_disabled(True) 
 
 
