@@ -155,18 +155,20 @@ Preview_Buffer         = 10000
 
 try:
     base_url =  os.path.join(os.path.realpath(os.path.expanduser(os.path.dirname(os.path.abspath(__file__))+os.sep+"..")),'neatseq_flow_gui','Codemirror')
-    flx.assets.associate_asset(__name__,'codemirror.css', open(os.path.join(base_url , 'codemirror.css'), encoding="utf-8").read())
-    flx.assets.associate_asset(__name__,'codemirror.js' ,open(os.path.join(base_url ,'codemirror.js'), encoding="utf-8").read())
-    flx.assets.associate_asset(__name__,'markdown.js' ,open(os.path.join(base_url ,'mode/markdown/markdown.js'), encoding="utf-8").read())
-    flx.assets.associate_asset(__name__, 'solarized.css' ,open(os.path.join(base_url ,'theme/solarized.css'), encoding="utf-8").read())
-    flx.assets.associate_asset(__name__,'active-line.js', open(os.path.join(base_url , 'addon/selection/active-line.js'), encoding="utf-8").read())
-    flx.assets.associate_asset(__name__, 'matchbrackets.js' ,open(os.path.join(base_url , 'addon/edit/matchbrackets.js'), encoding="utf-8").read())
-    flx.assets.associate_asset(__name__, 'continuelist.js' ,open(os.path.join(base_url , 'addon/edit/continuelist.js'), encoding="utf-8").read())
+    flx.assets.associate_asset(__name__,'codemirror.css'    ,open(os.path.join(base_url ,'codemirror.css'), encoding="utf-8").read())
+    flx.assets.associate_asset(__name__,'codemirror.js'     ,open(os.path.join(base_url ,'codemirror.js'), encoding="utf-8").read())
+    flx.assets.associate_asset(__name__,'markdown.js'       ,open(os.path.join(base_url ,'mode/markdown/markdown.js'), encoding="utf-8").read())
+    flx.assets.associate_asset(__name__,'yaml.js'           ,open(os.path.join(base_url ,'mode/yaml/yaml.js'), encoding="utf-8").read())
+    flx.assets.associate_asset(__name__,'solarized.css'     ,open(os.path.join(base_url ,'theme/solarized.css'), encoding="utf-8").read())
+    flx.assets.associate_asset(__name__,'active-line.js'    ,open(os.path.join(base_url ,'addon/selection/active-line.js'), encoding="utf-8").read())
+    flx.assets.associate_asset(__name__,'matchbrackets.js'  ,open(os.path.join(base_url ,'addon/edit/matchbrackets.js'), encoding="utf-8").read())
+    flx.assets.associate_asset(__name__,'continuelist.js'   ,open(os.path.join(base_url ,'addon/edit/continuelist.js'), encoding="utf-8").read())
 except :
     base_url = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.46.0/'
     flx.assets.associate_asset(__name__, base_url + 'codemirror.css')
     flx.assets.associate_asset(__name__, base_url + 'codemirror.js')
     flx.assets.associate_asset(__name__, base_url + 'mode/markdown/markdown.js')
+    flx.assets.associate_asset(__name__, base_url + 'mode/yaml/yaml.js')
     flx.assets.associate_asset(__name__, base_url + 'theme/solarized.css')
     flx.assets.associate_asset(__name__, base_url + 'addon/selection/active-line.js')
     flx.assets.associate_asset(__name__, base_url + 'addon/edit/matchbrackets.js')
@@ -1982,10 +1984,13 @@ class Documentation_Editor(flx.Widget):
     
     @flx.reaction('options')
     def SetOption(self,*events):
-        if len(self.options)==2:
-            self.cm.setOption(self.options[0],self.options[1])
-            self.set_options([])
-        self.set_load_flag(True)
+        for ev in events:
+            if ev.new_value!='':
+                for options in self.options:
+                    if len(options)==2:
+                        self.cm.setOption(options[0],options[1])
+                self.set_options([])
+                self.set_load_flag(True)
 
 class File_Browser(flx.GroupWidget):
     Dir           = event.DictProp({}, settable=True)
@@ -2529,24 +2534,24 @@ class Preview_Panel(flx.GroupWidget):
     Document_STR = event.StringProp('', settable=True)
     
     def init(self):
-        with flx.Layout(style='border: 0px solid gray; overflow-y:scroll; overflow-x:scroll;'):
+        with flx.Layout(style='border: 0px solid gray; '):
             self._legend.style.fontSize = 'xx-large'
-            self.Document               = Documentation_Editor('',
-                                                             True,
-                                                             False,
-                                                             True,
-                                                             False,
-                                                             style='border: 0px solid red;')
-            
-            self.Document.set_options(['mode','null'])
-            self.Document.set_options(['lineWrapping',False])
+            with ui.VSplit(spacing=20,padding=20):
+                self.Document               = Documentation_Editor('',
+                                                                 True,
+                                                                 False,
+                                                                 True,
+                                                                 False,
+                                                                 style='border: 0px solid red;')
+                
+                self.Document.set_options([['mode','yaml'],['lineWrapping',False]])
             #self.Document.set_disabled(True) 
-
 
     @event.reaction('Document_STR')
     def update_Document(self,*events):
         self.Document.set_value(self.Document_STR)
         self.Document.set_load_flag(True)
+    
 
 class Empty_class(flx.PyComponent):
     Done          = event.BoolProp(False, settable=True)
