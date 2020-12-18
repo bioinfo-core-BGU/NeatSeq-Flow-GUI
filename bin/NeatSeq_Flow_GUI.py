@@ -2834,7 +2834,41 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         for ev in events:
             if ev.source.Done:
                 ev.source.set_Done(False)
-                self.set_filepicker_options(ev.source.Selected_Path)
+                if self.filepicker_key  == 'workflow_file':
+                    import re
+                    sample_file = ev.source.Selected_Path[0][0]
+                    sample_file = re.sub('.yaml$','',sample_file)
+                    if ev.source.ssh_client!=None:
+                        import os,re
+                        import signal
+                        timeout = 2
+                        signal.signal(signal.SIGALRM, lambda x,y: 1/0 )
+                        try:
+                            signal.alarm(timeout)
+                            sftp   = ev.source.ssh_client.open_sftp()
+                            signal.alarm(0)
+                        except:
+                            sftp   = None
+                        
+                        if sftp!=None:
+                            try:
+                                sftp.stat(sample_file)
+                                self.filepicker_key  = 'load_samples_file'
+                                self.set_filepicker_options([[sample_file],[os.path.basename(sample_file)]])
+                            except:
+                                pass
+                    else:
+                        try:
+                            os.stat(sample_file)
+                            self.filepicker_key  = 'load_samples_file'
+                            self.set_filepicker_options([[sample_file],[os.path.basename(sample_file)]])
+                        except:
+                            pass
+                    self.filepicker_key  = 'workflow_file'
+                    self.set_filepicker_options(ev.source.Selected_Path)
+                    
+                else:
+                    self.set_filepicker_options(ev.source.Selected_Path)
                 self.stack.set_current(self.MainStack)
             
     @event.reaction('label.pointer_click')
