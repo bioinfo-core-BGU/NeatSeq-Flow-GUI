@@ -187,6 +187,7 @@ class Table(flx.GroupWidget):
     active           = event.BoolProp(True, settable=True)
     choice           = event.IntProp(-1, settable=True)
     Current_Highlite = event.IntProp(-1, settable=True)
+    Loading          = event.BoolProp(True, settable=True)
     def init(self,Highlite=0,Heder_Backgroun_Color='SeaShell'):
         self.Rows                  = {}
         self.Highlite              = Highlite
@@ -196,56 +197,82 @@ class Table(flx.GroupWidget):
         self.Heder_Backgroun_Color = Heder_Backgroun_Color
         self.MaxRows               = 30
         self.Show_MaxRows          = 5
+        self.row_str               = 'Row_Num '
+        self.page_navigation_title = 'page_navigation'
+        self.Next_Page_text        = '>>'
+        self.Previous_Page_text    = '<<'
+        
         with flx.Layout(style='overflow-x:scroll;') as self.table:
             self.Drow_window()
         self.set_Current_Highlite(self.Highlite)
 
     def Drow_window(self):
-        with ui.VFix(spacing=1,style='background: white; border: 0px solid gray;') as self.content  :
-            col_num=-1
-            self.num_of_col  = len(self.items.keys())
-            if self.num_of_col>0:
-                self.num_of_rows = len(self.items[self.items.keys()[0]])
-
-                self.Rows['heder']={}
-                self.Rows['heder']['handle'] = flx.HFix(padding=3,spacing=3,style='overflow-y:scroll; ')
-                with self.Rows['heder']['handle']:
-                    for col in self.items.keys():
-                        col_num = col_num+1
-                        count=0
-                        self.Rows['heder'][col_num] = flx.LineEdit(text=str(col),
-                                                                    disabled=True,
-                                                                    style='font-size: 120%; background: ' + self.Heder_Backgroun_Color  +'  ;color: blue;border-radius: 0px;max-height:35px;')
-
-                    # flx.LineEdit(text='',
-                    #             disabled=True,
-                    #             style=' background: SeaShell ;color: blue;border-radius: 0px; max-height: 35px; max-width: 15px;')
-
-                if self.num_of_rows>0:
-                    if len(self.ROWMODE)!=self.num_of_rows:
-                        self.ROWMODE=[0]*self.num_of_rows
+        col_num=-1
+        self.num_of_col  = len(self.items.keys())
+        
+        with flx.HFix(padding=3,spacing=3) as self.content:
+            if self.Loading:
+                flx.Button(text='Loading..',
+                          disabled=True,
+                          style='font-size: 150%;background:white; color:black;border: 0px solid gray; border-radius: 0px;max-height:30px;text-align: left;')
+                    
+            else:
+                if self.num_of_col>0:
+                    self.num_of_rows = len(self.items[self.items.keys()[0]])
                     if self.num_of_rows > self.MaxRows:
-                        num_of_rows = self.Show_MaxRows
-                    else:
-                        num_of_rows = self.num_of_rows
-                        
-                    with flx.Layout(style='overflow-y:scroll; ') as self.ROW_LAYOUT:
-                        for row_num in range(num_of_rows):
-                            self.Rows[row_num]={}
-                            self.Rows[row_num]['handle'] = flx.HFix(padding=3,spacing=3)
-                            with self.Rows[row_num]['handle']:
-                                col_num = -1
-                                for col in self.items.keys():
-                                    col_num = col_num+1
-                                    if row_num!=self.Highlite:
-                                        self.Rows[row_num][col_num] = flx.LineEdit(text=str(self.items[col][row_num]),
-                                                                                      disabled=True,
-                                                                                      style='background:white; color: ' +Text_COLORS[self.ROWMODE[row_num]]+ '; border-radius: 0px;max-height:30px;')
-                                    else:
-                                        self.Rows[row_num][col_num] = flx.LineEdit(text=str(self.items[col][row_num]),
-                                                                                      disabled=True,
-                                                                                      style='background: yellow;color: '+Text_COLORS[self.ROWMODE[row_num]]+ ';border-radius: 0px;max-height:30px;')
-    @event.reaction('items','rowmode')
+                        with ui.VFix(padding=3,spacing=3,style='background: white; border: 0px solid gray;',title=self.page_navigation_title):
+                            self.Previous   = flx.Button(text=self.Previous_Page_text,
+                                                        disabled=False,
+                                                        style='background: ' + self.Heder_Backgroun_Color  +'  ;color: blue;border: 0px solid gray;border-radius: 0px;max-height:30px;max-width:40px;')
+                            self.Page_count = flx.LineEdit(text='1',
+                                                         disabled=True,
+                                                         style='font-size: 150%; background: white ;color: blue;border-radius: 0px;border: 0px solid gray;max-width:40px;')
+                            self.Next       = flx.Button(text=self.Next_Page_text,
+                                                        disabled=False,
+                                                        style='background: ' + self.Heder_Backgroun_Color  +'  ;color: blue;border: 0px solid gray;border-radius: 0px;max-height:30px;max-width:40px;')
+                with ui.VFix(spacing=1,style='background: white; border: 0px solid gray;') :
+                    
+                    if self.num_of_col>0:
+                        self.num_of_rows = len(self.items[self.items.keys()[0]])
+                        self.Rows['heder']={}
+                        self.Rows['heder']['handle'] = flx.HFix(padding=3,spacing=3,style='overflow-y:scroll; ')
+                        with self.Rows['heder']['handle']:
+                            for col in self.items.keys():
+                                col_num = col_num+1
+                                count=0
+                                self.Rows['heder'][col_num] = flx.LineEdit(text=str(col),
+                                                                            disabled=True,
+                                                                            style='font-size: 120%; background: ' + self.Heder_Backgroun_Color  +'  ;color: blue;border-radius: 0px;max-height:35px;')
+
+                            # flx.LineEdit(text='',
+                            #             disabled=True,
+                            #             style=' background: SeaShell ;color: blue;border-radius: 0px; max-height: 35px; max-width: 15px;')
+
+                        if self.num_of_rows>0:
+                            if len(self.ROWMODE)!=self.num_of_rows:
+                                self.ROWMODE=[0]*self.num_of_rows
+                            if self.num_of_rows > self.MaxRows:
+                                num_of_rows = self.Show_MaxRows
+                            else:
+                                num_of_rows = self.num_of_rows
+                                
+                            with flx.Layout(style='overflow-y:scroll; ') as self.ROW_LAYOUT:
+                                for row_num in range(num_of_rows):
+                                    self.Rows[row_num]={}
+                                    self.Rows[row_num]['handle'] = flx.HFix(padding=3,spacing=3,title=self.row_str + str(row_num))
+                                    with self.Rows[row_num]['handle']:
+                                        col_num = -1
+                                        for col in self.items.keys():
+                                            col_num = col_num+1
+                                            if row_num!=self.Highlite:
+                                                self.Rows[row_num][col_num] = flx.Button(text=str(self.items[col][row_num]),
+                                                                                              disabled=False,
+                                                                                              style='background:white; color: ' +Text_COLORS[self.ROWMODE[row_num]]+ ';border: 1px solid gray; border-radius: 1px;max-height:30px;text-align: left;')
+                                            else:
+                                                self.Rows[row_num][col_num] = flx.Button(text=str(self.items[col][row_num]),
+                                                                                              disabled=False,
+                                                                                              style='background: yellow;color: '+Text_COLORS[self.ROWMODE[row_num]]+ ';border: 1px solid gray;border-radius: 1px;max-height:30px;text-align: left;')
+    @event.reaction('items','rowmode','Loading')
     def update_Data(self):
         self.ROWMODE  = self.rowmode
         if len(self.items.keys())>0:
@@ -258,11 +285,18 @@ class Table(flx.GroupWidget):
                 self.Re_Drow_window()
         else:
             self.content.dispose()
-
+    
+    @event.reaction('Loading')
+    def Now_Loading(self):
+        self.content.dispose()
+        with self.table:
+            self.Drow_window()
+        
     def Re_Drow_window(self):
         
         count=0
         if len(self.items[self.items.keys()[0]])> self.MaxRows:
+            self.Page_count.set_text(str(int(int(self.Highlite)/self.Show_MaxRows)+1))
             Extra = int(int(self.Highlite)/self.Show_MaxRows) * self.Show_MaxRows
         else:
             Extra = 0
@@ -277,13 +311,13 @@ class Table(flx.GroupWidget):
                     else:
                         for col in self.Rows[row].keys():
                             if col!='handle':
-                                self.Rows[row][col].apply_style('background:white; color: ' +Text_COLORS[self.ROWMODE[int(row)+Extra]]+ '; border-radius: 0px;max-height:30px;')
+                                self.Rows[row][col].apply_style('background:white; color: ' +Text_COLORS[self.ROWMODE[int(row)+Extra]]+ '; border: 1px solid gray; border-radius: 0px;max-height:30px;text-align: left;')
                                 self.Rows[row][col].set_text(str(self.items[self.items.keys()[int(col)]][int(row)+Extra]) )
                         count=count+1
                 else:
                     for col in self.Rows[row].keys():
                         if col!='handle':
-                            self.Rows[row][col].apply_style('background: yellow;color:' +Text_COLORS[self.ROWMODE[int(row)+Extra]]+ ';border-radius: 0px;')
+                            self.Rows[row][col].apply_style('background: yellow;color:' +Text_COLORS[self.ROWMODE[int(row)+Extra]]+ ';border: 1px solid gray;border-radius: 0px;text-align: left;')
                             self.Rows[row][col].set_text(str(self.items[self.items.keys()[int(col)]][int(row)+Extra]))
                     count=count+1
     @flx.emitter
@@ -321,6 +355,32 @@ class Table(flx.GroupWidget):
     def update_Highlite(self):
         if self.Current_Highlite!=self.Highlite:
             self.Highlite=self.Current_Highlite
+    @event.reaction('!table.children**.pointer_click')
+    def select_row(self, *events):
+        for ev in events:
+            if ev.source.parent.title.startswith(self.row_str):
+                if self.num_of_rows > self.MaxRows:
+                    self.Highlite = int(ev.source.parent.title.replace(self.row_str,''))+(self.Show_MaxRows * (int(self.Page_count.text)-1))
+                else:
+                    self.Highlite = int(ev.source.parent.title.replace(self.row_str,''))
+                self.set_choice(self.Highlite)
+                self.set_Current_Highlite(self.Highlite)
+                self.Re_Drow_window()
+                # print(ev.source.parent.title)
+                # print(ev.source.text)
+            elif ev.source.parent.title == self.page_navigation_title:
+                if ev.source.text == self.Previous_Page_text:
+                    if int(self.Page_count.text)-1>0:
+                        Highlite = (self.Show_MaxRows * (int(self.Page_count.text)-2))
+                        self.Highlite = Highlite
+                        self.Re_Drow_window()
+                        self.set_Current_Highlite(self.Highlite)
+                elif ev.source.text == self.Next_Page_text:
+                    if int(self.Page_count.text)+1 <= int((self.num_of_rows-1)/self.Show_MaxRows)+1:
+                        Highlite      = (self.Show_MaxRows * int(self.Page_count.text))
+                        self.Highlite = Highlite
+                        self.Re_Drow_window()
+                        self.set_Current_Highlite(self.Highlite)
 
 class nsfgm(flx.PyComponent):
     #  Main class for neatseq-flow Log file parser
@@ -552,7 +612,7 @@ class nsfgm(flx.PyComponent):
                     self.rowmode=list(map(lambda x,y: 2 if 'ERROR' in x else y, self.items['Status'],self.rowmode))
                 if q!=None:
                     if self.session.status!=0:
-                        q.put({'items':self.items.to_dict('list'),'rowmode': self.rowmode})
+                        q.put({'items':self.items.to_dict('list'),'rowmode': self.rowmode,'source':Instance})
                         time.sleep(0.00001)
 
                 if ssh_client!=None:
@@ -650,9 +710,11 @@ class nsfgm(flx.PyComponent):
         # if this function is running in a sub-process store the results in the queue
         if q!=None:
             if self.session.status!=0:
-                q.put({'items':self.items.to_dict('list'),'rowmode': self.rowmode})
+                if Instance==True:
+                    q.put({'items':self.items.to_dict('list'),'rowmode': self.rowmode,'source':runlog_file})
+                else:
+                    q.put({'items':self.items.to_dict('list'),'rowmode': self.rowmode,'source':Instance})
                 time.sleep(0.00001)
-        
         if ssh_client!=None:
             ssh_client.close()
         return {'items':self.items.to_dict('list'),'rowmode': self.rowmode}
@@ -685,6 +747,7 @@ class Relay_log_files(flx.PyComponent):
         elif  (self.keep_running):
             if self.q.empty()==False:
                 log=self.q.get(True)
+                self.Table_H.set_Loading(False)
                 self.Table_H.set_items(log['items'])
                 self.Table_H.set_rowmode([1]*log['rowmode'])
                 if self.Table_H.choice==-1:
@@ -703,17 +766,17 @@ class Relay_log_data(flx.PyComponent):
     runlog_file           = event.StringProp('', settable=True)
     
     def init(self,ssh_client,mynsfgm,Table_H,refreshrate=1):
-        self.q            = Queue()
-        self.running      = False
-        self.mynsfgm      = mynsfgm
-        self.Table_H      = Table_H
-        self.refreshrate  = refreshrate
-        self.ssh_client   = ssh_client
-        self.Process      = None
-        self.keep_running = True
-        self.Refresh_main_menu()
+        self.q                 = Queue()
+        self.running           = False
+        self.mynsfgm           = mynsfgm
+        self.Table_H           = Table_H
+        self.refreshrate       = refreshrate
+        self.ssh_client        = ssh_client
+        self.Process           = None
+        self.keep_running      = True
+        self.Refresh_steps_menu()
         
-    def Refresh_main_menu(self):
+    def Refresh_steps_menu(self):
         if (not self.running) and (self.keep_running):
             try:
                 self.Process  =        Process(target=self.mynsfgm.read_run_log, args=(self.ssh_client,
@@ -731,18 +794,30 @@ class Relay_log_data(flx.PyComponent):
         elif  (self.keep_running):
             if self.q.empty()==False:
                 steps=self.q.get(True)
-                self.Table_H.set_items(steps['items'])
-                self.Table_H.set_rowmode(steps['rowmode'])
+                if steps['source'] == self.runlog_file:
+                    self.Table_H.set_Loading(False)
+                    self.Table_H.set_items(steps['items'])
+                    self.Table_H.set_rowmode(steps['rowmode'])
         if self.Process!=None:
             if not self.Process.is_alive():
                 self.running = False
         if (self.session.status!=0) and (self.keep_running):
-            asyncio.get_event_loop().call_later(self.refreshrate, self.Refresh_main_menu)
+            asyncio.get_event_loop().call_later(self.refreshrate, self.Refresh_steps_menu)
                 
     def close(self):
         self.keep_running = False
-
-class Relay_sample_menu(flx.PyComponent):
+        
+    @event.reaction('runlog_file')
+    def Loading(self, *events):
+        self.Table_H.set_Loading(True)
+        if self.running:
+            if self.Process!=None:
+                self.Process.terminate()
+                self.Process.join()
+                self.running=False
+                self.Process=None
+            
+class Relay_samples_menu(flx.PyComponent):
     instances   = event.StringProp('', settable=True)
     runlog_file = event.StringProp('', settable=True)
 
@@ -755,9 +830,9 @@ class Relay_sample_menu(flx.PyComponent):
         self.ssh_client   = ssh_client
         self.Process      = None
         self.keep_running = True
-        self.Refresh_sample_menu()
+        self.Refresh_samples_menu()
 
-    def Refresh_sample_menu(self):
+    def Refresh_samples_menu(self):
         if (not self.running) and (self.keep_running):
             try:
                 self.Process  =        Process(target=self.mynsfgm.read_run_log, args=(self.ssh_client,
@@ -776,17 +851,29 @@ class Relay_sample_menu(flx.PyComponent):
         elif  (self.keep_running):
             if self.q.empty()==False:
                 steps=self.q.get(True)
-                self.Table_H.set_items(steps['items'])
-                self.Table_H.set_rowmode(steps['rowmode'])
+                if steps['source'] == self.instances:
+                    self.Table_H.set_Loading(False)
+                    self.Table_H.set_items(steps['items'])
+                    self.Table_H.set_rowmode(steps['rowmode'])
         if self.Process!=None:
             if not self.Process.is_alive():
                 self.running = False
         if (self.session.status!=0) and (self.keep_running):
-            asyncio.get_event_loop().call_later(self.refreshrate, self.Refresh_sample_menu)
+            asyncio.get_event_loop().call_later(self.refreshrate, self.Refresh_samples_menu)
                 
     def close(self):
         self.keep_running = False
-
+    
+    @event.reaction('instances')
+    def Loading(self, *events):
+        self.Table_H.set_Loading(True)
+        if self.running:
+            if self.Process!=None:
+                self.Process.terminate()
+                self.Process.join()
+                self.running=False
+                self.Process=None
+        
 class Test_sftp_alive(flx.PyComponent):
     Kill_session = event.BoolProp(False, settable=True)
 
@@ -839,10 +926,13 @@ class Monitor_GUI(flx.PyComponent):
                   File_browser_RF   = 2,
                   Sample_RF         = 3,
                   Bar_Marker        = '#',
-                  Bar_Spacer        = ' ',
+                  Bar_Spacer        = '-',
                   Bar_len           = 40 ):
         
-        self.redirect = Redirect('/')
+        self.file_menu_title        = 'Log File Menu'
+        self.steps_menu_title       = 'Steps Menu'
+        self.samples_menu_title     = 'Samples Menu'
+        self.redirect               = Redirect('/')
         global LOCAL_HOST
         if ssh_client!=None:
             try:
@@ -862,8 +952,8 @@ class Monitor_GUI(flx.PyComponent):
             if not os.path.isdir(directory):
                 directory     = os.getcwd()
 
-        sample_menu_flag=-1
-        sample_menu_active=False
+        samples_menu_flag=-1
+        samples_menu_active=False
         #initializing the main monitor/qstat log file parser module
         self.mynsfgm = nsfgm(directory,
                              Regular,           
@@ -873,24 +963,24 @@ class Monitor_GUI(flx.PyComponent):
 
         #initializing file browser window
         with flx.VSplit(padding=20,spacing=20,style='background: white;'):
-            self.file_menu   = Table(0,title='Log File Menu',style='font-size: 70%;')
-            self.main_menu   = Table(0,'LightSteelBlue',title='Steps Menu',style='font-size: 70%;')
-            self.sample_menu = Table(0,'NavajoWhite',title='Samples Menu',style='font-size: 70%;')
+            self.file_menu    = Table(0,title=self.file_menu_title,style='font-size: 70%;',flex=0.2)
+            self.steps_menu   = Table(0,'LightSteelBlue',title=self.steps_menu_title,style='font-size: 70%;',flex=0.6)
+            self.samples_menu = Table(0,'NavajoWhite',title=self.samples_menu_title,style='font-size: 70%;',flex=0.2)
         #get list of log files and information about them
         #with self:
         self.Test_sftp    = Test_sftp_alive(ssh_client)
         self.Relay_log    = Relay_log_files(ssh_client,
-                                            self.mynsfgm,
-                                            self.file_menu,
-                                            File_browser_RF)
+                                           self.mynsfgm,
+                                           self.file_menu,
+                                           File_browser_RF)
         self.Relay_data   = Relay_log_data(ssh_client,
                                             self.mynsfgm,
-                                            self.main_menu,
+                                            self.steps_menu,
                                             Monitor_RF)
-        self.Relay_sample = Relay_sample_menu(ssh_client,
-                                              self.mynsfgm,
-                                              self.sample_menu,
-                                              Sample_RF)
+        self.Relay_sample = Relay_samples_menu(ssh_client,
+                                            self.mynsfgm,
+                                            self.samples_menu,
+                                            Sample_RF)
                                               
     def close_session(self):
         self.redirect.go()
@@ -906,7 +996,7 @@ class Monitor_GUI(flx.PyComponent):
         self.Relay_data.close()
         self.Relay_log.close()
         self.Relay_sample.close()
-        self.Test_sftp.close()
+        # self.Test_sftp.close()
 
     @event.reaction('Dir')
     def Update_Dir(self, *events):
@@ -922,37 +1012,44 @@ class Monitor_GUI(flx.PyComponent):
             try:
                 if 'Name' in ev.source.items.keys():
                     runlog_file = os.path.join(self.mynsfgm.Dir,ev.source.items['Name'][ev.new_value])
+                    self.steps_menu.set_title(self.steps_menu_title +": "+ ev.source.items['Name'][ev.new_value])
                 else:
                     runlog_file = ''
+                    self.steps_menu.set_title(self.steps_menu_title)
             except :
                     runlog_file = ''
+                    self.steps_menu.set_title(self.steps_menu_title)
             self.Relay_data.set_runlog_file(runlog_file)
-            self.main_menu.set_Current_Highlite(0)
+            self.steps_menu.set_Current_Highlite(0)
             self.Relay_sample.set_instances('')
+            self.samples_menu.set_title(self.samples_menu_title)
             self.Relay_sample.set_runlog_file(runlog_file)
-
+            
     # @event.reaction('file_menu.Current_Highlite')
     # def choose_log_file_control(self, *events):
     #     for ev in events:
     #         if ev.new_value!=self.file_menu.choice:
     #             self.Relay_main.set_runlog_file('None')
 
-    @event.reaction('main_menu.choice')
+    @event.reaction('steps_menu.choice')
     def choose_step_file(self, *events):
         for ev in events:
             try:
                 if 'Steps' in ev.source.items.keys():
                     instances=ev.source.items['Steps'][ev.new_value]
+                    self.samples_menu.set_title(self.samples_menu_title +": "+ instances)
                 else:
                     instances = ''
+                    self.samples_menu.set_title(self.samples_menu_title)
             except :
                     instances = ''
+                    self.samples_menu.set_title(self.samples_menu_title)
             self.Relay_sample.set_instances(instances)
 
-    @event.reaction('main_menu.Current_Highlite')
+    @event.reaction('steps_menu.Current_Highlite')
     def choose_step_file_control(self, *events):
         for ev in events:
-            if ev.new_value!=self.main_menu.choice:
+            if ev.new_value!=self.steps_menu.choice:
                 self.Relay_sample.set_instances('')
 
 if __name__ == '__main__':
