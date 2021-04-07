@@ -353,6 +353,83 @@ Prokka:
             --kingdom:      '{Vars.Genome.kingdom}'
             --proteins:     VFDB
 
+Roary(Pan_Genome_from_GFFs):
+    Roary:
+        module: Roary
+        base: 
+        script_path: '{Vars.Programs.Roary}'
+        qsub_params:
+            -pe: shared 1
+        plot:
+            format: pdf
+            Tree: Accessory
+        redirects:
+            -p: 1
+            -s: null
+            -v: null
+            -y: null
+            -i: '{Vars.Roary.Percentage_Identity}'
+            -iv: '{Vars.Roary.MCL}'
+        search_GFF: null
+        tag: Roary
+
+KofamScan(KOs_from_sample_level_Protein_fasta):
+    KofamScan:
+        module: Generic
+        base: 
+        script_path: '{Vars.Programs.KofamScan}'
+        scope: sample
+        inputs:
+            empty1:
+                scope: sample
+                File_Type: fasta.prot
+                base: null
+        outputs:
+            --tmp-dir:
+                File_Type: tmpdir
+                constant_file_name: /temp
+            -o:
+                File_Type: tsv
+                prefix: null
+                suffix: .ko
+        inputs_last: null
+        redirects:
+            --cpu: 1
+            --profile: '{Vars.Kofam.profile}'
+            --ko-list: '{Vars.Kofam.ko_list}'
+            -f: mapper
+
+Collect_results(merge_data_from_sample_level_KofamScan):
+    Collect_results:
+        module: Collect_results
+        base: 
+        script_path: null
+        redirects:
+            --add_samples_names: null
+            --col_name: '''ORF'' ''KO'''
+            --pivot: '''KO'' ''Samples'' ''ORF'''
+            -R: .ko$
+            -T: null
+Tree_plot(Heatmap_from_Collect_results):
+    Tree_plot:
+        setenv:
+        - PERL5LIB=""
+        - R_LIBS_SITE=""
+        - LD_LIBRARY_PATH=""
+        - R_LIBS=""
+        module: Tree_plot
+        base:
+        script_path: null
+        tree_by_heatmap: null
+        redirects:
+            --heatmap: null
+            --Tip_labels: null
+            --heatmap_count_by_sep: ','
+            --heatmap_highest_value: red
+            --heatmap_lowest_value: blue
+            --heatmap_cell_border: NA
+            --heatmap_binary: null
+            --heatmap_HC_dist: euclidean
 
 Collect_results(Merge):           
     Collect_results:              
@@ -597,7 +674,6 @@ Gassst:
             -n:       1
             -p:       95
 
-
 Tree_Plot(From_Internal_Excel):
     Tree_Plot:
         module:                             Tree_plot                                            # Name of the used module
@@ -625,8 +701,6 @@ Tree_Plot(From_Internal_Excel):
             --heatmap_variable:                                                                  # Use only variable columns in the heatmap
             --heatmap_HC_dist:              'maximum'                                            # The heatmap Hierarchical Clustering dist method
             --heatmap_HC_agg:               'average'                                            # The heatmap Hierarchical Clustering agglomeration method
-
-
 
 Tree_Plot(Simple):
     Tree_Plot:
@@ -698,7 +772,6 @@ Tree_Plot(Extended):
             --heatmap_HC_dist:              'maximum'                                                # The heatmap Hierarchical Clustering dist method
             --heatmap_HC_agg:               'average'                                                # The heatmap Hierarchical Clustering agglomeration method
 
-
 Snippy:                     
     Snippy:                 
         module:             Snippy
@@ -719,7 +792,6 @@ Snippy:
             --mincov:       10
             --minfrac:      0.9
             --reference:    '{Vars.Genome.reference}'
-
 
 Gubbins:
     Gubbins:                                                                                        # Name of this step
@@ -815,85 +887,39 @@ Hmmscan(prot):
         redirects:
             --cpu:          1
 
-Sketch(per_Sample):
-    Sketch:
-        module:         mash_sketch
-        base:           
-        script_path:    '{Vars.Programs.mash} sketch'
-        scope:          sample
-        type:           fastq
-        rm_merged:
-        redirects:
-            -m:         2
-            -p:         1
+Mash_Sketch(use_all_samples_fasta):
+    Mash_Sketch:
+        module: Generic
+        base: 
+        script_path: '{Vars.Programs.mash} sketch'
+        scope: project
+        inputs:
+            empty1:
+                scope: sample
+                File_Type: fasta.nucl
+                base: null
+        outputs:
+            -o:
+                File_Type: msh.fasta
+                prefix: null
+                suffix: null
 
-Sketch(Project):
-    Sketch:
-        module:         mash_sketch
-        base:           
-        script_path:    '{Vars.Programs.mash} sketch'
-        src_scope:      sample
-        scope:          project
-        type:           fastq
-        rm_merged:
-        redirects:
-            -m:         2
-            -p:         1
-
-Mash_Dist(External_FASTA_Reference_Per_Sample):
-    Mash_Dist:
-        module:         mash_dist
-        base:          
-        script_path:    '{Vars.Programs.mash} dist'
-        reference:
-            path:       '{Vars.Genome.reference}'
-        query:
-            scope:      sample
-            type:       fastq
-            msh:
-
-Mash_Dist(Project_FASTA_Reference_Per_Sample):
-    Mash_Dist:
-        module:         mash_dist
-        base:          
-        script_path:    '{Vars.Programs.mash} dist'
-        reference:
-            scope:      project
-            type:       fasta
-            msh:
-        query:
-            scope:      sample
-            type:       fastq
-            msh:
-
-Mash_Dist(Project_vs_Project_Mashed_fastq):
-    Mash_Dist:
-        module:         mash_dist
-        base:          
-        script_path:    '{Vars.Programs.mash} dist'
-        reference:
-            scope:      project
-            type:       fastq
-            msh:
-        query:
-            scope:      project
-            type:       fastq
-            msh:
-
-Mash_Dist(Project_vs_Sample_Mashed_fastq):
-    Mash_Dist:
-        module:         mash_dist
-        base:          
-        script_path:    '{Vars.Programs.mash} dist'
-        reference:
-            scope:      project
-            type:       fastq
-            msh:
-        query:
-            scope:      sample
-            type:       fastq
-            msh:
-
+Mash_Triangle(create_dist_matrix_all_vs_all_from_project_Sketch):
+    Mash_Triangle:
+        module: Generic
+        base: 
+        script_path: '{Vars.Programs.mash} triangle'
+        scope: project
+        inputs:
+            empty1:
+                scope: project
+                File_Type: msh.fasta
+                suffix: .msh
+        outputs:
+            '>':
+                File_Type: msh.dist
+                prefix: null
+                suffix: .tsv
 
 Trinity(Project):
     Trinity:
