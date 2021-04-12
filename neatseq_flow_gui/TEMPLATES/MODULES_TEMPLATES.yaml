@@ -903,6 +903,9 @@ Mash_Sketch(use_all_samples_fasta):
                 File_Type: msh.fasta
                 prefix: null
                 suffix: null
+        redirects:
+            -k:          15
+            -s:          50000
 
 Mash_Triangle(create_dist_matrix_all_vs_all_from_project_Sketch):
     Mash_Triangle:
