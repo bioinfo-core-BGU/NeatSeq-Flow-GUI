@@ -202,8 +202,8 @@ def get_param_data_YAML(filelines):
 
         return endparams
  
-    filelines = remove_comments(filelines)
-    
+    #filelines = remove_comments(filelines)
+    filelines = [line.rstrip() for line in filelines if len(line.strip())>0]
     # Convert all tabs to 4 spaces. Tabs do not work well with YAML!
     filelines = [re.sub("\t","    ",line) for line in filelines]
     
