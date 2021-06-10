@@ -238,7 +238,7 @@ STAR_Mapper(external-index):
             --genomeDir:          '{Vars.Genome.STAR_index}'
 
 STAR_builder:  
-    STAR_Mapper:                  
+    STAR_Builder:                  
         module:                   STAR_builder
         base:                     
         script_path:              '{Vars.Programs.star}'
