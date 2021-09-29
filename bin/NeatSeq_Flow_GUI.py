@@ -38,17 +38,15 @@ STEPS                  = {'Import': {'module': 'Import', 'script_path': None  },
 
                         }
 
-COLORS                 = ('#ffffff','#8DD3C7','#BEBADA','#FDBF6F',
-          '#BC80BD','#FCCDE5','#FFFFB3','#66C2A5',
-          '#80B1D3','#FDB462','#B3DE69','#CCEBC5',
-          '#FC8D62','#8DA0CB','#E78AC3','#A6D854',
-          '#FFD92F','#E5C494','#A6CEE3','#1F78B4',
-          '#B2DF8A','#33A02C','#FB9A99','#E31A1C',
-          '#FFFF99','#FF7F00','#CAB2D6','#6A3D9A',
-          '#FB8072'
-          )
+COLORS                 = ('#EF9A9A','#B2EBF2','#FFECB3',
+                          '#E1BEE7','#C5CAE9','#C8E6C9',
+                          '#B3E5FC','#F8BBD0','#4DD0E1',
+                          '#B2DFDB','#DCEDC8','#F0F4C3',
+                          '#FFF9C4','#D1C4E9','#FFE0B2',
+                          '#FFCCBC','#BBDEFB','#F06292'
+                         )
 
-COLOR_BY               = ['module','tag']
+COLOR_BY               = ['module','tag','scope']
 
 CLUSTER                = {'Executor': 'Local',
            'Default_wait': '10',
@@ -331,6 +329,7 @@ class Graphical_panel(ui.CanvasWidget):
         self.ctx = self.node.getContext('2d')
         # Set mouse capturing mode
         self.set_capture_mouse(2)
+        self.set_Step_Colors({})
         self.Button_list = []
         self.Button_count = 0
         self.steps = self.Steps_Data
@@ -2847,6 +2846,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
     Recovery                     = event.IntProp(0, settable=True)
     Locate_Failures              = event.IntProp(0, settable=True)
     
+    
     def init(self,path,ssh_client=None,WOKFLOW_DIR=None):
         self.send_massage = None
         self.ssh_client = ssh_client
@@ -2878,7 +2878,8 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                         import Monitor_GUI
                         with ui.Widget(title='Monitor') as self.Monitor:
                             with ui.Layout() as self.Monitor_Widget:
-                                self.monitor = Monitor_GUI.Monitor_GUI(path)
+                                self.monitor      = Monitor_GUI.Monitor_GUI(path)
+                                self.Test_Monitor = Test_Monitor_Command(self.monitor)
                         self.Results = Results(path,self.ssh_client)
                     self.Help    = ui.IFrame(url=Base_Help_URL,
                                           title='Help')
@@ -3594,6 +3595,36 @@ class NeatSeq_Flow_GUI(app.PyComponent):
             self.Terminal_string = self.Terminal_string +  '\n' + Error
             self.Run.set_Terminal(self.Terminal_string)
     
+    def Run_ReRun_command(self,command):
+        Error = ''
+        if len(command) > 0:
+            if  self.Kill_Run == 0 :
+                if self.Recovery == 0:
+                    try:
+                        self.Running_Commands['Recovery'] =  Run_command_in_thread(self.session,command,self.ssh_client)
+                        self.Running_Commands['Recovery'].Run()
+                        self.Terminal_string = self.Terminal_string + '[Recovery]:   Trying to Recover.. \n'
+                        self.Run.set_Terminal(self.Terminal_string)
+                        self.set_Recovery(self.Recovery+1)
+                        self.Run.set_Terminal(self.Terminal_string)
+                    except Exception as e:
+                        Error = "Some Unknown ERROR!! " + str(e)
+                        
+                else:
+                    Error = "Can't Re-Run script while other scripts are submitted, Try later"
+            else:
+                Error = "Can't Re-Run script while Killing scripts, Try later"
+        else:
+            Error = 'No Script to Run'
+            
+        if len(Error)==0:
+            self.TabLayout2.set_current(self.Run)
+        else:
+            if SERVE:
+                self.send_massage.set_massage(Error)
+            else:
+                print(Error)
+    
     @event.action
     def change_value(self,obj,prop_name,value):
         obj._mutate(prop_name,value)
@@ -3646,7 +3677,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
             if ev.source.Go2Help!='':
                 self.Help.set_url(Base_Help_URL)
                 self.Help.set_url(Base_Help_URL+'Module_docs/AllModules.html#'+ev.source.Go2Help.lower().replace('_','-'))
-    
+        
     @event.reaction('Run.jump2monitortab')
     def jump2monitortab(self, *events):
         import Monitor_GUI
@@ -3656,9 +3687,16 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 #self.monitor.dispose()
                 with self.Monitor:
                     with ui.Layout() as self.Monitor_Widget:
-                        self.monitor = Monitor_GUI.Monitor_GUI(ev.new_value,self.ssh_client)
+                        self.monitor      = Monitor_GUI.Monitor_GUI(ev.new_value,self.ssh_client)
+                        self.Test_Monitor.update_monitor_object(self.monitor)
                 self.TabLayout2.set_current(self.Monitor)
                 self.Run.set_jump2monitortab('None')
+    
+    @event.reaction('!Test_Monitor.RunCommand')
+    def Monitor_send_command(self, *events):
+        for ev in events:
+            if ev.new_value!='':
+                self.Run_ReRun_command(ev.new_value)
     
     @event.reaction('!Run.open_filepicker', 'samples_info.open_filepicker', 'step_info.open_filepicker',
                     'cluster_info.open_filepicker', 'vars_info.open_filepicker')
@@ -4039,7 +4077,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
 
 class Popen_SSH(object):
     
-    def __init__(self,session,ssh_client,command,shell=False,pty=True,timeout=200,nbytes = 4096):
+    def __init__(self,session,ssh_client,command,shell=False,pty=True,timeout=500,nbytes = 4096):
         import time
         self.session     = session
         self.timeout     = timeout
@@ -4288,6 +4326,37 @@ class send_massage(ui.Widget):
                         # window.alert(msg);   
                                 # """.format(massage=ev.new_value) )
 
+class Test_Monitor_Command(flx.PyComponent):
+    RunCommand     = event.StringProp('', settable=True)
+    
+    def init(self,monitor,refreshrate=1):
+        self.refreshrate     = refreshrate
+        self.keep_running    = True
+        self.monitor         = monitor
+        if self.monitor !=None:
+            self.Test_Monitor()
+
+    def Test_Monitor(self):
+        if (self.keep_running):
+            try:
+                if self.RunCommand != self.monitor.RunCommand:
+                    self.set_RunCommand(self.monitor.RunCommand)
+            except:
+                pass
+        if (self.session.status!=0) and (self.keep_running):
+            asyncio.get_event_loop().call_later(self.refreshrate, self.Test_Monitor)
+        else:
+            self.close_session()
+
+    def close(self):
+        self.keep_running = False
+
+    def close_session(self):
+        self.monitor.close()
+    
+    def update_monitor_object(self,monitor):
+        self.monitor         = monitor
+    
 class Download_Link(ui.Widget):
     link = event.ListProp([], settable=True)
     def init(self):

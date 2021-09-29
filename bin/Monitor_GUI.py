@@ -17,6 +17,18 @@ jid_name_sep = '..'
 LOCAL_HOST   = socket.gethostname()
 Text_COLORS  = ['black','green','red','orange','magenta','cyan','blue']
 
+class send_massage(ui.Widget):
+    massage = event.StringProp('', settable=True)
+    def init(self):
+        pass
+        
+    @event.reaction('massage')
+    def print_massage(self, *events):
+        for ev in events:
+            if ev.new_value!='':
+                global window
+                window.alert(ev.new_value)
+                self.set_massage('') 
 
 def get_random_string(length=24, allowed_chars=None):
     import random
@@ -182,13 +194,23 @@ class Popen_SSH(object):
                 return self.ssh_session.recv_exit_status()
 
 class Table(flx.GroupWidget):
-    items            = event.DictProp({}, settable=True)
-    rowmode          = event.ListProp([], settable=True)
-    active           = event.BoolProp(True, settable=True)
-    choice           = event.IntProp(-1, settable=True)
-    Current_Highlite = event.IntProp(-1, settable=True)
-    Loading          = event.BoolProp(True, settable=True)
-    def init(self,Highlite=0,Heder_Backgroun_Color='SeaShell'):
+    CSS = """
+        .flx-Button:hover.flx-active {
+              border: 20px solid black;
+              color: white;
+              transform: scale(1.1);
+              background-color: black;
+              padding-right: 25px;
+            }
+    """
+    items                    = event.DictProp({}, settable=True)
+    rowmode                  = event.ListProp([], settable=True)
+    active                   = event.BoolProp(True, settable=True)
+    choice                   = event.IntProp(-1, settable=True)
+    Extra_Buttons_choice     = event.StringProp('', settable=True)
+    Current_Highlite         = event.IntProp(-1, settable=True)
+    Loading                  = event.BoolProp(True, settable=True)
+    def init(self,Highlite=0,Heder_Backgroun_Color='SeaShell',Extra_Buttons=[]):
         self.Rows                  = {}
         self.Highlite              = Highlite
         self.num_of_rows           = 0
@@ -201,6 +223,8 @@ class Table(flx.GroupWidget):
         self.page_navigation_title = 'page_navigation'
         self.Next_Page_text        = '>>'
         self.Previous_Page_text    = '<<'
+        self.Extra_Buttons         = Extra_Buttons
+        self.Extra_Buttons_title   = 'Extra_Button'
         
         with flx.Layout(style='overflow-x:scroll;') as self.table:
             self.Drow_window()
@@ -208,8 +232,8 @@ class Table(flx.GroupWidget):
 
     def Drow_window(self):
         col_num=-1
-        self.num_of_col  = len(self.items.keys())
         
+        self.num_of_col  = len(self.items.keys())
         with flx.HFix(padding=3,spacing=3) as self.content:
             if self.Loading:
                 flx.Button(text='Loading..',
@@ -219,6 +243,12 @@ class Table(flx.GroupWidget):
             else:
                 if self.num_of_col>0:
                     self.num_of_rows = len(self.items[self.items.keys()[0]])
+                    for col in self.Extra_Buttons:
+                        self.items[col]=[]
+                        for row_num in range(self.num_of_rows):
+                            self.items[col][row_num]=col
+                    
+                    self.num_of_col  = len(self.items.keys())
                     if self.num_of_rows > self.MaxRows:
                         with ui.VFix(padding=3,spacing=3,style='background: white; border: 0px solid gray;',title=self.page_navigation_title):
                             self.Previous   = flx.Button(text=self.Previous_Page_text,
@@ -240,10 +270,19 @@ class Table(flx.GroupWidget):
                             for col in self.items.keys():
                                 col_num = col_num+1
                                 count=0
-                                self.Rows['heder'][col_num] = flx.LineEdit(text=str(col),
-                                                                            disabled=True,
-                                                                            style='font-size: 120%; background: ' + self.Heder_Backgroun_Color  +'  ;color: blue;border-radius: 0px;max-height:35px;')
-
+                                if col in self.Extra_Buttons:
+                                    col_num = col_num+1
+                                    count=0
+                                    self.Rows['heder'][col_num] = flx.LineEdit(text=str(col),
+                                                                               title=self.Extra_Buttons_title,
+                                                                               disabled=True,
+                                                                               style='font-size: 120%; background: ' + self.Heder_Backgroun_Color  +'  ;color: blue;border-radius: 0px;max-height:35px;')
+                                else:   
+                                    self.Rows['heder'][col_num] = flx.LineEdit(text=str(col),
+                                                                                disabled=True,
+                                                                                style='font-size: 120%; background: ' + self.Heder_Backgroun_Color  +'  ;color: blue;border-radius: 0px;max-height:35px;')
+                            
+                                
                             # flx.LineEdit(text='',
                             #             disabled=True,
                             #             style=' background: SeaShell ;color: blue;border-radius: 0px; max-height: 35px; max-width: 15px;')
@@ -264,24 +303,44 @@ class Table(flx.GroupWidget):
                                         col_num = -1
                                         for col in self.items.keys():
                                             col_num = col_num+1
-                                            if row_num!=self.Highlite:
-                                                self.Rows[row_num][col_num] = flx.Button(text=str(self.items[col][row_num]),
-                                                                                              disabled=False,
-                                                                                              style='background:white; color: ' +Text_COLORS[self.ROWMODE[row_num]]+ ';border: 1px solid gray; border-radius: 1px;max-height:30px;text-align: left;')
+                                            if col in self.Extra_Buttons:
+                                                if row_num!=self.Highlite:
+                                                    self.Rows[row_num][col_num] = flx.Button(text=str(col),
+                                                                                             title=self.Extra_Buttons_title,
+                                                                                             disabled=False,
+                                                                                             style='background: #D4D4D3; color: ' +Text_COLORS[self.ROWMODE[row_num]]+ ';border: 0px solid gray; border-radius: 10px;max-height:30px;text-align: center;')
+                                                else:
+                                                    self.Rows[row_num][col_num] = flx.Button(text=str(col),
+                                                                                             title=self.Extra_Buttons_title,
+                                                                                             disabled=False,
+                                                                                             style='background: #FEDB9D; color: '+Text_COLORS[self.ROWMODE[row_num]]+ ';border: 0px solid gray;border-radius: 10px;max-height:30px;text-align: center;')
                                             else:
-                                                self.Rows[row_num][col_num] = flx.Button(text=str(self.items[col][row_num]),
-                                                                                              disabled=False,
-                                                                                              style='background: yellow;color: '+Text_COLORS[self.ROWMODE[row_num]]+ ';border: 1px solid gray;border-radius: 1px;max-height:30px;text-align: left;')
+                                                if row_num!=self.Highlite:
+                                                    self.Rows[row_num][col_num] = flx.Button(text=str(self.items[col][row_num]),
+                                                                                                  disabled=False,
+                                                                                                  style='background:white; color: ' +Text_COLORS[self.ROWMODE[row_num]]+ ';border: 1px solid gray; border-radius: 1px;max-height:30px;text-align: left;')
+                                                else:
+                                                    self.Rows[row_num][col_num] = flx.Button(text=str(self.items[col][row_num]),
+                                                                                                  disabled=False,
+                                                                                                  style='background: yellow;color: '+Text_COLORS[self.ROWMODE[row_num]]+ ';border: 1px solid gray;border-radius: 1px;max-height:30px;text-align: left;')
+                                            
     @event.reaction('items','rowmode','Loading')
     def update_Data(self):
         self.ROWMODE  = self.rowmode
         if len(self.items.keys())>0:
+            num_of_rows = len(self.items[self.items.keys()[0]])
+            for col in self.Extra_Buttons:
+                self.items[col]=[]
+                for row_num in range(num_of_rows):
+                    self.items[col][row_num]=col
+            
             if (self.num_of_col !=len(self.items.keys())) or (self.num_of_rows !=len(self.items[self.items.keys()[0]])) :
                 self.content.dispose()
                 with self.table:
+                    self.Highlite=0
                     self.Drow_window()
             else:
-                #self.Highlite=0
+                
                 self.Re_Drow_window()
         else:
             self.content.dispose()
@@ -311,14 +370,25 @@ class Table(flx.GroupWidget):
                     else:
                         for col in self.Rows[row].keys():
                             if col!='handle':
-                                self.Rows[row][col].apply_style('background:white; color: ' +Text_COLORS[self.ROWMODE[int(row)+Extra]]+ '; border: 1px solid gray; border-radius: 0px;max-height:30px;text-align: left;')
-                                self.Rows[row][col].set_text(str(self.items[self.items.keys()[int(col)]][int(row)+Extra]) )
+                                if self.Rows[row][col].title == self.Extra_Buttons_title:
+                                   
+                                    # self.Rows[row][col].outernode.classList.add('flx-active')
+                                    # self.Rows[row][col].set_css_class('flx-active')
+                                    self.Rows[row][col].apply_style('background:#D4D4D3; color: ' +Text_COLORS[self.ROWMODE[int(row)+Extra]]+ '; border: 0px solid gray; border-radius: 10px;max-height:30px;text-align: center;')
+                                    self.Rows[row][col].set_text(str(self.items[self.items.keys()[int(col)]][int(row)+Extra]) )
+                                else:
+                                    self.Rows[row][col].apply_style('background:white; color: ' +Text_COLORS[self.ROWMODE[int(row)+Extra]]+ '; border: 1px solid gray; border-radius: 0px;max-height:30px;text-align: left;')
+                                    self.Rows[row][col].set_text(str(self.items[self.items.keys()[int(col)]][int(row)+Extra]) )
                         count=count+1
                 else:
                     for col in self.Rows[row].keys():
                         if col!='handle':
-                            self.Rows[row][col].apply_style('background: yellow;color:' +Text_COLORS[self.ROWMODE[int(row)+Extra]]+ ';border: 1px solid gray;border-radius: 0px;text-align: left;')
-                            self.Rows[row][col].set_text(str(self.items[self.items.keys()[int(col)]][int(row)+Extra]))
+                            if self.Rows[row][col].title == self.Extra_Buttons_title:
+                                self.Rows[row][col].apply_style('background: #FEDB9D; color:' +Text_COLORS[self.ROWMODE[int(row)+Extra]]+ ';border: 0px solid gray;border-radius: 10px;text-align: center;')
+                                self.Rows[row][col].set_text(str(self.items[self.items.keys()[int(col)]][int(row)+Extra]))
+                            else:
+                                self.Rows[row][col].apply_style('background: yellow; color:' +Text_COLORS[self.ROWMODE[int(row)+Extra]]+ ';border: 1px solid gray;border-radius: 0px;text-align: left;')
+                                self.Rows[row][col].set_text(str(self.items[self.items.keys()[int(col)]][int(row)+Extra]))
                     count=count+1
     @flx.emitter
     def key_down(self, e):
@@ -368,6 +438,9 @@ class Table(flx.GroupWidget):
                 self.Re_Drow_window()
                 # print(ev.source.parent.title)
                 # print(ev.source.text)
+                if ev.source.title == self.Extra_Buttons_title:
+                    self.set_Extra_Buttons_choice(ev.source.text)
+                    
             elif ev.source.parent.title == self.page_navigation_title:
                 if ev.source.text == self.Previous_Page_text:
                     if int(self.Page_count.text)-1>0:
@@ -917,7 +990,8 @@ class Redirect(flx.JsComponent):
         window.location.href = self.dest
 
 class Monitor_GUI(flx.PyComponent):
-    Dir = event.StringProp('', settable=True)
+    Dir         = event.StringProp('', settable=True)
+    RunCommand  = event.StringProp('', settable=True)
     #main program
     def init(self,directory         = os.getcwd(),
                   ssh_client        = None,
@@ -929,10 +1003,18 @@ class Monitor_GUI(flx.PyComponent):
                   Bar_Spacer        = '-',
                   Bar_len           = 40 ):
         
-        self.file_menu_title        = 'Log File Menu'
-        self.steps_menu_title       = 'Steps Menu'
-        self.samples_menu_title     = 'Samples Menu'
-        self.redirect               = Redirect('/')
+        self.send_massage            = send_massage()
+        self.file_menu_title         = 'Log File Menu'
+        self.steps_menu_title        = 'Steps Menu'
+        self.samples_menu_title      = 'Samples Menu'
+        self.log_id                  = ''
+        self.step                    = ''
+        self.Sample                  = ''
+        self.redirect                = Redirect('/')
+        self.STEP_format             = """..{STEP}..{ID}"""
+        self.SAMPLE_format           = """..{STEP}..{SAMPLE}..{ID}"""
+        self.scripts_index_file_loc  = """objects/script_index_{ID}.txt"""
+        self.master_scripts_file_loc = 'scripts/00.workflow.commands.sh'
         global LOCAL_HOST
         if ssh_client!=None:
             try:
@@ -951,11 +1033,13 @@ class Monitor_GUI(flx.PyComponent):
             SFTP = None
             if not os.path.isdir(directory):
                 directory     = os.getcwd()
-
+        
+        self.directory  = directory
+        self.ssh_client = ssh_client
         samples_menu_flag=-1
         samples_menu_active=False
         #initializing the main monitor/qstat log file parser module
-        self.mynsfgm = nsfgm(directory,
+        self.mynsfgm = nsfgm(self.directory,
                              Regular,           
                              Bar_Marker,        
                              Bar_Spacer ,       
@@ -964,10 +1048,10 @@ class Monitor_GUI(flx.PyComponent):
         #initializing file browser window
         with flx.VSplit(padding=20,spacing=20,style='background: white;'):
             self.file_menu    = Table(0,title=self.file_menu_title,style='font-size: 70%;',flex=0.2)
-            self.steps_menu   = Table(0,'LightSteelBlue',title=self.steps_menu_title,style='font-size: 70%;',flex=0.6)
-            self.samples_menu = Table(0,'NavajoWhite',title=self.samples_menu_title,style='font-size: 70%;',flex=0.2)
+            self.steps_menu   = Table(0,'LightSteelBlue',['Re Run Step'],title=self.steps_menu_title,style='font-size: 70%;',flex=0.6)
+            self.samples_menu = Table(0,'NavajoWhite',['Re Run Sample'],title=self.samples_menu_title,style='font-size: 70%;',flex=0.2)
         #get list of log files and information about them
-        #with self:
+        
         self.Test_sftp    = Test_sftp_alive(ssh_client)
         self.Relay_log    = Relay_log_files(ssh_client,
                                            self.mynsfgm,
@@ -998,6 +1082,11 @@ class Monitor_GUI(flx.PyComponent):
         self.Relay_sample.close()
         # self.Test_sftp.close()
 
+    # @event.reaction('RunCommand')
+    # def Update_RunCommand(self, *events):
+        # for ev in events:
+            # print(ev.new_value)
+
     @event.reaction('Dir')
     def Update_Dir(self, *events):
         for ev in events:
@@ -1013,11 +1102,16 @@ class Monitor_GUI(flx.PyComponent):
                 if 'Name' in ev.source.items.keys():
                     runlog_file = os.path.join(self.mynsfgm.Dir,ev.source.items['Name'][ev.new_value])
                     self.steps_menu.set_title(self.steps_menu_title +": "+ ev.source.items['Name'][ev.new_value])
+                    self.log_id = ev.source.items['Name'][ev.new_value]
+                    self.log_id = self.log_id.split('_')[1]
+                    self.log_id = self.log_id.split('.')[0]
                 else:
                     runlog_file = ''
+                    self.log_id = ''
                     self.steps_menu.set_title(self.steps_menu_title)
             except :
                     runlog_file = ''
+                    self.log_id = ''
                     self.steps_menu.set_title(self.steps_menu_title)
             self.Relay_data.set_runlog_file(runlog_file)
             self.steps_menu.set_Current_Highlite(0)
@@ -1038,11 +1132,14 @@ class Monitor_GUI(flx.PyComponent):
                 if 'Steps' in ev.source.items.keys():
                     instances=ev.source.items['Steps'][ev.new_value]
                     self.samples_menu.set_title(self.samples_menu_title +": "+ instances)
+                    self.step = instances
                 else:
                     instances = ''
+                    self.step = instances
                     self.samples_menu.set_title(self.samples_menu_title)
             except :
                     instances = ''
+                    self.step = instances
                     self.samples_menu.set_title(self.samples_menu_title)
             self.Relay_sample.set_instances(instances)
 
@@ -1052,6 +1149,122 @@ class Monitor_GUI(flx.PyComponent):
             if ev.new_value!=self.steps_menu.choice:
                 self.Relay_sample.set_instances('')
 
+    @event.reaction('samples_menu.choice')
+    def choose_Sample(self, *events):
+        for ev in events:
+            try:
+                if 'Samples' in ev.source.items.keys():
+                    Sample = ev.source.items['Samples'][ev.new_value]
+                    self.Sample = Sample
+                else:
+                    Sample = ''
+                    self.Sample = Sample
+            except :
+                    Sample = ''
+                    self.Sample = Sample
+                    
+    @event.reaction('steps_menu.Extra_Buttons_choice')
+    def handle_steps_Extra_Buttons_choice(self, *events):
+        for ev in events:
+            if ev.new_value!='':
+                try:
+                    # print(ev.new_value)
+                    #print(self.log_id)
+                    #print(self.step)
+                    #print(self.Sample)
+                    self.steps_menu.set_Extra_Buttons_choice('')
+                    step = self.STEP_format.format(STEP = self.step,
+                                                   ID   = self.log_id)
+
+                    command = "grep " + step + ' ' + os.path.join(self.directory , self.scripts_index_file_loc.format(ID = self.log_id))
+                    if self.ssh_client!=None:
+                        [out, errs , exit_status]  = Popen_SSH(self.session,self.ssh_client,command).output()
+                        if exit_status==0:
+                            out = out.split('\n')
+                            if len(out)>1:
+                                script = out[-2].split('\t')
+                                if len(script)>1: 
+                                    command = 'grep ' + script[-1] + ' ' + os.path.join(self.directory ,self.master_scripts_file_loc)
+                                    [out, errs , exit_status]  = Popen_SSH(self.session,self.ssh_client,command).output()
+                                    if exit_status==0:
+                                        if len(out)>0:
+                                            self.set_RunCommand(out)
+                                        else:
+                                            self.send_massage.set_massage('Could Not find the script for Step: ' + self.step + '. It could be from previous run')
+
+                    else:
+                        out = os.popen(command).read()
+                        out = out.split('\n')
+                        if len(out)>1:
+                            script = out[-2].split('\t')
+                            if len(script)>1: 
+                                command = 'grep ' + script[-1] + ' ' + os.path.join(self.directory ,self.master_scripts_file_loc)
+                                out = os.popen(command).read()
+                            if len(out)>0:
+                                self.set_RunCommand(out)
+                            else:
+                                self.send_massage.set_massage('Could Not find the script for Step: ' + self.step + '. It could be from previous run')
+                except:
+                    self.send_massage.set_massage('Could Not ' + ev.new_value + '. Try to Generate Scripts in the Run Tab')
+    @event.reaction('samples_menu.Extra_Buttons_choice')
+    def handle_samples_Extra_Buttons_choice(self, *events):
+        for ev in events:
+            if ev.new_value!='':
+                # print(ev.new_value)
+                # print(self.log_id)
+                # print(self.step)
+                # print(self.Sample)
+                try:
+                    self.samples_menu.set_Extra_Buttons_choice('')
+                    Step = self.STEP_format.format(STEP = self.step,
+                                                       ID   = self.log_id)
+                    
+                    Sample = self.SAMPLE_format.format(STEP   = self.step,
+                                                       SAMPLE = self.Sample,
+                                                       ID     = self.log_id)
+                    script_Step   =''
+                    script_Sample =''
+                    
+                    command_Step   = "grep " + Step   + ' ' + os.path.join(self.directory , self.scripts_index_file_loc.format(ID = self.log_id))
+                    command_Sample = "grep " + Sample + ' ' + os.path.join(self.directory , self.scripts_index_file_loc.format(ID = self.log_id))
+                    if self.ssh_client!=None:
+                        [out, errs , exit_status]  = Popen_SSH(self.session,self.ssh_client,command_Step).output()
+                        if exit_status==0:
+                            out = out.split('\n')
+                            if len(out)>1:
+                                script_Step = out[-2].split('\t')[-1]
+                                
+                        [out, errs , exit_status]  = Popen_SSH(self.session,self.ssh_client,command_Sample).output()
+                        if exit_status==0:
+                            out = out.split('\n')
+                            if len(out)>1:
+                                script_Sample = out[-2].split('\t')[-1]
+                        
+                        if (script_Sample!='') and (script_Step!=''):
+                            command = 'grep "' + script_Sample + '" ' + script_Step 
+                            [out, errs , exit_status]  = Popen_SSH(self.session,self.ssh_client,command).output()
+                            if len(out)>0:
+                                self.set_RunCommand(out)
+                            else:
+                                self.send_massage.set_massage('Could Not find the script for Sample: ' + self.Sample + ' within Step: ' + self.step + '. It could be from previous run')
+                    else:
+                        out = os.popen(command_Step).read()
+                        out = out.split('\n')
+                        script_Step = out[-2].split('\t')
+                        
+                        out = os.popen(command_Sample).read()
+                        out = out.split('\n')
+                        script_Sample = out[-2].split('\t')
+                        if (script_Sample!='') and (script_Step!=''):
+                            command = 'grep "' + script_Sample + '" ' + script_Step 
+                            out = os.popen(command).read()
+                            if len(out)>0:
+                                self.set_RunCommand(out)
+                            else:
+                                self.send_massage.set_massage('Could Not find the script for Sample: ' + self.Sample + ' within Step: ' + self.step + '. It could be from previous run')
+                except:
+                    self.send_massage.set_massage('Could Not ' + ev.new_value + '. Try to Generate Scripts in the Run Tab')
+    
 if __name__ == '__main__':
     #getting arguments from the user
     parser = argparse.ArgumentParser(description='Neatseq-flow Monitor By Liron Levin ')
