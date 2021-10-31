@@ -4077,7 +4077,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
 
 class Popen_SSH(object):
     
-    def __init__(self,session,ssh_client,command,shell=False,pty=True,timeout=500,nbytes = 4096):
+    def __init__(self,session,ssh_client,command,shell=False,pty=True,timeout=1300,nbytes = 4096):
         import time
         self.session     = session
         self.timeout     = timeout
