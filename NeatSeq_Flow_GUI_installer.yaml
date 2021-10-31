@@ -23,6 +23,7 @@ dependencies:
   - pip:
     - git+https://github.com/bioinfo-core-BGU/neatseq-flow.git@master
     - git+https://github.com/bioinfo-core-BGU/neatseq-flow-modules.git@master
-    - git+https://github.com/flexxui/flexx.git
+    - git+https://github.com/levinbgu/flexx.git
     - git+https://github.com/bioinfo-core-BGU/NeatSeq-Flow-GUI.git
+    # - git+https://github.com/flexxui/flexx.git
 
