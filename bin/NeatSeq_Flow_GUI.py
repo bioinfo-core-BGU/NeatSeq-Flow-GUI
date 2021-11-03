@@ -2592,7 +2592,7 @@ class Run_File_Browser(flx.PyComponent):
                                     else:
                                         Dir['File'][entry.name][columns[1]]=str(size)+'B'
                                     time = entry.stat().st_mtime
-                                    Dir['File'][entry.filename][columns[2]] = datetime.fromtimestamp(time).strftime('%Y-%m-%d-%H:%M')
+                                    Dir['File'][entry.name][columns[2]] = datetime.fromtimestamp(time).strftime('%Y-%m-%d-%H:%M')
                     self.File_Browser.set_Path(Path)
                     self.Path = Path
                     self.File_Browser.set_Dir(Dir)
