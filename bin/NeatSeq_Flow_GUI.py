@@ -44,6 +44,8 @@ COLORS                 = ('#EF9A9A','#B2EBF2','#FFECB3',
                           '#B2DFDB','#DCEDC8','#F0F4C3',
                           '#FFF9C4','#D1C4E9','#FFE0B2',
                           '#FFCCBC','#BBDEFB','#F06292'
+                                                  
+                   
                          )
 
 COLOR_BY               = ['module','tag','scope']
@@ -148,6 +150,8 @@ Download_Size_Limit    = 150 # in MB
 Download_TimeOut       = 30
 
 Preview_Buffer         = 10000
+
+COMMAND_TIME_OUT       = 10000
 # Associate CodeMirror's assets with this module so that Flexx will load
 # them when (things from) this module is used.
 
@@ -2592,7 +2596,7 @@ class Run_File_Browser(flx.PyComponent):
                                     else:
                                         Dir['File'][entry.name][columns[1]]=str(size)+'B'
                                     time = entry.stat().st_mtime
-                                    Dir['File'][entry.name][columns[2]] = datetime.fromtimestamp(time).strftime('%Y-%m-%d-%H:%M')
+                                    Dir['File'][entry.filename][columns[2]] = datetime.fromtimestamp(time).strftime('%Y-%m-%d-%H:%M')
                     self.File_Browser.set_Path(Path)
                     self.Path = Path
                     self.File_Browser.set_Dir(Dir)
@@ -2892,9 +2896,9 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 self.TabLayout2.set_capture_mouse(2)
                 self.Terminal_string = ''
                 Add_Tooltip(self.label,HELP['cite'])
-            with  ui.Widget(flex=1) as self.Browser_W:
+            with ui.Widget(flex=1) as self.Browser_W:
                 self.Browser         = Run_File_Browser(path,self.ssh_client)
-                
+             
             if SERVE:
                 with ui.Widget(flex=1) as self.Option_Menu_w:
                     if (WOKFLOW_DIR != None):
@@ -3596,26 +3600,26 @@ class NeatSeq_Flow_GUI(app.PyComponent):
             self.Run.set_Terminal(self.Terminal_string)
     
     def Run_ReRun_command(self,command):
+        import time
         Error = ''
         if len(command) > 0:
             if  self.Kill_Run == 0 :
-                if self.Recovery == 0:
-                    try:
-                        self.Running_Commands['Recovery'] =  Run_command_in_thread(self.session,command,self.ssh_client)
-                        self.Running_Commands['Recovery'].Run()
-                        self.Terminal_string = self.Terminal_string + '[Recovery]:   Trying to Recover.. \n'
-                        self.Run.set_Terminal(self.Terminal_string)
-                        self.set_Recovery(self.Recovery+1)
-                        self.Run.set_Terminal(self.Terminal_string)
-                    except Exception as e:
-                        Error = "Some Unknown ERROR!! " + str(e)
-                        
-                else:
-                    Error = "Can't Re-Run script while other scripts are submitted, Try later"
+                while self.Recovery != 0:
+                    time.sleep(0.000001)
+                try:
+                    time.sleep(0.00001)
+                    self.Running_Commands['Recovery'] =  Run_command_in_thread(self.session,command,self.ssh_client)
+                    self.Running_Commands['Recovery'].Run()
+                    self.Terminal_string = self.Terminal_string + '[Recovery]:'+ command +'\n'
+                    self.Run.set_Terminal(self.Terminal_string)
+                    self.set_Recovery(self.Recovery+1)
+                    self.Run.set_Terminal(self.Terminal_string)
+                except Exception as e:
+                    Error += "Some Unknown ERROR!! " + str(e) + '\n'
             else:
-                Error = "Can't Re-Run script while Killing scripts, Try later"
+                Error += "Can't Re-Run script while Killing scripts, Try later"
         else:
-            Error = 'No Script to Run'
+            Error += 'No Script to Run'
             
         if len(Error)==0:
             self.TabLayout2.set_current(self.Run)
@@ -3696,8 +3700,17 @@ class NeatSeq_Flow_GUI(app.PyComponent):
     def Monitor_send_command(self, *events):
         for ev in events:
             if ev.new_value!='':
-                self.Run_ReRun_command(ev.new_value)
-    
+                if self.Recovery == 0:
+                    for line in ev.new_value.split('\n'):
+                            if len(line)>0:
+                                self.Run_ReRun_command(line)
+                else:
+                    Error = "Can't Re-Run script while other scripts are submitted, Try later"
+                    if SERVE:
+                        self.send_massage.set_massage(Error)
+                    else:
+                        print(Error)
+                        
     @event.reaction('!Run.open_filepicker', 'samples_info.open_filepicker', 'step_info.open_filepicker',
                     'cluster_info.open_filepicker', 'vars_info.open_filepicker')
     def open_filepicker(self, *events):
@@ -4077,7 +4090,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
 
 class Popen_SSH(object):
     
-    def __init__(self,session,ssh_client,command,shell=False,pty=True,timeout=1300,nbytes = 4096):
+    def __init__(self,session,ssh_client,command,shell=False,pty=True,timeout=COMMAND_TIME_OUT,nbytes = 4096):
         import time
         self.session     = session
         self.timeout     = timeout

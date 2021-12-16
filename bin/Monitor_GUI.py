@@ -10,12 +10,162 @@ import argparse
 from multiprocessing import Process, Queue
 import threading
 
+
 pd.options.mode.chained_assignment = None
 
 __author__   = "Liron Levin"
 jid_name_sep = '..'
 LOCAL_HOST   = socket.gethostname()
 Text_COLORS  = ['black','green','red','orange','magenta','cyan','blue']
+HEDER        = 'Heder'
+
+class Circle(flx.Label):
+
+    CSS = """
+    .flx-Circle {
+            height: 25px;
+            width: 25px;
+            background-color: #bbb;
+            border-radius: 50%;
+            display: inline-block;
+        }
+    """
+
+class Circles(ui.Widget):
+    refresh_flag     = event.BoolProp(False, settable=True)
+    def init(self):
+        self._circles = [Circle() for i in range(5)]
+        self.tick()
+        
+    #@event.reaction('refresh_flag')
+    def tick(self):
+        global Math, window
+        for i, circle in enumerate(self._circles):
+            t = time()
+            x = i*3+10#Math.sin(i*0.1 + t) * 30 + 50
+            y = Math.cos(i*0.6 + t*3.5)*20+50  
+            circle.apply_style(dict(left=x + '%', top=y + '%'))
+        
+        # if self.refresh_flag:
+            # self.set_refresh_flag(False)
+        # else:
+            # self.set_refresh_flag(True)
+        window.setTimeout(self.tick, 0)
+
+class Rainbow2(flx.CanvasWidget):
+    def init(self):
+        global Math, window
+        self.colors        = ["red", "orange", "yellow","LightSeaGreen","green","Cyan", "blue","DeepSkyBlue" ,"violet","Purple "]
+        self.ctx           = self.node.getContext('2d')
+        self.lineWidth     = 5
+        self.ctx.lineWidth = self.lineWidth
+
+        i=0
+        self.speed = {}
+        self.angle = {}
+        self.direction = {}
+        for color in self.colors:
+            self.speed[color] = 5 + Math.random()*5
+            self.angle[color] = Math.PI / 4
+            self.direction[color] = 0
+        self.draw()
+        
+    def drawArc(self, radius, color, angle):
+        global Math, window
+        w, h = self.size
+        self.ctx.beginPath()
+        self.ctx.strokeStyle = color
+        self.ctx.lineWidth = self.lineWidth
+        self.ctx.arc(w*0.5, h*0.5, radius, angle, angle- Math.PI/2 , True)
+        self.ctx.stroke();
+        self.ctx.closePath()
+        
+        
+    def makeArc(self,radius, color):
+        global Math, window
+        self.drawArc(radius, color, self.angle[color])
+        self.direction[color] += Math.PI / 180
+        self.angle[color] += Math.PI / 180 * Math.sin(self.direction[color])  * self.speed[color]  
+        
+
+    def draw(self):
+        global Math, window
+        w, h = self.size
+        #self.ctx.clearRect(0, 0, w, h)
+        self.ctx.fillStyle = 'rgba(256, 256, 256, 0.4)'
+        self.ctx.fillRect(0, 0, w, h)
+        i = 0
+        for color in self.colors:
+            i+=1
+            self.makeArc(10 + i * 9, color ) # 
+        window.setTimeout(self.draw, 100/7 )
+
+class Rainbow(flx.CanvasWidget):
+    
+    def init(self):
+        global Math, window
+        self.colors = ["red", "orange", "yellow", "green", "blue", "violet"]
+        self.radius = 10       # max radius
+        self.lineWidth = 6     # width of each arc in pixels
+        self.delay = 3000        # ms
+        self.duration = 10000    # ms (per arc)
+        canvas = self.node
+        self.ctx = self.node.getContext('2d')
+        self.ctx.lineWidth = self.lineWidth
+        self.angle = Math.PI / 4
+        self.direction = 0
+        self.startTime   = time()
+        self.i=0
+        self.draw()
+        
+    def drawArc(self, radius, color, angle):
+        global Math, window
+        w, h = self.size
+        self.ctx.beginPath()
+        self.ctx.strokeStyle = color
+        self.ctx.lineWidth = self.lineWidth
+        self.ctx.arc(w*0.5, h*0.5, radius, angle, angle - Math.PI/2  , True)
+        self.ctx.stroke();
+        self.ctx.closePath()
+        
+        
+    def makeArc(self,radius, color, speed):
+        global Math, window
+        self.radius = radius
+        self.color = color
+        self.speed = speed
+        self.direction += Math.PI / 180
+        self.angle += Math.PI / 180 * Math.sin(self.direction) * self.speed
+        if self.i > 5:
+            self.i = 0
+        self.drawArc(self.radius, self.color, self.angle)
+        
+        
+
+    def draw(self):
+        w, h = self.size
+        #self.ctx.clearRect(0, 0, w, h)
+        self.ctx.fillStyle = 'rgba(256, 256, 256, 0.7)'
+        self.ctx.fillRect(0, 0, w, h)
+        i = 0
+        for color in self.colors:
+            i+=2
+            self.i+=0.01
+            #print(self.i)
+            self.makeArc(30 + i * 5, color,   i*self.i)
+        window.setTimeout(self.draw, 100)
+
+def LoadingWin(string='Collecting Data'):
+    with ui.HSplit():
+        ui.Layout()
+        with ui.VSplit():
+            ui.Layout()
+            with flx.GroupWidget(title=string,style='font-size: 200%; border: 0px solid purple;'):
+                with ui.VBox():
+                    Rainbow2(style='min-height: 200px; min-width: 200px; ')
+                    ui.Widget()  # Spacing
+            ui.Layout()
+        ui.Layout()
 
 class send_massage(ui.Widget):
     massage = event.StringProp('', settable=True)
@@ -273,9 +423,9 @@ class Table(flx.GroupWidget):
                                 if col in self.Extra_Buttons:
                                     col_num = col_num+1
                                     count=0
-                                    self.Rows['heder'][col_num] = flx.LineEdit(text=str(col),
+                                    self.Rows['heder'][col_num] =  flx.Button(text=str(col),
                                                                                title=self.Extra_Buttons_title,
-                                                                               disabled=True,
+                                                                               disabled=False,
                                                                                style='font-size: 120%; background: ' + self.Heder_Backgroun_Color  +'  ;color: blue;border-radius: 0px;max-height:35px;')
                                 else:   
                                     self.Rows['heder'][col_num] = flx.LineEdit(text=str(col),
@@ -454,6 +604,8 @@ class Table(flx.GroupWidget):
                         self.Highlite = Highlite
                         self.Re_Drow_window()
                         self.set_Current_Highlite(self.Highlite)
+            elif ev.source.title == self.Extra_Buttons_title:
+                self.set_Extra_Buttons_choice(ev.source.text+HEDER)
 
 class nsfgm(flx.PyComponent):
     #  Main class for neatseq-flow Log file parser
@@ -1015,6 +1167,8 @@ class Monitor_GUI(flx.PyComponent):
         self.SAMPLE_format           = """..{STEP}..{SAMPLE}..{ID}"""
         self.scripts_index_file_loc  = """objects/script_index_{ID}.txt"""
         self.master_scripts_file_loc = 'scripts/00.workflow.commands.sh'
+        self.sample_rerun_heder      = 'Re Run Samples'
+        self.step_rerun_heder        = 'Re Run Step'
         global LOCAL_HOST
         if ssh_client!=None:
             try:
@@ -1044,12 +1198,18 @@ class Monitor_GUI(flx.PyComponent):
                              Bar_Marker,        
                              Bar_Spacer ,       
                              Bar_len)
-
-        #initializing file browser window
-        with flx.VSplit(padding=20,spacing=20,style='background: white;'):
-            self.file_menu    = Table(0,title=self.file_menu_title,style='font-size: 70%;',flex=0.2)
-            self.steps_menu   = Table(0,'LightSteelBlue',['Re Run Step'],title=self.steps_menu_title,style='font-size: 70%;',flex=0.6)
-            self.samples_menu = Table(0,'NavajoWhite',['Re Run Sample'],title=self.samples_menu_title,style='font-size: 70%;',flex=0.2)
+        with ui.StackLayout(flex=1) as self.stack:
+            
+            #initializing file browser window
+            with flx.VSplit(padding=20,spacing=20,style='background: white;') as self.main_stack:
+                self.file_menu    = Table(0,title=self.file_menu_title,style='font-size: 70%;',flex=0.2)
+                self.steps_menu   = Table(0,'LightSteelBlue',[self.step_rerun_heder ],title=self.steps_menu_title,style='font-size: 70%;',flex=0.6)
+                self.samples_menu = Table(0,'NavajoWhite',[self.sample_rerun_heder],title=self.samples_menu_title,style='font-size: 70%;',flex=0.2)
+            self.LoadingWin = ui.Widget(style='background:white;')
+            with self.LoadingWin:
+                LoadingWin()
+        self.stack.set_current(self.main_stack)
+        
         #get list of log files and information about them
         
         self.Test_sftp    = Test_sftp_alive(ssh_client)
@@ -1065,7 +1225,7 @@ class Monitor_GUI(flx.PyComponent):
                                             self.mynsfgm,
                                             self.samples_menu,
                                             Sample_RF)
-                                              
+        
     def close_session(self):
         self.redirect.go()
             
@@ -1080,12 +1240,6 @@ class Monitor_GUI(flx.PyComponent):
         self.Relay_data.close()
         self.Relay_log.close()
         self.Relay_sample.close()
-        # self.Test_sftp.close()
-
-    # @event.reaction('RunCommand')
-    # def Update_RunCommand(self, *events):
-        # for ev in events:
-            # print(ev.new_value)
 
     @event.reaction('Dir')
     def Update_Dir(self, *events):
@@ -1094,7 +1248,7 @@ class Monitor_GUI(flx.PyComponent):
                 self.mynsfgm.set_Dir(os.path.join(ev.new_value,"logs"))
                 self.Relay_sample.set_instances('')
                 self.Relay_data.set_runlog_file('')
-                
+
     @event.reaction('file_menu.Current_Highlite','file_menu.choice')
     def choose_log_file(self, *events):
         for ev in events:
@@ -1118,12 +1272,6 @@ class Monitor_GUI(flx.PyComponent):
             self.Relay_sample.set_instances('')
             self.samples_menu.set_title(self.samples_menu_title)
             self.Relay_sample.set_runlog_file(runlog_file)
-            
-    # @event.reaction('file_menu.Current_Highlite')
-    # def choose_log_file_control(self, *events):
-    #     for ev in events:
-    #         if ev.new_value!=self.file_menu.choice:
-    #             self.Relay_main.set_runlog_file('None')
 
     @event.reaction('steps_menu.choice')
     def choose_step_file(self, *events):
@@ -1162,109 +1310,182 @@ class Monitor_GUI(flx.PyComponent):
             except :
                     Sample = ''
                     self.Sample = Sample
-                    
+
     @event.reaction('steps_menu.Extra_Buttons_choice')
     def handle_steps_Extra_Buttons_choice(self, *events):
         for ev in events:
             if ev.new_value!='':
-                try:
-                    # print(ev.new_value)
-                    #print(self.log_id)
-                    #print(self.step)
-                    #print(self.Sample)
-                    self.steps_menu.set_Extra_Buttons_choice('')
-                    step = self.STEP_format.format(STEP = self.step,
-                                                   ID   = self.log_id)
+                if ev.new_value!=self.step_rerun_heder+HEDER:
+                    try:
+                        # print(ev.new_value)
+                        #print(self.log_id)
+                        #print(self.step)
+                        #print(self.Sample)
+                        self.steps_menu.set_Extra_Buttons_choice('')
+                        step = self.STEP_format.format(STEP = self.step,
+                                                       ID   = self.log_id)
 
-                    command = "grep " + step + ' ' + os.path.join(self.directory , self.scripts_index_file_loc.format(ID = self.log_id))
-                    if self.ssh_client!=None:
-                        [out, errs , exit_status]  = Popen_SSH(self.session,self.ssh_client,command).output()
-                        if exit_status==0:
+                        command = "grep " + step + ' ' + os.path.join(self.directory , self.scripts_index_file_loc.format(ID = self.log_id))
+                        if self.ssh_client!=None:
+                            [out, errs , exit_status]  = Popen_SSH(self.session,self.ssh_client,command).output()
+                            if exit_status==0:
+                                out = out.split('\n')
+                                if len(out)>1:
+                                    script = out[-2].split('\t')
+                                    if len(script)>1: 
+                                        command = 'grep ' + script[-1] + ' ' + os.path.join(self.directory ,self.master_scripts_file_loc)
+                                        [out, errs , exit_status]  = Popen_SSH(self.session,self.ssh_client,command).output()
+                                        if exit_status==0:
+                                            if len(out)>0:
+                                                self.set_RunCommand(out)
+                                            else:
+                                                self.send_massage.set_massage('Could Not find the script for Step: ' + self.step + '. It could be from previous run')
+
+                        else:
+                            out = os.popen(command).read()
                             out = out.split('\n')
                             if len(out)>1:
                                 script = out[-2].split('\t')
                                 if len(script)>1: 
                                     command = 'grep ' + script[-1] + ' ' + os.path.join(self.directory ,self.master_scripts_file_loc)
-                                    [out, errs , exit_status]  = Popen_SSH(self.session,self.ssh_client,command).output()
-                                    if exit_status==0:
-                                        if len(out)>0:
-                                            self.set_RunCommand(out)
-                                        else:
-                                            self.send_massage.set_massage('Could Not find the script for Step: ' + self.step + '. It could be from previous run')
+                                    out = os.popen(command).read()
+                                if len(out)>0:
+                                    self.set_RunCommand(out)
+                                else:
+                                    self.send_massage.set_massage('Could Not find the script for Step: ' + self.step + '. It could be from previous run')
+                    except:
+                        self.send_massage.set_massage('Could Not ' + ev.new_value + '. Try to Generate Scripts in the Run Tab')
 
-                    else:
-                        out = os.popen(command).read()
-                        out = out.split('\n')
-                        if len(out)>1:
-                            script = out[-2].split('\t')
-                            if len(script)>1: 
-                                command = 'grep ' + script[-1] + ' ' + os.path.join(self.directory ,self.master_scripts_file_loc)
-                                out = os.popen(command).read()
-                            if len(out)>0:
-                                self.set_RunCommand(out)
-                            else:
-                                self.send_massage.set_massage('Could Not find the script for Step: ' + self.step + '. It could be from previous run')
-                except:
-                    self.send_massage.set_massage('Could Not ' + ev.new_value + '. Try to Generate Scripts in the Run Tab')
     @event.reaction('samples_menu.Extra_Buttons_choice')
     def handle_samples_Extra_Buttons_choice(self, *events):
         for ev in events:
             if ev.new_value!='':
-                # print(ev.new_value)
-                # print(self.log_id)
-                # print(self.step)
-                # print(self.Sample)
-                try:
-                    self.samples_menu.set_Extra_Buttons_choice('')
-                    Step = self.STEP_format.format(STEP = self.step,
+                if ev.new_value!=self.sample_rerun_heder+HEDER:
+                    try:
+                        self.samples_menu.set_Extra_Buttons_choice('')
+                        Step = self.STEP_format.format(STEP = self.step,
                                                        ID   = self.log_id)
-                    
-                    Sample = self.SAMPLE_format.format(STEP   = self.step,
-                                                       SAMPLE = self.Sample,
-                                                       ID     = self.log_id)
-                    script_Step   =''
-                    script_Sample =''
-                    
-                    command_Step   = "grep " + Step   + ' ' + os.path.join(self.directory , self.scripts_index_file_loc.format(ID = self.log_id))
-                    command_Sample = "grep " + Sample + ' ' + os.path.join(self.directory , self.scripts_index_file_loc.format(ID = self.log_id))
-                    if self.ssh_client!=None:
-                        [out, errs , exit_status]  = Popen_SSH(self.session,self.ssh_client,command_Step).output()
-                        if exit_status==0:
+                        
+                        Sample = self.SAMPLE_format.format(STEP   = self.step,
+                                                           SAMPLE = self.Sample,
+                                                           ID     = self.log_id)
+                        script_Step   =''
+                        script_Sample =''
+                        
+                        command_Step   = "grep " + Step   + ' ' + os.path.join(self.directory , self.scripts_index_file_loc.format(ID = self.log_id))
+                        command_Sample = "grep " + Sample + ' ' + os.path.join(self.directory , self.scripts_index_file_loc.format(ID = self.log_id))
+                        if self.ssh_client!=None:
+                            [out, errs , exit_status]  = Popen_SSH(self.session,self.ssh_client,command_Step).output()
+                            if exit_status==0:
+                                out = out.split('\n')
+                                if len(out)>1:
+                                    script_Step = out[-2].split('\t')[-1]
+                                    
+                            [out, errs , exit_status]  = Popen_SSH(self.session,self.ssh_client,command_Sample).output()
+                            if exit_status==0:
+                                out = out.split('\n')
+                                if len(out)>1:
+                                    script_Sample = out[-2].split('\t')[-1]
+                            
+                            if (script_Sample!='') and (script_Step!=''):
+                                command = 'grep "' + script_Sample + '" ' + script_Step 
+                                [out, errs , exit_status]  = Popen_SSH(self.session,self.ssh_client,command).output()
+                                if len(out)>0:
+                                    self.set_RunCommand(out)
+                                else:
+                                    self.send_massage.set_massage('Could Not find the script for Sample: ' + self.Sample + ' within Step: ' + self.step + '. It could be from previous run')
+                        else:
+                            out = os.popen(command_Step).read()
                             out = out.split('\n')
-                            if len(out)>1:
-                                script_Step = out[-2].split('\t')[-1]
+                            script_Step = out[-2].split('\t')
+                            
+                            out = os.popen(command_Sample).read()
+                            out = out.split('\n')
+                            script_Sample = out[-2].split('\t')
+                            if (script_Sample!='') and (script_Step!=''):
+                                command = 'grep "' + script_Sample + '" ' + script_Step 
+                                out = os.popen(command).read()
+                                if len(out)>0:
+                                    self.set_RunCommand(out)
+                                else:
+                                    self.send_massage.set_massage('Could Not find the script for Sample: ' + self.Sample + ' within Step: ' + self.step + '. It could be from previous run')
+                    except:
+                        self.send_massage.set_massage('Could Not ' + ev.new_value + '. Try to Generate Scripts in the Run Tab')
+                else:
+                    
+                    self.stack.set_current(self.LoadingWin)
+                    try:                        
+                        self.samples_menu.set_Extra_Buttons_choice('')
+                        Samples = ''
+                        items = pd.DataFrame.from_dict(ev.source.items)
+                        Script = ''
+                        if 'Samples' in items.columns:
+                            if 'Status' in items.columns:
+                                Status = items['Status']=='ERROR'
+                                if 'Running?' in items.columns:
+                                    Running = items['Running?']=='No'
+                                    Samples = items[Status & Running]['Samples'].values
+                                else:
+                                    Samples = items[Status]['Samples'].values
                                 
-                        [out, errs , exit_status]  = Popen_SSH(self.session,self.ssh_client,command_Sample).output()
-                        if exit_status==0:
+                        
+                        script_Step = ''
+                        Step = self.STEP_format.format(STEP = self.step,
+                                                           ID   = self.log_id)
+                        command_Step   = "grep " + Step   + ' ' + os.path.join(self.directory , self.scripts_index_file_loc.format(ID = self.log_id))
+                        
+                        if self.ssh_client!=None:
+                            [out, errs , exit_status]  = Popen_SSH(self.session,self.ssh_client,command_Step).output()
+                            if exit_status==0:
+                                out = out.split('\n')
+                                if len(out)>1:
+                                    script_Step = out[-2].split('\t')[-1]
+                        else:
+                            out = os.popen(command_Step).read()
                             out = out.split('\n')
-                            if len(out)>1:
-                                script_Sample = out[-2].split('\t')[-1]
-                        
-                        if (script_Sample!='') and (script_Step!=''):
-                            command = 'grep "' + script_Sample + '" ' + script_Step 
-                            [out, errs , exit_status]  = Popen_SSH(self.session,self.ssh_client,command).output()
-                            if len(out)>0:
-                                self.set_RunCommand(out)
-                            else:
-                                self.send_massage.set_massage('Could Not find the script for Sample: ' + self.Sample + ' within Step: ' + self.step + '. It could be from previous run')
-                    else:
-                        out = os.popen(command_Step).read()
-                        out = out.split('\n')
-                        script_Step = out[-2].split('\t')
-                        
-                        out = os.popen(command_Sample).read()
-                        out = out.split('\n')
-                        script_Sample = out[-2].split('\t')
-                        if (script_Sample!='') and (script_Step!=''):
-                            command = 'grep "' + script_Sample + '" ' + script_Step 
-                            out = os.popen(command).read()
-                            if len(out)>0:
-                                self.set_RunCommand(out)
-                            else:
-                                self.send_massage.set_massage('Could Not find the script for Sample: ' + self.Sample + ' within Step: ' + self.step + '. It could be from previous run')
-                except:
-                    self.send_massage.set_massage('Could Not ' + ev.new_value + '. Try to Generate Scripts in the Run Tab')
-    
+                            script_Step = out[-2].split('\t')
+                        if script_Step!='':
+                            for Sample_Name in Samples:
+                                
+                                Sample = self.SAMPLE_format.format(STEP   = self.step,
+                                                                   SAMPLE = Sample_Name,
+                                                                   ID     = self.log_id)
+                                
+                                script_Sample =''
+                                command_Sample = "grep " + Sample + ' ' + os.path.join(self.directory , self.scripts_index_file_loc.format(ID = self.log_id))
+                                if self.ssh_client!=None:
+                                    [out, errs , exit_status]  = Popen_SSH(self.session,self.ssh_client,command_Sample).output()
+                                    if exit_status==0:
+                                        out = out.split('\n')
+                                        if len(out)>1:
+                                            script_Sample = out[-2].split('\t')[-1]
+                                    
+                                    if (script_Sample!='') and (script_Step!=''):
+                                        command = 'grep "' + script_Sample + '" ' + script_Step 
+                                        [out, errs , exit_status]  = Popen_SSH(self.session,self.ssh_client,command).output()
+                                        if len(out)>0:
+                                            Script+= out + '\n'
+                                        else:
+                                            self.send_massage.set_massage('Could Not find the script for Sample: ' + self.Sample + ' within Step: ' + self.step + '. It could be from previous run')
+                                else:
+                                    
+                                    out = os.popen(command_Sample).read()
+                                    out = out.split('\n')
+                                    script_Sample = out[-2].split('\t')
+                                    if (script_Sample!='') and (script_Step!=''):
+                                        command = 'grep "' + script_Sample + '" ' + script_Step 
+                                        out = os.popen(command).read()
+                                        if len(out)>0:
+                                            Script+= out + '\n'
+                                        else:
+                                            self.send_massage.set_massage('Could Not find the script for Sample: ' + self.Sample + ' within Step: ' + self.step + '. It could be from previous run')
+                        #print(Script)
+                        if len(Script)>0:
+                            self.set_RunCommand(Script)
+                    except:
+                        self.send_massage.set_massage('Could Not ' + ev.new_value + '. Try to Generate Scripts in the Run Tab')
+                    self.stack.set_current(self.main_stack)
+
 if __name__ == '__main__':
     #getting arguments from the user
     parser = argparse.ArgumentParser(description='Neatseq-flow Monitor By Liron Levin ')
