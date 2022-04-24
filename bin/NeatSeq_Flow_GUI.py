@@ -15,6 +15,7 @@ import os,sys,dialite
 from collections import OrderedDict
 import asyncio
 import signal
+from multiprocessing import Process, Queue
 
 sys.path.append(os.path.realpath(os.path.expanduser(os.path.dirname(os.path.abspath(__file__))+os.sep+"..")))
 
@@ -152,6 +153,17 @@ Download_TimeOut       = 30
 Preview_Buffer         = 10000
 
 COMMAND_TIME_OUT       = 10000
+
+def tracefunc(frame, event, arg, indent=[0]):
+    if os.path.basename(__file__) != os.path.basename(frame.f_code.co_filename):
+        if event == "call":
+          indent[0] += 2
+          print("-" * indent[0] + "> call function", frame.f_code.co_name)
+        elif event == "return":
+          print("<" + "-" * indent[0], "exit function", frame.f_code.co_name)
+          indent[0] -= 2
+        return tracefunc
+
 # Associate CodeMirror's assets with this module so that Flexx will load
 # them when (things from) this module is used.
 
@@ -327,7 +339,6 @@ class Graphical_panel(ui.CanvasWidget):
     Steps_Order      = event.DictProp({},settable=True)
 
     def init(self):
-
         super().init()
         self.new_size = None
         self.ctx = self.node.getContext('2d')
@@ -2600,7 +2611,7 @@ class Run_File_Browser(flx.PyComponent):
                     self.File_Browser.set_Path(Path)
                     self.Path = Path
                     self.File_Browser.set_Dir(Dir)
-                except :# Exception as e:
+                except :# BaseException as e:
                     # print(str(e))
                     if self.ssh_client!=None:
                         self.sftp   = self.ssh_client.open_sftp()
@@ -2714,6 +2725,71 @@ def Reconnect_SSH(ssh_client):
     except:
         ssh_client.close()
     return   ssh_client
+
+class Rainbow(flx.CanvasWidget):
+    def init(self):
+        global Math, window
+        self.colors        = ["red", "orange", "yellow","LightSeaGreen","green","Cyan", "blue","DeepSkyBlue" ,"violet","Purple "]
+        self.ctx           = self.node.getContext('2d')
+        self.lineWidth     = 5
+        self.ctx.lineWidth = self.lineWidth
+
+        i=0
+        self.speed = {}
+        self.angle = {}
+        self.direction = {}
+        for color in self.colors:
+            self.speed[color] = 5 + Math.random()*5
+            self.angle[color] = Math.PI / 4
+            self.direction[color] = 0
+        self.draw()
+        # window.setInterval(self.draw, 100/7 )
+        
+        
+    def drawArc(self, radius, color, angle):
+        global Math, window
+        w, h = self.size
+        self.ctx.beginPath()
+        self.ctx.strokeStyle = color
+        self.ctx.lineWidth = self.lineWidth
+        self.ctx.arc(w*0.5, h*0.5, radius, angle, angle- Math.PI/2 , True)
+        self.ctx.stroke();
+        self.ctx.closePath()
+        
+        
+    def makeArc(self,radius, color):
+        global Math, window
+        self.drawArc(radius, color, self.angle[color])
+        self.direction[color] += Math.PI / 180
+        self.angle[color] += Math.PI / 180 * Math.sin(self.direction[color])  * self.speed[color]  
+        
+
+    def draw(self):
+        global Math, window
+        w, h = self.size
+        #self.ctx.clearRect(0, 0, w, h)
+        self.ctx.fillStyle = 'rgba(256, 256, 256, 0.4)'
+        self.ctx.fillRect(0, 0, w, h)
+        i = 0
+        for color in self.colors:
+            i+=1
+            self.makeArc(10 + i * 9, color ) # 
+        window.setTimeout(self.draw, 100/7 )
+
+def LoadingWin(string='Collecting Data'):
+    with ui.HSplit():
+        ui.Layout()
+        with ui.VSplit():
+            ui.Layout()
+            with flx.GroupWidget(title=string,style='font-size: 200%; border: 0px solid purple;'):
+                with ui.VBox():
+                    # Rainbow(style='min-height: 200px; min-width: 200px; ')
+                    ui.ImageWidget(stretch=False,
+                                   source='https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/neatseq_flow_gui/Loading.gif')
+                                   #source='https://i.pinimg.com/originals/0c/28/08/0c28087b5cedf7276ee6c8d81e28d328.gif')
+                    ui.Widget()  # Spacing
+            ui.Layout()
+        ui.Layout()
 
 class NeatSeq_Flow_GUI(app.PyComponent):
     CSS = """
@@ -2898,7 +2974,8 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 Add_Tooltip(self.label,HELP['cite'])
             with ui.Widget(flex=1) as self.Browser_W:
                 self.Browser         = Run_File_Browser(path,self.ssh_client)
-             
+            with ui.Widget(style='background:white;') as self.LoadingWin:
+                LoadingWin()
             if SERVE:
                 with ui.Widget(flex=1) as self.Option_Menu_w:
                     if (WOKFLOW_DIR != None):
@@ -2921,10 +2998,8 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 
         if not SERVE:
             self.stack.apply_style('font-size:80%;')
-    # @event.reaction('label.pointer_move')
-    # def on_label_move(self, *events):
-        # self.label.set_flex(0.2)
-    
+        self.Run_FUN = Run_function_in_thread()
+
     @event.reaction('!Option_Menu.Done')
     def Option_Menu_Done(self,*events):
         for ev in events:
@@ -2937,6 +3012,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                     self.stack.set_current(self.workflow_select_w)
                 else:
                     self.stack.set_current(self.MainStack)
+                    self.label.set_flex(0.02)
     
     @event.reaction('Browser.Done','!workflow_select.Done')
     def when_File_Browser_Done(self,*events):
@@ -2977,15 +3053,19 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                         self.filepicker_key  = 'workflow_file'
                         self.set_filepicker_options(ev.source.Selected_Path)
                         self.stack.set_current(self.MainStack)
+                        # self.label.set_flex(0.02)
                     else:
                         self.stack.set_current(self.MainStack)
+                        self.label.set_flex(0.02)
                 else:
                     self.set_filepicker_options(ev.source.Selected_Path)
                     self.stack.set_current(self.MainStack)
+                    # self.label.set_flex(0.02)
             
     @event.reaction('label.pointer_click')
     def on_label_click(self, *events):
         self.label.set_flex(0.2)
+        asyncio.get_event_loop().call_later(5, self.label.set_flex,0.02)
     
     def select_files(self,select_style='Single', select_type='Open', wildcard='*'):
         if SERVE:
@@ -3071,13 +3151,13 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 self.Browser.set_Done(True)
                 return 
     
-    # @event.reaction('TabLayout.pointer_move')
+    # @event.reaction('label.pointer_move')
+    # def on_label_move(self, *events):
+        # self.label.set_flex(0.2)
+    
+    # @event.reaction('TabLayout2.pointer_move')
     # def on_label_after(self, *events):
         # self.label.set_flex(0.02)
-    
-    @event.reaction('TabLayout2.pointer_move')
-    def on_label_after(self, *events):
-        self.label.set_flex(0.02)
     
     def filepicker_options(self, key):
         options = {'file_path'            : lambda: self.select_files('Single', 'Open'),
@@ -3183,10 +3263,12 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         
         self.Run.set_Terminal(self.Terminal_string)
         return options
-        
+    
     def Generate_scripts_command(self, NeatSeq_bin, conda_bin, conda_env, Project_dir, sample_file, parameter_file):
         import os,re
         from subprocess import Popen, PIPE, STDOUT, TimeoutExpired
+        
+        
         errs  = ''
         outs  = ''
         Error = ''
@@ -3282,42 +3364,16 @@ class NeatSeq_Flow_GUI(app.PyComponent):
 
                 if len(Error) == 0:
                     err_flag = False
+                    # import sys
+                    # sys.setprofile(tracefunc)
                     try:
                         self.Run.set_Terminal(self.Terminal_string + '[Generating_scripts]:  Generating...\n')
-                        self.Running_Commands['Generating_scripts'] =  Run_command_in_thread(self.session,temp_command,self.ssh_client)
+                        self.Running_Commands['Generating_scripts'] =  Run_command_in_thread2(self.session,temp_command,self.ssh_client)
                         self.Running_Commands['Generating_scripts'].Run()
                         self.set_Generating_scripts(self.Generating_scripts+1)
-                    except:
+                    except BaseException as e:
+                        print(e)
                         pass
-                        
-                        # self.Run.set_Terminal(self.Terminal_string + '[Generating scripts]:  Generating...\n')
-                        # if self.ssh_client!= None:
-                            # [outs, errs , exit_status] = Popen_SSH(self.session,self.ssh_client,temp_command,shell=True).output()
-                            # if exit_status!=0:
-                                # err_flag = True
-                        # else:
-                            # Generating_proc = Popen(temp_command, stdout=PIPE, stderr=PIPE, shell=True,
-                                                    # universal_newlines=True , executable='/bin/bash')
-                            # outs, errs = Generating_proc.communicate(timeout=25)
-
-                    # except :
-                        # err_flag = True
-                        # if self.ssh_client== None:
-                            # Generating_proc.kill()
-                            # outs, errs = Generating_proc.communicate()
-
-                    # if len(errs) > 0:
-                        # for line in errs.split('\n'):
-                            # if len(line)>0:
-                                # self.Terminal_string = self.Terminal_string + '[Generating scripts]:  ' + line + '\n'
-                    # if len(outs) > 0:
-                        # for line in outs.split('\n'):
-                            # if len(line)>0:
-                                # self.Terminal_string = self.Terminal_string + '[Generating scripts]:  ' + line + '\n'
-                    # if err_flag:
-                        # self.Terminal_string = self.Terminal_string + '[Generating scripts] : Finished with Error!! \n'
-                    # self.Run.set_Terminal(self.Terminal_string)
-
                 else:
                     self.Run.set_Terminal(Error)
     
@@ -3375,7 +3431,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         if len(Error) == 0:
             if self.Running_script == 0:
                 try:
-                    self.Running_Commands['Running_script'] =  Run_command_in_thread(self.session,temp_command,self.ssh_client)
+                    self.Running_Commands['Running_script'] =  Run_command_in_thread2(self.session,temp_command,self.ssh_client)
                     self.Running_Commands['Running_script'].Run()
                     self.set_Running_script(self.Running_script+1)
                 except :
@@ -3383,7 +3439,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
 
             # elif self.Running_Commands['Running_script'].proc.poll() is not None:
                 # try:
-                    # self.Running_Commands['Running_script'] =  Run_command_in_thread(self.session,temp_command)
+                    # self.Running_Commands['Running_script'] =  Run_command_in_thread2(self.session,temp_command)
                     # self.Running_Commands['Running_script'].Run()
                     # self.set_Running_script(self.Running_script+1)
                 # except :
@@ -3426,7 +3482,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
 
             if self.Kill_Run == 0:
                 try:
-                    self.Running_Commands['Kill_Run'] =  Run_command_in_thread(self.session,temp_command,self.ssh_client)
+                    self.Running_Commands['Kill_Run'] =  Run_command_in_thread2(self.session,temp_command,self.ssh_client)
                     self.Running_Commands['Kill_Run'].Run()
                     self.set_Kill_Run(self.Kill_Run+1)
                 except :
@@ -3434,7 +3490,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
 
             # elif self.Running_Commands['Kill_Run'].proc.poll() is not None:
                 # try:
-                    # self.Running_Commands['Kill_Run'] =  Run_command_in_thread(self.session,temp_command)
+                    # self.Running_Commands['Kill_Run'] =  Run_command_in_thread2(self.session,temp_command)
                     # self.Running_Commands['Kill_Run'].Run()
                     # self.set_Kill_Run(self.Kill_Run+1)
                 # except :
@@ -3471,7 +3527,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         if len(Error) == 0:
             if self.Locate_Failures == 0:
                 try:
-                    self.Running_Commands['Locate_Failures'] =  Run_command_in_thread(self.session,temp_command,self.ssh_client)
+                    self.Running_Commands['Locate_Failures'] =  Run_command_in_thread2(self.session,temp_command,self.ssh_client)
                     self.Running_Commands['Locate_Failures'].Run()
                     self.Terminal_string = self.Terminal_string + '[Locate Failures]:   Searching for failures in the last run.. \n'
                     self.Terminal_string = self.Terminal_string + '[Locate Failures]:   Click on the Recover button if you want to re-run these steps: \n'
@@ -3483,7 +3539,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
 
             # elif self.Running_Commands['Locate_Failures'].proc.poll() is not None:
                 # try:
-                  # self.Running_Commands['Locate_Failures'] =  Run_command_in_thread(self.session,temp_command)
+                  # self.Running_Commands['Locate_Failures'] =  Run_command_in_thread2(self.session,temp_command)
                     # self.Running_Commands['Locate_Failures'].Run()
                     # self.Terminal_string = self.Terminal_string + '[ Locate Failures ]:   Searching for failures in the last run.. \n'
                     # self.Terminal_string = self.Terminal_string + '[ Locate Failures ]:   Click on the Recover button if you want to re-run these steps: \n'
@@ -3533,7 +3589,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
 
             if self.Recovery == 0:
                 try:
-                    self.Running_Commands['Recovery'] =  Run_command_in_thread(self.session,temp_command,self.ssh_client)
+                    self.Running_Commands['Recovery'] =  Run_command_in_thread2(self.session,temp_command,self.ssh_client)
                     self.Running_Commands['Recovery'].Run()
                     self.Terminal_string = self.Terminal_string + '[Recovery]:   Trying to Recover.. \n'
                     self.Run.set_Terminal(self.Terminal_string)
@@ -3542,18 +3598,6 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                     self.Run.set_Terminal(self.Terminal_string)
                 except :
                     pass
-            # elif self.Running_Commands['Recovery'].proc.poll() is not None:
-                # try:
-                    # self.Running_Commands['Recovery'] =  Run_command_in_thread(self.session,temp_command)
-                    # self.Running_Commands['Recovery'].Run()
-                    # self.Terminal_string = self.Terminal_string + '[Recovery]:   Trying to Recover.. \n'
-                    # self.Run.set_Terminal(self.Terminal_string)
-                    # self.set_Recovery(self.Recovery+1)
-                    # self.Terminal_string = self.Terminal_string + '[Recovery]:   Click on Run Monitor to See if it Worked \n'
-                    # self.Run.set_Terminal(self.Terminal_string)
-                # except :
-                    # pass
-
         else:
             self.Run.set_Terminal(Error)
     
@@ -3608,13 +3652,13 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                     time.sleep(0.000001)
                 try:
                     time.sleep(0.00001)
-                    self.Running_Commands['Recovery'] =  Run_command_in_thread(self.session,command,self.ssh_client)
+                    self.Running_Commands['Recovery'] =  Run_command_in_thread2(self.session,command,self.ssh_client)
                     self.Running_Commands['Recovery'].Run()
                     self.Terminal_string = self.Terminal_string + '[Recovery]:'+ command +'\n'
                     self.Run.set_Terminal(self.Terminal_string)
                     self.set_Recovery(self.Recovery+1)
                     self.Run.set_Terminal(self.Terminal_string)
-                except Exception as e:
+                except BaseException as e:
                     Error += "Some Unknown ERROR!! " + str(e) + '\n'
             else:
                 Error += "Can't Re-Run script while Killing scripts, Try later"
@@ -3643,15 +3687,18 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 outs     = ''
                 errs     = ''
                 try:
-                    if self.Running_Commands[ev.type].proc.poll() is None:
+                    if self.Running_Commands[ev.type].is_alive():
                        outs, errs = self.Running_Commands[ev.type].output()
+                       #asyncio.get_event_loop().call_later(0.5, self.change_value,ev.source,ev.type,ev.new_value + 1)
                        self.change_value(ev.source,ev.type,ev.new_value + 1)
                     else:
-                        self.Running_Commands[ev.type].Stop()
+                        self.Running_Commands[ev.type].Stop()                                     
                         outs, errs = self.Running_Commands[ev.type].output()
+                        # self.Running_Commands[ev.type].Stop()
                         self.change_value(ev.source,ev.type,0)
                         Task_End=True
-                except Exception:
+                except BaseException as e:
+                    print(e)
                     stat=False
 
 
@@ -3681,7 +3728,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
             if ev.source.Go2Help!='':
                 self.Help.set_url(Base_Help_URL)
                 self.Help.set_url(Base_Help_URL+'Module_docs/AllModules.html#'+ev.source.Go2Help.lower().replace('_','-'))
-        
+    
     @event.reaction('Run.jump2monitortab')
     def jump2monitortab(self, *events):
         import Monitor_GUI
@@ -3730,6 +3777,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
     def save_sample_file(self, *events):
         for ev in events:
             if len(self.samples_info.save_samples_file) > 0:
+                self.stack.set_current(self.LoadingWin)
                 if len(self.samples_info.samples_data.keys()) > 0:
                     if self.samples_info.save_samples_file[0][0].endswith(os.sep):
                         if SERVE:
@@ -3762,17 +3810,22 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                             self.Run.set_sample_file(self.samples_info.save_samples_file)
                             self.samples_info.set_title('Samples - '+os.path.basename(self.samples_info.save_samples_file[0][0]))
                             self.samples_info.set_save_samples_file([])
-                        except Exception as e: 
+                        except BaseException as e: 
                             if SERVE:
                                 self.send_massage.set_massage(str(e))
                             else:
                                 dialite.fail('Saving Sample file Error', str(e))
+                            self.samples_info.set_save_samples_file([])
+            else:
+                self.stack.set_current(self.MainStack)
+                self.label.set_flex(0.02)
     
     @event.reaction('samples_info.load_samples_file')
     def load_sample_file(self, *events):
         samples_data = self.samples_info.samples_data
         for ev in events:
             if len(self.samples_info.load_samples_file) > 0:
+                self.stack.set_current(self.LoadingWin)
                 try:
                     if self.sftp!=None:
                         from neatseq_flow_gui.modules.parse_sample_data import parse_sample_file_object
@@ -3783,18 +3836,20 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                     else:
                         from neatseq_flow_gui.modules.parse_sample_data import parse_sample_file
                         samples_data = parse_sample_file(self.samples_info.load_samples_file[0][0])
-                except Exception as e: 
+                    if len(samples_data) > 0:
+                        self.update_samples_data(samples_data)
+                        self.Run.set_sample_file(self.samples_info.load_samples_file)
+                        self.samples_info.set_title('Samples - '+os.path.basename(self.samples_info.load_samples_file[0][0]))
+                except BaseException as e: 
                     if SERVE:
                         self.send_massage.set_massage('[Loading Sample file Error]:'+str(e))
                     else:
                         dialite.fail('Loading Sample file Error', str(e))
                     samples_data = []
                     self.samples_info.set_load_samples_file([])
-
-                if len(samples_data) > 0:
-                    self.update_samples_data(samples_data)
-                    self.Run.set_sample_file(self.samples_info.load_samples_file)
-                    self.samples_info.set_title('Samples - '+os.path.basename(self.samples_info.load_samples_file[0][0]))
+            else:
+                self.stack.set_current(self.MainStack)
+                self.label.set_flex(0.02)
     
     @event.action
     def update_samples_data(self, samples_data):
@@ -3837,7 +3892,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                             step_data['Step'] = self.fix_order_dict(self.step_info.step2export)
                             yaml.dump(step_data['Step'], outfile, default_flow_style=False,width=float("inf"), indent=4)
 
-                    except Exception as e: 
+                    except BaseException as e: 
                         if SERVE:
                             self.send_massage.set_massage('[Saving Step file Error]:'+str(e))
                         else:
@@ -3864,7 +3919,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                         file_object = open(file_name,'r')
                     Step_data   = yaml.load(file_object, yaml.SafeLoader)
                     file_object.close()
-                except Exception as e: 
+                except BaseException as e: 
                     if SERVE:
                         self.send_massage.set_massage('[Loading Step file Error]:'+str(e))
                     else:
@@ -3882,6 +3937,8 @@ class NeatSeq_Flow_GUI(app.PyComponent):
     def load_workflow_file(self, *events):
         for ev in events:
             if len(self.step_info.workflow_file) > 0:
+                self.stack.set_current(self.LoadingWin)
+                # self.Run_FUN.Run_Function(Name='sleep',FUN=Test_FUN,agrs=(50))
                 try:
                     if self.sftp!=None:
                         from neatseq_flow_gui.modules.parse_param_data import parse_param_file_object
@@ -3892,14 +3949,13 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                     else:
                         from neatseq_flow_gui.modules.parse_param_data import parse_param_file
                         param_data = parse_param_file(self.step_info.workflow_file[0][0])
-                except Exception as e: 
+                except BaseException as e: 
                     if SERVE:
                         self.send_massage.set_massage('[Load WorkFlow Error]:'+str(e))
                     else:
                         dialite.fail('Load WorkFlow Error', str(e))
                     param_data = []
                     self.step_info.set_workflow_file([])
-                        
                 if len(param_data) > 0:
 
                     if 'Step_params' in param_data.keys():
@@ -3917,8 +3973,12 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                     if 'Documentation' in param_data.keys():
                         self.Documentation.set_value(param_data['Documentation'])
                         self.Documentation.set_load_flag(True)
+                    
                     self.Run.set_parameter_file(self.step_info.workflow_file)
                     self.TabLayout.set_title('Work-Flow - '+os.path.basename(self.step_info.workflow_file[0][0]))
+            else:
+                self.stack.set_current(self.MainStack)
+                self.label.set_flex(0.02)
     
     @event.reaction('step_info.save_workflow_file')
     def save_workflow_file(self, *events):
@@ -3927,7 +3987,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         setup_yaml(yaml, OrderedDict)
         for ev in events:
             if len(self.step_info.save_workflow_file) > 0:
-                
+                self.stack.set_current(self.LoadingWin)
                 if self.step_info.save_workflow_file[0][0].endswith(os.sep):
                     if SERVE:
                         self.send_massage.set_massage('[Save WorkFlow Error]:No File Name Was Identified')
@@ -3967,7 +4027,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                             param_data['Step_params'] = self.fix_order_dict(self.step_info.Data)
                             yaml.dump(param_data, outfile, default_flow_style=False,width=float("inf"), indent=4)
 
-                    except Exception as e: 
+                    except BaseException as e: 
                         if SERVE:
                             self.send_massage.set_massage('[Save WorkFlow Error]:'+str(e))
                         else:
@@ -3984,6 +4044,9 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                     self.Run.set_parameter_file(self.step_info.save_workflow_file)
                     self.TabLayout.set_title('Work-Flow - '+os.path.basename(self.step_info.save_workflow_file[0][0]))
                 self.step_info.set_save_workflow_file([])
+            else:
+                self.stack.set_current(self.MainStack)
+                self.label.set_flex(0.02)
     
     def fix_order_dict(self, dic):
         if isinstance(dic, dict):
@@ -4023,7 +4086,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         self.vars_info.set_Data(Vars_Data)
         self.vars_info.set_converter(converer)
         self.vars_info.set_Data_update(True)
-    
+        
     def correct_dict(self, dic, count, converer):
         if isinstance(dic, dict):
             dic_keys = list(dic.keys())
@@ -4031,7 +4094,6 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 temp = dic.pop(key)
                 converer['temp_' + str(count)] = key
                 dic['temp_' + str(count)], count = self.correct_dict(temp, count + 1, converer)
-
         return dic, count
     
     def dic2list(self, Vars, flat_list, string='Vars.'):
@@ -4050,7 +4112,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         self.find_vars_in_dict(self.step_info.Vars_data, input_list)
         new_vars_data = self.Add_items_to_vars_dict(self.vars_info.Data, input_list)
         self.update_vars_data(new_vars_data)
-    
+        
     def Add_items_to_vars_dict(self, vars_data, items2add):
         for items in items2add:
             item = items.split('.')
@@ -4087,10 +4149,17 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 self.find_vars_in_dict(input_dict[key], input_list)
             elif len(re.findall(var_re, str(input_dict[key]))) > 0:
                 input_list.extend(list(re.findall(var_re, input_dict[key])))
+    
+    # @event.reaction('Run_FUN.Loading')
+    def Collect_Function_in_Thread(self, *events):
+        for ev in events:
+            if ev.new_value==False:
+                self.stack.set_current(self.MainStack)
+                self.label.set_flex(0.02)
 
 class Popen_SSH(object):
     
-    def __init__(self,session,ssh_client,command,shell=False,pty=True,timeout=COMMAND_TIME_OUT,nbytes = 4096):
+    def __init__(self,session,ssh_client,command,shell=False,out_queue=None,err_queue=None,pty=True,timeout=COMMAND_TIME_OUT,nbytes = 4096):
         import time
         self.session     = session
         self.timeout     = timeout
@@ -4103,8 +4172,18 @@ class Popen_SSH(object):
         self.EFC         = get_random_string()
         self.Done        = True
         self.time        = time.time()
+        
         try:
             if (ssh_client!= None) and (self.session.status!=0):
+                import paramiko
+                transport  = ssh_client.get_transport()
+                ssh_client = paramiko.SSHClient()
+                ssh_client.set_missing_host_key_policy( paramiko.AutoAddPolicy() )
+                ssh_client.connect(transport.getpeername()[0],
+                                   username=transport.get_username(),
+                                   password=transport.auth_handler.password,
+                                   port=transport.getpeername()[1])
+                
                 if ssh_client.get_transport().is_active():
                     self.ssh_transport     = ssh_client.get_transport()
                     self.ssh_session       = self.ssh_transport.open_channel(kind='session')
@@ -4124,6 +4203,8 @@ class Popen_SSH(object):
                         self.Done = False
                         self.err_flag = False
                         self.ssh_session.exec_command(command)
+                    if (out_queue!=None) and (err_queue!=None):
+                        self.output(out_queue,err_queue)
         except :
             self.err_flag = True
             try:
@@ -4187,7 +4268,7 @@ class Popen_SSH(object):
                             keep_running = True
                         else:
                             break 
-                
+                    
                 if not self.shell:
                     self.stdout_data = ''.join(self.stdout_data)
                     self.stderr_data = ''.join(self.stderr_data)
@@ -4202,7 +4283,7 @@ class Popen_SSH(object):
                         self.stdout_data = ''.join(self.stdout_data)
                     self.stderr_data = ''.join(self.stderr_data)
                 self.Done = True
-            except Exception as e: 
+            except BaseException as e: 
                 print(str(e))
                 self.err_flag = True
                 self.Done = True
@@ -4257,11 +4338,14 @@ class Run_command_in_thread(object):
         self.Run_command  =   command
         self.ssh_client   =   ssh_client
         self.shell        =   shell
-
+        self.refreshrate  =   1
 
     def collect_out(self):
         if self.ssh_client != None:
-            self.proc.output(self.stdout,self.stderr)
+            if self.session.status!=0:
+                self.proc.output(self.stdout,self.stderr)
+            else:
+                self.Stop()
         else:
             if self.session.status!=0:
                 for stdout in iter(self.proc.stdout.readline, ''):
@@ -4270,6 +4354,8 @@ class Run_command_in_thread(object):
                             self.stdout.put(stdout,False)
                     else:
                         break
+            else:
+                self.Stop()
 
     def collect_err(self):
         if self.session.status!=0:
@@ -4286,6 +4372,7 @@ class Run_command_in_thread(object):
             self.get_std_out.daemon = True
             self.get_std_out.start()
             # self.get_std_err.start()
+            asyncio.get_event_loop().call_later(self.refreshrate, self.Test_Alive)
         else:
             from subprocess import Popen, PIPE, STDOUT
             self.proc = Popen(self.Run_command , shell=self.shell, executable='/bin/bash', stdout=PIPE, stderr=PIPE,
@@ -4294,18 +4381,32 @@ class Run_command_in_thread(object):
             self.get_std_out.start()
             self.get_std_err.daemon = True
             self.get_std_err.start()
+            asyncio.get_event_loop().call_later(self.refreshrate, self.Test_Alive)
 
     def Stop(self):
         self.get_std_out.join()
         if self.ssh_client == None:
             self.get_std_err.join()
         self.proc.kill()
-
+        
+    def is_alive(self):
+        if self.session.status==0:
+            self.Stop()
+        if self.proc.poll() == None:
+            return False
+        else:
+            return True
+    
+    def Test_Alive(self):
+        if self.session.status==0:
+            self.Stop()
+        else:
+            asyncio.get_event_loop().call_later(self.refreshrate, self.Test_Alive)
+            
     def output(self):
         import time
         all_out = ''
         all_err = ''
-        
         while (self.stdout.empty()==False) and (self.session.status!=0):
             out = self.stdout.get()
             all_out = all_out + out
@@ -4322,6 +4423,194 @@ class Run_command_in_thread(object):
         time.sleep(0.000001)
         return [ out , err]
 
+class Run_command_in_thread2(object):
+
+    def __init__(self,session,command,ssh_client=None,shell=True):
+
+        import threading
+        import multiprocessing
+        from multiprocessing import Process, Queue
+        import queue
+
+        self.session      =   session
+        self.stdout       =   Queue()
+        self.stderr       =   Queue()
+        self.Run_command  =   command
+        self.ssh_client   =   ssh_client
+        self.shell        =   shell
+        self.Process      =   None
+        self.get_std_err  =   None
+        self.get_std_out  =   None
+        self.refreshrate  =   1
+        
+    def collect_out(Process,session,stdout_q):
+        if session.status!=0:
+            for stdout in iter(Process.stdout.readline, ''):
+                if session.status!=0:
+                    if len(stdout)>0:
+                        stdout_q.put(stdout)
+                else:
+                    break
+        else:
+            self.Stop()
+
+    def collect_err(Process,session,stderr_q):
+        if session.status!=0:
+            for stderr in iter(Process.stderr.readline, ''):
+                if session.status!=0:
+                    if len(stderr)>0:
+                        stderr_q.put(stderr)
+                else:
+                    break
+        else:
+            self.Stop()
+
+    def Run(self):
+        if self.ssh_client != None:
+            self.Process = Process(target=Popen_SSH,args=(self.session,
+                                                       self.ssh_client,
+                                                       self.Run_command,
+                                                       self.shell,
+                                                       self.stdout,
+                                                       self.stderr,
+                                                       ))
+            self.Process.daemon = True
+            self.Process.start()
+            asyncio.get_event_loop().call_later(self.refreshrate, self.Test_Alive)
+        else:
+            from subprocess import Popen, PIPE, STDOUT
+            self.Process     = Popen(self.Run_command , shell=self.shell, executable='/bin/bash', stdout=PIPE, stderr=PIPE,
+                                     universal_newlines=True)
+            self.get_std_out = Process(target=self.collect_out,args=(self.Process,
+                                                                     self.session,
+                                                                     self.stdout,))
+            self.get_std_err = Process(target=self.collect_out,args=(self.Process,
+                                                                     self.session,
+                                                                     self.stderr_q,))
+            self.get_std_out.daemon = True
+            self.get_std_out.start()
+            self.get_std_err.daemon = True
+            self.get_std_err.start()
+            asyncio.get_event_loop().call_later(self.refreshrate, self.Test_Alive)
+            
+    def Stop(self):
+        if self.ssh_client != None:
+            if self.Process!=None:
+                self.Process.terminate()
+                self.Process.join()
+                self.Process=None
+        else:
+            if self.get_std_out!=None:
+                self.get_std_out.terminate()
+                self.get_std_out.join()
+                self.get_std_out = None
+            if self.get_std_err!=None:
+                self.get_std_err.terminate()
+                self.get_std_err.join()
+                self.get_std_err = None
+            if self.Process!=None:
+                self.Process.kill()
+                
+    def is_alive(self):
+        if self.session.status==0:
+            self.Stop()
+        if self.ssh_client != None:
+            return self.Process.is_alive()
+        else:
+            if self.Process.poll() == None:
+                return False
+            else:
+                return True
+        
+    def Test_Alive(self):
+        if self.session.status==0:
+            self.Stop()
+        else:
+            asyncio.get_event_loop().call_later(self.refreshrate, self.Test_Alive)
+            
+    def output(self):
+        import time
+        all_out = ''
+        all_err = ''
+        while (self.stdout.empty()==False) and (self.session.status!=0):
+            out = self.stdout.get(True)
+            all_out = all_out + out
+            
+        out=all_out
+        
+        while (self.stderr.empty()==False) and (self.session.status!=0):
+            err = self.stderr.get(True)
+            all_err = all_err + err
+        
+        if self.session.status==0:
+           self.Stop()
+        
+        err=all_err
+        time.sleep(0.000001)
+        return [ out , err]
+
+class Run_function_in_thread(flx.PyComponent):
+    
+    Loading = event.BoolProp(True, settable=True)
+    Data    = event.DictProp({}   , settable=True)
+    
+    def init(self,refreshrate=1):
+        self.q              = Queue()
+        self.running        = False
+        self.refreshrate    = refreshrate
+        self.Process        = None
+        self.keep_running   = True
+        
+    def Run_Function(self,Name,FUN,agrs):
+        self.FUN  = FUN
+        self.agrs = agrs
+        self.Name = Name
+        if (not self.running) :
+            try:
+                self.set_Loading(True)
+                self.Process        = Process(target=self.FUN, args=(self.agrs,
+                                                                       self.q,))
+                self.Process.daemon = None
+                self.Process.start()
+                self.running        = True
+                self.keep_running   = True
+                self.Monitor()
+            except BaseException as e:
+                self.Process        = None
+                self.running        = False
+                self.close()
+                print(e)
+                
+                
+    def Monitor(self):
+        if  (self.keep_running):
+            if self.q.empty()==False:
+                Data=self.q.get(True)
+                self.set_Loading(False)
+                self.set_Data({self.Name:Data})
+        if self.Process!=None:
+            if not self.Process.is_alive():
+                self.close()
+        else:
+            self.close()
+        if (self.session.status!=0) and (self.keep_running):
+            asyncio.get_event_loop().call_later(self.refreshrate, self.Monitor) 
+
+    def close(self):
+        self.keep_running = False
+        self.set_Loading(False)
+        if self.Process!=None:
+            self.Process.terminate()
+            self.Process.join()
+            self.Process=None
+        self.running=False
+
+def Test_FUN(sleeptime,q):
+    import time
+    print(sleeptime)
+    time.sleep(sleeptime)
+    q.put('test')
+    
 class send_massage(ui.Widget):
     massage = event.StringProp('', settable=True)
     def init(self):
@@ -4666,7 +4955,7 @@ class Manage_Participants(flx.Component):
         sessions_id = [s.id for s in sessions]
         if self.names != names:
             self.names = names
-            self.count =self.max_count
+            self.count = self.max_count
             print(names)
             
         if (self.LOG_DIR!=None) and (self.count==self.max_count):

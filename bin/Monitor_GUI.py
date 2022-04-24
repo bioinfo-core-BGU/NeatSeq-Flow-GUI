@@ -9,7 +9,8 @@ import asyncio
 import argparse
 from multiprocessing import Process, Queue
 import threading
-
+import signal
+signal.signal(signal.SIGALRM, lambda x,y: 1/0 )
 
 pd.options.mode.chained_assignment = None
 
@@ -18,6 +19,7 @@ jid_name_sep = '..'
 LOCAL_HOST   = socket.gethostname()
 Text_COLORS  = ['black','green','red','orange','magenta','cyan','blue']
 HEDER        = 'Heder'
+TIMEOUT      = 5
 
 class Circle(flx.Label):
 
@@ -660,8 +662,12 @@ class nsfgm(flx.PyComponent):
                 ssh_client = paramiko.SSHClient()
                 ssh_client.set_missing_host_key_policy( paramiko.AutoAddPolicy() )
                 ssh_client.connect(transport.getpeername()[0], username=transport.get_username(), password=transport.auth_handler.password,port=transport.getpeername()[1])
+                signal.alarm(TIMEOUT)
                 sftp    = ssh_client.open_sftp()
+                signal.alarm(0)
+                signal.alarm(TIMEOUT)
                 listdir = sftp.listdir(self.Dir)
+                signal.alarm(0)
                 # get the available log files names
                 file_sys["Name"]          = [x for x in listdir if len(re.findall(Regular,x))]
                 #print(file_sys["Name"])
@@ -749,7 +755,9 @@ class nsfgm(flx.PyComponent):
                     ssh_client = paramiko.SSHClient()
                     ssh_client.set_missing_host_key_policy( paramiko.AutoAddPolicy() )
                     ssh_client.connect(transport.getpeername()[0], username=transport.get_username(), password=transport.auth_handler.password,port=transport.getpeername()[1])
+                    signal.alarm(TIMEOUT)
                     sftp = ssh_client.open_sftp()
+                    signal.alarm(0)
                     runlog_Data=pd.read_table(sftp.file(runlog_file),header =4,dtype={'Job ID':str})
                 else:
                     runlog_Data=pd.read_table(runlog_file,header =4,dtype={'Job ID':str})
@@ -1172,7 +1180,9 @@ class Monitor_GUI(flx.PyComponent):
         global LOCAL_HOST
         if ssh_client!=None:
             try:
+                signal.alarm(TIMEOUT)
                 SFTP                          = ssh_client.open_sftp()
+                signal.alarm(0)
                 [outs, errs , exit_status]    = Popen_SSH(ssh_client,'echo $HOST').output()
                 if exit_status==0:
                     LOCAL_HOST                = outs.strip()
