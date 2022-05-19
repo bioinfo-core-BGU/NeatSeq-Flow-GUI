@@ -2056,9 +2056,9 @@ class File_Browser(flx.GroupWidget):
                     self.set_update(True)
             
             with ui.HSplit(style='max-height: 30px;') as self.Page_Button:
-                ui.Button(text=self.page_names[0],disabled=False,style= size_style+'color: black; background: white;border: 2px solid gray;max-height: 30px;min-height: 30px;max-width: 150px;')
-                self.page_count = ui.Button(text=str(self.page),disabled= True,style= size_style+'color: black; background: white;border: 2px solid gray;max-height: 30px;min-height: 30px;')
-                ui.Button(text=self.page_names[1],disabled=False,style= size_style+'color: black; background: white;border: 2px solid gray;max-height: 30px;min-height: 30px;max-width: 150px;')
+                ui.Button(text=self.page_names[0],disabled=False,style= 'font-size: 80% ; color: black; background: white;border: 2px solid gray;max-height: 30px;min-height: 30px;max-width: 150px;')
+                self.page_count = ui.Button(text=str(self.page),disabled= True,style= 'font-size: 80%; color: black; background: white;border: 2px solid gray;max-height: 30px;min-height: 30px;')
+                ui.Button(text=self.page_names[1],disabled=False,style= 'font-size: 80%; color: black; background: white;border: 2px solid gray;max-height: 30px;min-height: 30px;max-width: 150px;')
 
             with ui.HSplit(style='max-height: 30px;'):
                 self.File_Name_title = ui.Label(text='File Name:',style='font-size: 120%;max-width: 100px;color:red;')
