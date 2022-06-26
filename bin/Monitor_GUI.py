@@ -971,10 +971,19 @@ class Relay_log_files(flx.PyComponent):
                 self.Process  =         Process(target=self.mynsfgm.file_browser, args=(self.ssh_client,
                                                                                         self.mynsfgm.Regular,
                                                                                         self.q,))
-                self.Process.daemon = None
+                self.Process.daemon = True
+                if 'Process' not in self.session.__dict__.keys():
+                    self.session.Process = [self.Process]
+                else:
+                    self.session.Process.append(self.Process)
+                
                 self.Process.start()
                 self.running=True
             except:
+                try:
+                    self.Process.terminate()
+                except:
+                    pass
                 self.Process=None
                 self.running=False
         elif  (self.keep_running):
@@ -1019,9 +1028,18 @@ class Relay_log_data(flx.PyComponent):
                                                                                        self.mynsfgm.Bar_Spacer,
                                                                                        self.q,))
                 self.Process.daemon = True
+                if 'Process' not in self.session.__dict__.keys():
+                    self.session.Process = [self.Process]
+                else:
+                    self.session.Process.append(self.Process)
+                
                 self.Process.start()
                 self.running=True
             except:
+                try:
+                    self.Process.terminate()
+                except:
+                    pass
                 self.Process=None
                 self.running=False
         elif  (self.keep_running):
@@ -1076,9 +1094,18 @@ class Relay_samples_menu(flx.PyComponent):
                                                                                        self.q,
                                                                                        self.instances,))
                 self.Process.daemon = True
+                if 'Process' not in self.session.__dict__.keys():
+                    self.session.Process = [self.Process]
+                else:
+                    self.session.Process.append(self.Process)
+                
                 self.Process.start()
                 self.running=True
             except:
+                try:
+                    self.Process.terminate()
+                except:
+                    pass
                 self.Process=None
                 self.running=False
         elif  (self.keep_running):

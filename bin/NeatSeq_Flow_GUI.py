@@ -154,6 +154,8 @@ Preview_Buffer         = 10000
 
 COMMAND_TIME_OUT       = 10000
 
+Process_Runing = {}
+
 def tracefunc(frame, event, arg, indent=[0]):
     if os.path.basename(__file__) != os.path.basename(frame.f_code.co_filename):
         if event == "call":
@@ -2982,7 +2984,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                         self.Option_Menu = Option_Menu(['New Work-Flow','Load Work-Flow','Choose a Work-Flow From Repository'])
                     else:
                         self.Option_Menu = Option_Menu(['New Work-Flow','Load Work-Flow'])
-                    self.Option_Menu_w.apply_style('font-size:150%;')
+                    self.Option_Menu_w.apply_style('font-size:110%;')
                     self.stack.set_current(self.Option_Menu_w)
                     
                 if (WOKFLOW_DIR != None):
@@ -4475,7 +4477,14 @@ class Run_command_in_thread2(object):
                                                        self.stderr,
                                                        ))
             self.Process.daemon = True
+            if 'Process' not in self.session.__dict__.keys():
+                self.session.Process = [self.Process]
+            else:
+                self.session.Process.append(self.Process)
+            
             self.Process.start()
+            
+                
             asyncio.get_event_loop().call_later(self.refreshrate, self.Test_Alive)
         else:
             from subprocess import Popen, PIPE, STDOUT
@@ -4488,8 +4497,21 @@ class Run_command_in_thread2(object):
                                                                      self.session,
                                                                      self.stderr_q,))
             self.get_std_out.daemon = True
+            
+            if 'Process' not in self.session.__dict__.keys():
+                self.session.Process = [self.get_std_out]
+            else:
+                self.session.Process.append(self.get_std_out)
+            
             self.get_std_out.start()
+            
             self.get_std_err.daemon = True
+            
+            if 'Process' not in self.session.__dict__.keys():
+                self.session.Process = [self.get_std_err]
+            else:
+                self.session.Process.append(self.get_std_err)
+                
             self.get_std_err.start()
             asyncio.get_event_loop().call_later(self.refreshrate, self.Test_Alive)
             
@@ -4570,7 +4592,13 @@ class Run_function_in_thread(flx.PyComponent):
                 self.set_Loading(True)
                 self.Process        = Process(target=self.FUN, args=(self.agrs,
                                                                        self.q,))
-                self.Process.daemon = None
+                self.Process.daemon = True
+                
+                if 'Process' not in self.session.__dict__.keys():
+                    self.session.Process = [self.Process]
+                else:
+                    self.session.Process.append(self.Process)
+                
                 self.Process.start()
                 self.running        = True
                 self.keep_running   = True
@@ -4938,11 +4966,12 @@ def set_gmail_connection():
     
 class Manage_Participants(flx.Component):
     
-    def init(self,app_name,LOG_DIR=None,max_count=30,refreshrate=1):
+    def init(self,app_name,LOG_DIR=None,max_count=30,refreshrate=0.5):
         self.app_name    = app_name
         self.refreshrate = refreshrate
         self.LOG_DIR     = LOG_DIR
         self.names       = []
+        self.sessions_id = []
         self.count       = 0
         self.max_count   = max_count
         self.update_participants()
@@ -4953,10 +4982,31 @@ class Manage_Participants(flx.Component):
         sessions    = flx.manager.get_connections(self.app_name)
         names       = [s.app.UserName for s in sessions]
         sessions_id = [s.id for s in sessions]
-        if self.names != names:
+        
+        for session in sessions:
+            if 'Process' in session.__dict__.keys():
+                for Proces in session.Process:
+                    if not Proces.is_alive():
+                        Proces.terminate()
+                        Proces.join()
+                        session.Process.remove(Proces)
+        
+        if self.sessions_id != sessions_id:
             self.names = names
+            for closed_session in set(self.sessions_id).difference(sessions_id):
+                for session in self.sessions:
+                    if session.id == closed_session:
+                        if 'Process' in session.__dict__.keys():
+                            for Proces in session.Process:
+                                if Proces.is_alive():
+                                    # print(Proces.pid)
+                                    Proces.terminate()
+                                    Proces.join()
+                                        
+            self.sessions_id = sessions_id
             self.count = self.max_count
             print(names)
+        self.sessions = sessions
             
         if (self.LOG_DIR!=None) and (self.count==self.max_count):
             if (os.path.exists(self.LOG_DIR)):
