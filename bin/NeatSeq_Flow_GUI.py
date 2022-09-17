@@ -3239,7 +3239,9 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         try:
             self.Run.set_Terminal(self.Terminal_string + '[Searching for Conda Environments]: Searching...\n')
             if self.ssh_client!= None:
-                [outs, errs , exit_status] = Popen_SSH(self.session,self.ssh_client,temp_command).output()
+                SSH = Popen_SSH(self.session,self.ssh_client,temp_command)
+                [outs, errs , exit_status] = SSH.output()
+                SSH.kill()
                 if exit_status!=0:
                     err_flag = True
             else:
