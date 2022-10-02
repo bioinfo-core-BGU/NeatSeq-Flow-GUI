@@ -130,7 +130,6 @@ class Rainbow(flx.CanvasWidget):
         self.ctx.stroke();
         self.ctx.closePath()
         
-        
     def makeArc(self,radius, color, speed):
         global Math, window
         self.radius = radius
@@ -142,8 +141,6 @@ class Rainbow(flx.CanvasWidget):
             self.i = 0
         self.drawArc(self.radius, self.color, self.angle)
         
-        
-
     def draw(self):
         w, h = self.size
         #self.ctx.clearRect(0, 0, w, h)
@@ -362,21 +359,23 @@ class Table(flx.GroupWidget):
     Extra_Buttons_choice     = event.StringProp('', settable=True)
     Current_Highlite         = event.IntProp(-1, settable=True)
     Loading                  = event.BoolProp(True, settable=True)
-    def init(self,Highlite=0,Heder_Backgroun_Color='SeaShell',Extra_Buttons=[]):
-        self.Rows                  = {}
-        self.Highlite              = Highlite
-        self.num_of_rows           = 0
-        self.num_of_col            = 0
-        self.ROWMODE               = []
-        self.Heder_Backgroun_Color = Heder_Backgroun_Color
-        self.MaxRows               = 30
-        self.Show_MaxRows          = 5
-        self.row_str               = 'Row_Num '
-        self.page_navigation_title = 'page_navigation'
-        self.Next_Page_text        = '>>'
-        self.Previous_Page_text    = '<<'
-        self.Extra_Buttons         = Extra_Buttons
-        self.Extra_Buttons_title   = 'Extra_Button'
+    Col2Sort                 = event.StringProp('', settable=True)
+    def init(self,Highlite=0,Header_Backgroun_Color='SeaShell',Extra_Buttons=[]):
+        self.Rows                   = {}
+        self.Highlite               = Highlite
+        self.num_of_rows            = 0
+        self.num_of_col             = 0
+        self.ROWMODE                = []
+        self.Header_Backgroun_Color = Header_Backgroun_Color
+        self.MaxRows                = 30
+        self.Show_MaxRows           = 5
+        self.row_str                = 'Row_Num '
+        self.page_navigation_title  = 'page_navigation'
+        self.Next_Page_text         = '>>'
+        self.Previous_Page_text     = '<<'
+        self.Extra_Buttons          = Extra_Buttons
+        self.Extra_Buttons_title    = 'Extra_Button'
+        self.Header_title           = 'HEADER'
         
         with flx.Layout(style='overflow-x:scroll;') as self.table:
             self.Drow_window()
@@ -405,34 +404,35 @@ class Table(flx.GroupWidget):
                         with ui.VFix(padding=3,spacing=3,style='background: white; border: 0px solid gray;',title=self.page_navigation_title):
                             self.Previous   = flx.Button(text=self.Previous_Page_text,
                                                         disabled=False,
-                                                        style='background: ' + self.Heder_Backgroun_Color  +'  ;color: blue;border: 0px solid gray;border-radius: 0px;max-height:30px;max-width:40px;')
+                                                        style='background: ' + self.Header_Backgroun_Color  +'  ;color: blue;border: 0px solid gray;border-radius: 0px;max-height:30px;max-width:40px;')
                             self.Page_count = flx.LineEdit(text='1',
                                                          disabled=True,
                                                          style='font-size: 150%; background: white ;color: blue;border-radius: 0px;border: 0px solid gray;max-width:40px;')
                             self.Next       = flx.Button(text=self.Next_Page_text,
                                                         disabled=False,
-                                                        style='background: ' + self.Heder_Backgroun_Color  +'  ;color: blue;border: 0px solid gray;border-radius: 0px;max-height:30px;max-width:40px;')
+                                                        style='background: ' + self.Header_Backgroun_Color  +'  ;color: blue;border: 0px solid gray;border-radius: 0px;max-height:30px;max-width:40px;')
                 with ui.VFix(spacing=1,style='background: white; border: 0px solid gray;') :
                     
                     if self.num_of_col>0:
                         self.num_of_rows = len(self.items[self.items.keys()[0]])
-                        self.Rows['heder']={}
-                        self.Rows['heder']['handle'] = flx.HFix(padding=3,spacing=3,style='overflow-y:scroll; ')
-                        with self.Rows['heder']['handle']:
+                        self.Rows['Header']={}
+                        self.Rows['Header']['handle'] = flx.HFix(padding=3,spacing=3,style='overflow-y:scroll; ')
+                        with self.Rows['Header']['handle']:
                             for col in self.items.keys():
                                 col_num = col_num+1
                                 count=0
                                 if col in self.Extra_Buttons:
                                     col_num = col_num+1
                                     count=0
-                                    self.Rows['heder'][col_num] =  flx.Button(text=str(col),
+                                    self.Rows['Header'][col_num] =  flx.Button(text=str(col),
                                                                                title=self.Extra_Buttons_title,
                                                                                disabled=False,
-                                                                               style='font-size: 120%; background: ' + self.Heder_Backgroun_Color  +'  ;color: blue;border-radius: 0px;max-height:35px;')
+                                                                               style='font-size: 120%; background: ' + self.Header_Backgroun_Color  +'  ;color: blue;border-radius: 0px;max-height:35px;')
                                 else:   
-                                    self.Rows['heder'][col_num] = flx.LineEdit(text=str(col),
-                                                                                disabled=True,
-                                                                                style='font-size: 120%; background: ' + self.Heder_Backgroun_Color  +'  ;color: blue;border-radius: 0px;max-height:35px;')
+                                    self.Rows['Header'][col_num] =  flx.Button(text=str(col),
+                                                                                title=self.Header_title,
+                                                                                disabled=False,
+                                                                                style='font-size: 120%; background: ' + self.Header_Backgroun_Color  +'  ;color: blue;border-radius: 0px;max-height:35px;')
                             
                                 
                             # flx.LineEdit(text='',
@@ -512,7 +512,7 @@ class Table(flx.GroupWidget):
         else:
             Extra = 0
         for row in self.Rows.keys():
-            if row!='heder':
+            if row!='Header':
                 if (int(row)+Extra)!=int(self.Highlite):
                     if (int(row)+Extra) >= self.num_of_rows:
                         for col in self.Rows[row].keys():
@@ -542,6 +542,7 @@ class Table(flx.GroupWidget):
                                 self.Rows[row][col].apply_style('background: yellow; color:' +Text_COLORS[self.ROWMODE[int(row)+Extra]]+ ';border: 1px solid gray;border-radius: 0px;text-align: left;')
                                 self.Rows[row][col].set_text(str(self.items[self.items.keys()[int(col)]][int(row)+Extra]))
                     count=count+1
+    
     @flx.emitter
     def key_down(self, e):
         """Overload key_down emitter to prevent browser scroll."""
@@ -550,6 +551,7 @@ class Table(flx.GroupWidget):
         # if ev.key.startswith('Arrow'):
         #     e.preventDefault()
         return ev
+    
     @flx.reaction('key_down')
     def _handle_highlighting(self, *events):
         for ev in events:
@@ -573,10 +575,12 @@ class Table(flx.GroupWidget):
                 return self.Highlite
             elif ev.key == 'Escape':
                 return -2
+    
     @flx.reaction('Current_Highlite')
     def update_Highlite(self):
         if self.Current_Highlite!=self.Highlite:
             self.Highlite=self.Current_Highlite
+    
     @event.reaction('!table.children**.pointer_click')
     def select_row(self, *events):
         for ev in events:
@@ -607,7 +611,9 @@ class Table(flx.GroupWidget):
                         self.Re_Drow_window()
                         self.set_Current_Highlite(self.Highlite)
             elif ev.source.title == self.Extra_Buttons_title:
-                self.set_Extra_Buttons_choice(ev.source.text+HEDER)
+                self.set_Extra_Buttons_choice(ev.source.text+Header)
+            elif ev.source.title == self.Header_title:
+                self.set_Col2Sort(ev.source.text)
 
 class nsfgm(flx.PyComponent):
     #  Main class for neatseq-flow Log file parser
@@ -967,6 +973,8 @@ class Relay_log_files(flx.PyComponent):
         self.ssh_client   = ssh_client
         self.Process      = None
         self.keep_running = True
+        self.ascending    = False
+        self.Col2Sort     = ''
         self.Refresh_log_files()
 
     def Refresh_log_files(self):
@@ -994,10 +1002,12 @@ class Relay_log_files(flx.PyComponent):
             if self.q.empty()==False:
                 log=self.q.get(True)
                 self.Table_H.set_Loading(False)
+                log['rowmode'] = [1]*log['rowmode']
+                log = self.Sort_col(self.Col2Sort,log['items'],log['rowmode'])
                 self.Table_H.set_items(log['items'])
-                self.Table_H.set_rowmode([1]*log['rowmode'])
+                self.Table_H.set_rowmode(log['rowmode'])
                 if self.Table_H.choice==-1:
-                    if log['rowmode']>0:
+                    if len(log['rowmode'])>0:
                         self.Table_H.set_choice(0)
         if self.Process!=None:
             if not self.Process.is_alive():
@@ -1007,7 +1017,52 @@ class Relay_log_files(flx.PyComponent):
 
     def close(self):
         self.keep_running = False
-
+    
+    @event.reaction('Table_H.Col2Sort')
+    def Sort_Items(self, *events):
+        for ev in events:
+            if ev.new_value!='':
+                if self.ascending:
+                    self.ascending = False
+                else:
+                    self.ascending = True
+                steps = self.Sort_col(ev.new_value,self.Table_H.items,self.Table_H.rowmode)
+                self.Table_H.set_items(steps['items'])
+                self.Table_H.set_rowmode(steps['rowmode'])
+                self.Col2Sort = ev.new_value
+                self.Table_H.set_Col2Sort('')
+        
+    def Sort_col(self,col,items,rowmode):
+        items_DataFrame = pd.DataFrame.from_dict(items)
+        items_DataFrame = items_DataFrame.assign(rowmode = rowmode) 
+        if col in items_DataFrame.columns:
+            index = items_DataFrame.applymap(lambda col: int(col) if str(col).isnumeric() else col.lower()).sort_values(col,
+                                                               ascending=self.ascending).index
+            items_DataFrame_sort = items_DataFrame.loc[index,].reset_index(drop=True).copy()
+            # items_DataFrame_sort.index = list(range(len(items_DataFrame_sort.index)))
+            steps = dict()
+            steps['rowmode'] =  list(map(int,list(items_DataFrame_sort.pop('rowmode')))) 
+            steps['items']   =  items_DataFrame_sort.to_dict('list')
+        else:
+            steps = dict()
+            steps['rowmode'] = rowmode
+            steps['items']   = items
+        return steps
+        
+        for ev in events:
+            if ev.new_value!='':
+                items_DataFrame = pd.DataFrame.from_dict(self.Table_H.items)
+                items_DataFrame = items_DataFrame.assign(rowmode=self.Table_H.rowmode)
+                if ev.new_value in items_DataFrame.columns:
+                    items_DataFrame_sort = items_DataFrame.sort_values(ev.new_value,ascending=self.ascending)
+                    items_DataFrame_sort.index = list(range(len(items_DataFrame_sort.index)))
+                    if self.ascending:
+                        self.ascending = False
+                    else:
+                        self.ascending = True
+                    self.Table_H.set_rowmode(list(items_DataFrame_sort.pop('rowmode')))
+                    self.Table_H.set_items(items_DataFrame_sort.to_dict())
+    
 class Relay_log_data(flx.PyComponent):
     runlog_file           = event.StringProp('', settable=True)
     
@@ -1020,6 +1075,8 @@ class Relay_log_data(flx.PyComponent):
         self.ssh_client        = ssh_client
         self.Process           = None
         self.keep_running      = True
+        self.ascending         = False
+        self.Col2Sort          = ''
         self.Refresh_steps_menu()
         
     def Refresh_steps_menu(self):
@@ -1051,6 +1108,7 @@ class Relay_log_data(flx.PyComponent):
                 steps=self.q.get(True)
                 if steps['source'] == self.runlog_file:
                     self.Table_H.set_Loading(False)
+                    steps = self.Sort_col(self.Col2Sort,steps['items'],steps['rowmode'])
                     self.Table_H.set_items(steps['items'])
                     self.Table_H.set_rowmode(steps['rowmode'])
         if self.Process!=None:
@@ -1071,7 +1129,38 @@ class Relay_log_data(flx.PyComponent):
                 self.Process.join()
                 self.running=False
                 self.Process=None
-            
+    
+    @event.reaction('Table_H.Col2Sort')
+    def Sort_Items(self, *events):
+        for ev in events:
+            if ev.new_value!='':
+                if self.ascending:
+                    self.ascending = False
+                else:
+                    self.ascending = True
+                steps = self.Sort_col(ev.new_value,self.Table_H.items,self.Table_H.rowmode)
+                self.Table_H.set_items(steps['items'])
+                self.Table_H.set_rowmode(steps['rowmode'])
+                self.Col2Sort = ev.new_value
+                self.Table_H.set_Col2Sort('')
+        
+    def Sort_col(self,col,items,rowmode):
+        items_DataFrame = pd.DataFrame.from_dict(items)
+        items_DataFrame = items_DataFrame.assign(rowmode = rowmode) 
+        if col in items_DataFrame.columns:
+            index = items_DataFrame.applymap(lambda col: int(col) if str(col).isnumeric() else col.lower()).sort_values(col,
+                                                               ascending=self.ascending).index
+            items_DataFrame_sort = items_DataFrame.loc[index,].reset_index(drop=True).copy()
+            # items_DataFrame_sort.index = list(range(len(items_DataFrame_sort.index)))
+            steps = dict()
+            steps['rowmode'] =  list(map(int,list(items_DataFrame_sort.pop('rowmode')))) 
+            steps['items']   =  items_DataFrame_sort.to_dict('list')
+        else:
+            steps = dict()
+            steps['rowmode'] = rowmode
+            steps['items']   = items
+        return steps
+        
 class Relay_samples_menu(flx.PyComponent):
     instances   = event.StringProp('', settable=True)
     runlog_file = event.StringProp('', settable=True)
@@ -1085,8 +1174,10 @@ class Relay_samples_menu(flx.PyComponent):
         self.ssh_client   = ssh_client
         self.Process      = None
         self.keep_running = True
+        self.ascending    = False
+        self.Col2Sort     = ''
         self.Refresh_samples_menu()
-
+    
     def Refresh_samples_menu(self):
         if (not self.running) and (self.keep_running):
             try:
@@ -1117,6 +1208,7 @@ class Relay_samples_menu(flx.PyComponent):
                 steps=self.q.get(True)
                 if steps['source'] == self.instances:
                     self.Table_H.set_Loading(False)
+                    steps = self.Sort_col(self.Col2Sort,steps['items'],steps['rowmode'])
                     self.Table_H.set_items(steps['items'])
                     self.Table_H.set_rowmode(steps['rowmode'])
         if self.Process!=None:
@@ -1124,7 +1216,7 @@ class Relay_samples_menu(flx.PyComponent):
                 self.running = False
         if (self.session.status!=0) and (self.keep_running):
             asyncio.get_event_loop().call_later(self.refreshrate, self.Refresh_samples_menu)
-                
+    
     def close(self):
         self.keep_running = False
     
@@ -1137,6 +1229,37 @@ class Relay_samples_menu(flx.PyComponent):
                 self.Process.join()
                 self.running=False
                 self.Process=None
+    
+    @event.reaction('Table_H.Col2Sort')
+    def Sort_Items(self, *events):
+        for ev in events:
+            if ev.new_value!='':
+                if self.ascending:
+                    self.ascending = False
+                else:
+                    self.ascending = True
+                steps = self.Sort_col(ev.new_value,self.Table_H.items,self.Table_H.rowmode)
+                self.Table_H.set_items(steps['items'])
+                self.Table_H.set_rowmode(steps['rowmode'])
+                self.Col2Sort = ev.new_value
+                self.Table_H.set_Col2Sort('')
+        
+    def Sort_col(self,col,items,rowmode):
+        items_DataFrame = pd.DataFrame.from_dict(items)
+        items_DataFrame = items_DataFrame.assign(rowmode = rowmode) 
+        if col in items_DataFrame.columns:
+            index = items_DataFrame.applymap(lambda col: int(col) if str(col).isnumeric() else col.lower()).sort_values(col,
+                                                               ascending=self.ascending).index
+            items_DataFrame_sort = items_DataFrame.loc[index,].reset_index(drop=True).copy()
+            # items_DataFrame_sort.index = list(range(len(items_DataFrame_sort.index)))
+            steps = dict()
+            steps['rowmode'] =  list(map(int,list(items_DataFrame_sort.pop('rowmode')))) 
+            steps['items']   =  items_DataFrame_sort.to_dict('list')
+        else:
+            steps = dict()
+            steps['rowmode'] = rowmode
+            steps['items']   = items
+        return steps
         
 class Test_sftp_alive(flx.PyComponent):
     Kill_session = event.BoolProp(False, settable=True)
@@ -1191,14 +1314,20 @@ class Find_Error_Scripts(flx.PyComponent):
         self.Process                  = None
         self.keep_running             = True
     
-    def Get_Command_Error(self,Step,STEP_format,SAMPLE_format,Samples,directory,scripts_index_file_loc,log_id,master_scripts_file_loc,queue):
+    def Get_Command_Error(self,Step,STEP_format,SAMPLE_format,Samples,directory,scripts_index_file_loc,log_id,master_scripts_file_loc,queue=None):
         Script = ''
         script_Step = ''
         step = STEP_format.format(STEP = Step,
                                        ID   = log_id)
         command_Step   = "grep " + step   + ' ' + os.path.join(directory , scripts_index_file_loc.format(ID = log_id))
         if self.ssh_client!=None:
-            SSH = Popen_SSH(self.session,self.ssh_client,command_Step)
+            import paramiko
+            transport  = self.ssh_client.get_transport()
+            ssh_client = paramiko.SSHClient()
+            ssh_client.set_missing_host_key_policy( paramiko.AutoAddPolicy() )
+            ssh_client.connect(transport.getpeername()[0], username=transport.get_username(), password=transport.auth_handler.password,port=transport.getpeername()[1])
+            signal.alarm(TIMEOUT)
+            SSH = Popen_SSH(self.session,ssh_client,command_Step)
             [out, errs , exit_status]  = SSH.output()
             SSH.kill()
             if exit_status==0:
@@ -1219,7 +1348,7 @@ class Find_Error_Scripts(flx.PyComponent):
                 script_Sample =''
                 command_Sample = "grep " + Sample + ' ' + os.path.join(directory , scripts_index_file_loc.format(ID = log_id))
                 if self.ssh_client!=None:
-                    SSH = Popen_SSH(self.session,self.ssh_client,command_Sample)
+                    SSH = Popen_SSH(self.session,ssh_client,command_Sample)
                     [out, errs , exit_status]  = SSH.output()
                     SSH.kill()
                     if exit_status==0:
@@ -1229,7 +1358,7 @@ class Find_Error_Scripts(flx.PyComponent):
                     
                     if (script_Sample!='') and (script_Step!=''):
                         command = 'grep "' + script_Sample + '" ' + script_Step 
-                        SSH = Popen_SSH(self.session,self.ssh_client,command)
+                        SSH = Popen_SSH(self.session,ssh_client,command)
                         [out, errs , exit_status]  = SSH.output()
                         SSH.kill()
                         if len(out)>0:
@@ -1243,10 +1372,13 @@ class Find_Error_Scripts(flx.PyComponent):
                         out = os.popen(command).read()
                         if len(out)>0:
                             Script+= out + '\n'
-        if Script=='':
-            queue.put('')
+        if queue==None:
+            print(Script)
         else:
-            queue.put(Script)
+            if Script=='':
+                queue.put('')
+            else:
+                queue.put(Script)
 
     def Get_Command_Step(self,Step,directory,scripts_index_file_loc,log_id,master_scripts_file_loc,queue):
         out_line = ''
@@ -1282,18 +1414,31 @@ class Find_Error_Scripts(flx.PyComponent):
             queue.put('')
         else:
             queue.put(out_line)
-        
+    
     def Get_Command(self,Step,STEP_format,SAMPLE_format,Samples,directory,scripts_index_file_loc,log_id,master_scripts_file_loc):
+        self.Step                           =  Step
+        self.STEP_format                    =  STEP_format
+        self.SAMPLE_format                  =  SAMPLE_format
+        self.Samples                        =  Samples
+        self.directory                      =  directory
+        self.scripts_index_file_loc         =  scripts_index_file_loc
+        self.log_id                         =  log_id
+        self.master_scripts_file_loc        =  master_scripts_file_loc
+        
+        self.Get_Command_q()
+    
+    
+    def Get_Command_q(self):
         if (not self.running) and (self.keep_running):
             try:
-                self.Process  =        Process(target=self.Get_Command_Error, args=(Step,
-                                                                              STEP_format,
-                                                                              SAMPLE_format,
-                                                                              Samples,
-                                                                              directory,
-                                                                              scripts_index_file_loc,
-                                                                              log_id,
-                                                                              master_scripts_file_loc,
+                self.Process  =        Process(target=self.Get_Command_Error, args=(self.Step,
+                                                                              self.STEP_format,
+                                                                              self.SAMPLE_format,
+                                                                              self.Samples,
+                                                                              self.directory,
+                                                                              self.scripts_index_file_loc,
+                                                                              self.log_id,
+                                                                              self.master_scripts_file_loc,
                                                                               self.q,))
                 self.Process.daemon = True
                 if 'Process' not in self.session.__dict__.keys():
@@ -1303,13 +1448,15 @@ class Find_Error_Scripts(flx.PyComponent):
                 
                 self.Process.start()
                 self.running=True
-            except:
+            except BaseException as e:
+                print(str(e))
                 try:
                     self.Process.terminate()
                 except:
                     pass
                 self.Process=None
                 self.running=False
+                self.set_Script2Run('No_Scripts2Run')
         elif  (self.keep_running):
             if self.q.empty()==False:
                 scripts = self.q.get(True)
@@ -1317,15 +1464,21 @@ class Find_Error_Scripts(flx.PyComponent):
                     self.set_Script2Run(scripts)
                 else:
                     self.set_Script2Run('No_Scripts2Run')
-                
+                self.close()
         if self.Process!=None:
             if not self.Process.is_alive():
                 self.running = False
         if (self.session.status!=0) and (self.keep_running):
-            asyncio.get_event_loop().call_later(self.refreshrate, self.Get_Command)
+            asyncio.get_event_loop().call_later(self.refreshrate, self.Get_Command_q)
                 
     def close(self):
+        try:
+            self.Process.terminate()
+        except:
+            pass
         self.keep_running = False
+        self.Process=None
+        self.running=False
 
 class Monitor_GUI(flx.PyComponent):
     Dir         = event.StringProp('', settable=True)
