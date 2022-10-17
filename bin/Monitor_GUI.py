@@ -611,7 +611,7 @@ class Table(flx.GroupWidget):
                         self.Re_Drow_window()
                         self.set_Current_Highlite(self.Highlite)
             elif ev.source.title == self.Extra_Buttons_title:
-                self.set_Extra_Buttons_choice(ev.source.text+Header)
+                self.set_Extra_Buttons_choice(ev.source.text+HEDER)
             elif ev.source.title == self.Header_title:
                 self.set_Col2Sort(ev.source.text)
 
