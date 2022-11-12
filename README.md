@@ -112,7 +112,7 @@ For more information about **"NeatSeq-Flow"** see the full documentation on **[R
     ```
   *Not including the web-browser
 
-  ### No Conda
+  ### No Conda [Not Recommended]
   If all the dependencies are satisfied:
   - Just clone the github repository:
     ```Bash 
