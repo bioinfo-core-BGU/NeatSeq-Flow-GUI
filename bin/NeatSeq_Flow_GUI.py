@@ -5056,7 +5056,7 @@ if __name__ == '__main__':
                         help='Password For This Serve (Works only When --Server is set)')
     parser.add_argument('--USERSFILE',dest='USERSFILE',metavar="CHAR",type=str,default="",
                         help='''
-                                 The location of a Users file in which a list of users, E-mails addresses and Users Directorys are separated by one space (as:USER user@example.com /USER/DIR).
+                                 The location of a Users file in which a list of users, E-mails addresses and Users directories are separated by one space (as:USER user@example.com /USER/DIR).
                                  The login password will be send to the user e-mail after filling its user name and the password generated at the beginning of the run (Works only When --Server is set).
                                  You will need a Gmail account to send the password to the users (you will be prompt to type in your Gmail address and password) 
                                  '''
