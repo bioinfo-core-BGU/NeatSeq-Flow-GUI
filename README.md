@@ -119,8 +119,10 @@ For more information about **"NeatSeq-Flow"** see the full documentation on **[R
       git clone https://github.com/bioinfo-core-BGU/NeatSeq-Flow-GUI.git
     ```
   - NOTE: If not installed using CONDA you need to clone the NeatSeq-Flow repository as well as the NeatSeq-Flow Modules repository
-    [NeatSeq-Flow repository](https://github.com/bioinfo-core-BGU/neatseq-flow) 
-    [NeatSeq-Flow Modules repository](https://github.com/bioinfo-core-BGU/neatseq-flow-modules) 
+  
+  [NeatSeq-Flow repository](https://github.com/bioinfo-core-BGU/neatseq-flow) 
+  
+  [NeatSeq-Flow Modules repository](https://github.com/bioinfo-core-BGU/neatseq-flow-modules) 
 
 # Tutorial
 Detailed [Tutorial](https://github.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/blob/master/Tutorial.md) to learn and experience NeatSeq-Flow-GUI.
