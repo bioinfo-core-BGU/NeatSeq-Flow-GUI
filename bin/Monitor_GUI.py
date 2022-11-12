@@ -1502,8 +1502,8 @@ class Monitor_GUI(flx.PyComponent):
         self.step                    = ''
         self.Sample                  = ''
         self.redirect                = Redirect('/')
-        self.STEP_format             = """..{STEP}..{ID}"""
-        self.SAMPLE_format           = """..{STEP}..{SAMPLE}..{ID}"""
+        self.STEP_format             = """'\.\.{STEP}\.\.{ID}'"""
+        self.SAMPLE_format           = """'\.\.{STEP}\.\.{SAMPLE}\.\.{ID}'"""
         self.scripts_index_file_loc  = """objects/script_index_{ID}.txt"""
         self.master_scripts_file_loc = 'scripts/00.workflow.commands.sh'
         self.sample_rerun_heder      = 'Re Run Samples'
@@ -1781,60 +1781,6 @@ class Monitor_GUI(flx.PyComponent):
                                     Samples = items[Status]['Samples'].values
                         if self.Error_Scripts.running==False:
                             self.Error_Scripts.Get_Command(self.step,self.STEP_format,self.SAMPLE_format,Samples,self.directory,self.scripts_index_file_loc,self.log_id,self.master_scripts_file_loc)
-                        # Script = ''
-                        # script_Step = ''
-                        # Step = self.STEP_format.format(STEP = self.step,
-                                                           # ID   = self.log_id)
-                        # command_Step   = "grep " + Step   + ' ' + os.path.join(self.directory , self.scripts_index_file_loc.format(ID = self.log_id))
-                        
-                        # if self.ssh_client!=None:
-                            # [out, errs , exit_status]  = Popen_SSH(self.session,self.ssh_client,command_Step).output()
-                            # if exit_status==0:
-                                # out = out.split('\n')
-                                # if len(out)>1:
-                                    # script_Step = out[-2].split('\t')[-1]
-                        # else:
-                            # out = os.popen(command_Step).read()
-                            # out = out.split('\n')
-                            # script_Step = out[-2].split('\t')
-                        # if script_Step!='':
-                            # for Sample_Name in Samples:
-                                
-                                # Sample = self.SAMPLE_format.format(STEP   = self.step,
-                                                                   # SAMPLE = Sample_Name,
-                                                                   # ID     = self.log_id)
-                                
-                                # script_Sample =''
-                                # command_Sample = "grep " + Sample + ' ' + os.path.join(self.directory , self.scripts_index_file_loc.format(ID = self.log_id))
-                                # if self.ssh_client!=None:
-                                    # [out, errs , exit_status]  = Popen_SSH(self.session,self.ssh_client,command_Sample).output()
-                                    # if exit_status==0:
-                                        # out = out.split('\n')
-                                        # if len(out)>1:
-                                            # script_Sample = out[-2].split('\t')[-1]
-                                    
-                                    # if (script_Sample!='') and (script_Step!=''):
-                                        # command = 'grep "' + script_Sample + '" ' + script_Step 
-                                        # [out, errs , exit_status]  = Popen_SSH(self.session,self.ssh_client,command).output()
-                                        # if len(out)>0:
-                                            # Script+= out + '\n'
-                                        # else:
-                                            # self.send_massage.set_massage('Could Not find the script for Sample: ' + self.Sample + ' within Step: ' + self.step + '. It could be from previous run')
-                                # else:
-                                    
-                                    # out = os.popen(command_Sample).read()
-                                    # out = out.split('\n')
-                                    # script_Sample = out[-2].split('\t')
-                                    # if (script_Sample!='') and (script_Step!=''):
-                                        # command = 'grep "' + script_Sample + '" ' + script_Step 
-                                        # out = os.popen(command).read()
-                                        # if len(out)>0:
-                                            # Script+= out + '\n'
-                                        # else:
-                                            # self.send_massage.set_massage('Could Not find the script for Sample: ' + self.Sample + ' within Step: ' + self.step + '. It could be from previous run')
-                        # #print(Script)
-                        # if len(Script)>0:
-                            # self.set_RunCommand(Script)
                     except:
                         self.send_massage.set_massage('Could Not ' + ev.new_value + '. Try to Generate Scripts in the Run Tab')
                         self.stack.set_current(self.main_stack)
