@@ -10,7 +10,7 @@ For more information about **"NeatSeq-Flow"** see the full documentation on **[R
 - [Dependencies](#dependencies)
 - [Installing](#installing)
   - [Using Conda](#using-conda)
-  - [No Conda [Not Recommended]](#no-conda-[not-recommended])
+  - [No Conda [Not Recommended]](#no-conda-not-recommended)
 - [Tutorial](#tutorial)
 - [Contact](#contact)
 
