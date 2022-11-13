@@ -10,6 +10,7 @@ For more information about **"NeatSeq-Flow"** see the full documentation on **[R
 - [Dependencies](#dependencies)
 - [Installing](#installing)
   - [Using Conda](#using-conda)
+  - [Using Docker](#using-docker)
   - [No Conda [Not Recommended]](#no-conda-not-recommended)
 - [Tutorial](#tutorial)
 - [Contact](#contact)
@@ -111,6 +112,10 @@ For more information about **"NeatSeq-Flow"** see the full documentation on **[R
                               path needs to be at the local host.
     ```
   *Not including the web-browser
+  ### Using Docker
+  Running the NeatSeq-Flow Platform on Windows/Mac Using a Docker Container
+  Follow the instructions here:
+    [NeatSeq-Flow Using Docker](https://github.com/bioinfo-core-BGU/NeatSeq-Flow-Using-Docker) 
 
   ### No Conda [Not Recommended]
   If all the dependencies are satisfied:
