@@ -40,7 +40,7 @@ For more information about **"NeatSeq-Flow"** see the full documentation on **[R
 - munch
 - pandas
 - [Flexx](https://github.com/flexxui/flexx)
-- A web-browser (Preferably firefox)
+- A web-browser (Not needed to be installed locally if using server mode)
 
 ## Installing
 
