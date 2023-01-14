@@ -68,16 +68,7 @@ For more information about **"NeatSeq-Flow"** see the full documentation on **[R
         - Copy the "User Name" (blue line) from the terminal to the "User Name" form in the login window
         - Copy the "Password" (yellow line) from the terminal to the "Password" form in the login window
         - Click on the "Login" button.
-&nbsp;  
 &nbsp;
-&nbsp;  
-&nbsp;
-&nbsp;  
-&nbsp;
-&nbsp;  
-&nbsp;  
-&nbsp;
-
 
 
     5. Managing Users:
