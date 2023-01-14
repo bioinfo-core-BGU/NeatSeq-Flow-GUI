@@ -69,7 +69,16 @@ For more information about **"NeatSeq-Flow"** see the full documentation on **[R
         - Click on the "Login" button.
 &nbsp;  
 
-<img align="right" src="https://github.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/raw/master/doc/NeatSeq-Flow_Server.jpg" width="350">
+
+
+
+
+<img align="right" src="https://github.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/raw/master/doc/NeatSeq-Flow_Server.jpg" width="550">
+
+
+
+
+
 
 &nbsp;  
 &nbsp;
