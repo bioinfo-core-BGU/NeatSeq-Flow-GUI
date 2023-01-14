@@ -59,9 +59,17 @@ For more information about **"NeatSeq-Flow"** see the full documentation on **[R
     ```
     3. Run **NeatSeq_Flow_GUI**:
     ```Bash 
-      NeatSeq_Flow_GUI.py
+      NeatSeq_Flow_GUI.py --Server
     ```
-    4. For more option:
+    4. Use the information in the terminal:
+       - Copy the IP address to a web-browser - red color
+       - A login window should appear
+       - Copy the "User Name" (blue line) from the terminal to the "User Name" form in the login window
+       - Copy the "Password" (yellow line) from the terminal to the "Password" form in the login window
+       - Click on the "Login" button.
+       <img align="right" src="https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-Using-Docker/master/doc/NeatSeq-Flow_Server.jpg" width="350">
+
+    5. For more option:
     ```Bash 
         NeatSeq_Flow_GUI.py -h
         usage: NeatSeq_Flow_GUI.py [-h] [--Server] [--PORT CHAR] [--HOST CHAR] [--SSL]
