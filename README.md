@@ -63,7 +63,7 @@ For more information about **"NeatSeq-Flow"** see the full documentation on **[R
     ```
     4. Use the information in the terminal:
         <img align="right" src="https://github.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/raw/master/doc/NeatSeq-Flow_Server.jpg" width="450">
-        - Copy the IP address to a web-browser - red color
+        - Copy the IP address to a web-browser - (red line)
         - A login window should appear
         - Copy the "User Name" (blue line) from the terminal to the "User Name" form in the login window
         - Copy the "Password" (yellow line) from the terminal to the "Password" form in the login window
