@@ -80,9 +80,15 @@ For more information about **"NeatSeq-Flow"** see the full documentation on **[R
 
 
 
+    5. Managing Users:
+        - It is possible to mange users using SSH, NeatSeq-Flow will try to login by ssh to a host using the provided "User Name" and "Password".
+        - The ssh host can be local or remote.
+        - Note: If using a remote host, NeatSeq-Flow needs to be installed on the remote host and the analysis will be run on the remote host by the user that logged-in
+    ```Bash 
+      NeatSeq_Flow_GUI.py --Server --SSH_HOST 127.0.0.1
+    ```
 
-
-    5. For more option:
+    6. For more option:
     ```Bash 
         NeatSeq_Flow_GUI.py -h
         usage: NeatSeq_Flow_GUI.py [-h] [--Server] [--PORT CHAR] [--HOST CHAR] [--SSL]
