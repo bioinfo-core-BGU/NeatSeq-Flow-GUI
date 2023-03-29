@@ -217,10 +217,6 @@ class Popen_SSH(object):
                 if ssh_client.get_transport().is_active():
                     self.ssh_transport     = ssh_client.get_transport()
                     self.ssh_session       = self.ssh_transport.open_channel(kind='session')
-                    if 'SSHClient' not in self.session.__dict__.keys():
-                        self.session.SSHClient = [self.ssh_session]
-                    else:
-                        self.session.SSHClient.append(self.ssh_session)
                     if pty:
                         self.ssh_session.get_pty('vt100')
                     if self.shell:
@@ -669,19 +665,11 @@ class nsfgm(flx.PyComponent):
             else:
                 import paramiko
                 transport  = ssh_client.get_transport()
-                ssh_client_ = paramiko.SSHClient()
-                ssh_client_.set_missing_host_key_policy( paramiko.AutoAddPolicy() )
-                ssh_client_.connect(transport.getpeername()[0], username=transport.get_username(), password=transport.auth_handler.password,port=transport.getpeername()[1])
-                if 'SSHClient' not in self.session.__dict__.keys():
-                    self.session.SSHClient = [ssh_client_]
-                else:
-                    self.session.SSHClient.append(ssh_client_)
+                ssh_client = paramiko.SSHClient()
+                ssh_client.set_missing_host_key_policy( paramiko.AutoAddPolicy() )
+                ssh_client.connect(transport.getpeername()[0], username=transport.get_username(), password=transport.auth_handler.password,port=transport.getpeername()[1])
                 signal.alarm(TIMEOUT)
-                sftp    = ssh_client_.open_sftp()
-                if 'SSHClient' not in self.session.__dict__.keys():
-                    self.session.SSHClient = [sftp]
-                else:
-                    self.session.SSHClient.append(sftp)
+                sftp    = ssh_client.open_sftp()
                 signal.alarm(0)
                 signal.alarm(TIMEOUT)
                 listdir = sftp.listdir(self.Dir)
@@ -699,8 +687,7 @@ class nsfgm(flx.PyComponent):
                 file_sys["Size"]          = [sftp.stat(os.path.join(self.Dir,x)).st_size for x in file_sys["Name"]]
                 file_sys["Size"]          = list(map(lambda x: self.format_file_size(x),file_sys["Size"]))
                 
-                sftp.close()
-                ssh_client_.close()
+                ssh_client.close()
         except :
             file_sys=pd.DataFrame(columns=["Name","Created","Last Modified","Size"])
         if q!=None:
@@ -768,8 +755,6 @@ class nsfgm(flx.PyComponent):
 
     # main function for parsing log file
     def read_run_log(self,ssh_client,runlog_file,Bar_len,Bar_Marker,Bar_Spacer,q=None,Instance=True,read_from_disk=True):
-        ssh_client_ = None
-        sftp        = None
         try:
             # read log file to a Data-Frame
             if read_from_disk:
@@ -777,22 +762,13 @@ class nsfgm(flx.PyComponent):
                 if ssh_client!=None:
                     import paramiko
                     transport  = ssh_client.get_transport()
-                    ssh_client_ = paramiko.SSHClient()
-                    ssh_client_.set_missing_host_key_policy( paramiko.AutoAddPolicy() )
-                    ssh_client_.connect(transport.getpeername()[0], username=transport.get_username(), password=transport.auth_handler.password,port=transport.getpeername()[1])
-                    if 'SSHClient' not in self.session.__dict__.keys():
-                        self.session.SSHClient = [ssh_client_]
-                    else:
-                        self.session.SSHClient.append(ssh_client_)
+                    ssh_client = paramiko.SSHClient()
+                    ssh_client.set_missing_host_key_policy( paramiko.AutoAddPolicy() )
+                    ssh_client.connect(transport.getpeername()[0], username=transport.get_username(), password=transport.auth_handler.password,port=transport.getpeername()[1])
                     signal.alarm(TIMEOUT)
-                    sftp = ssh_client_.open_sftp()
-                    if 'SSHClient' not in self.session.__dict__.keys():
-                        self.session.SSHClient = [sftp]
-                    else:
-                        self.session.SSHClient.append(sftp)
+                    sftp = ssh_client.open_sftp()
                     signal.alarm(0)
                     runlog_Data=pd.read_table(sftp.file(runlog_file),header =4,dtype={'Job ID':str})
-                    sftp.close()
                 else:
                     runlog_Data=pd.read_table(runlog_file,header =4,dtype={'Job ID':str})
                 self.LogData=runlog_Data.copy()
@@ -826,7 +802,7 @@ class nsfgm(flx.PyComponent):
             # for the sample window information:
             else:
                 # get the running information from qstat
-                qstat=self.get_qstat(ssh_client_)
+                qstat=self.get_qstat(ssh_client)
                 if len(qstat)>0:
                     runlog_Data=runlog_Data.merge(qstat,how='left')
                     runlog_Data.loc[runlog_Data["State"].isnull(),"State"]=''
@@ -836,7 +812,7 @@ class nsfgm(flx.PyComponent):
                 if 'Job ID' in runlog_Data.columns:
                     if len(set(runlog_Data["Host"]))==1:
                         if list(set(runlog_Data["Host"]))[0]==LOCAL_HOST+"-LOCAL_RUN":
-                            PID = self.get_PID(ssh_client_)
+                            PID = self.get_PID(ssh_client)
                             if len(PID)>0:
                                 runlog_Data = runlog_Data.merge(PID,how='left',on='Job ID')
                                 runlog_Data.loc[~runlog_Data["PID_State"].isnull(),"State"]='running'
@@ -881,6 +857,9 @@ class nsfgm(flx.PyComponent):
                     if self.session.status!=0:
                         q.put({'items':self.items.to_dict('list'),'rowmode': self.rowmode,'source':Instance})
                         time.sleep(0.00001)
+
+                if ssh_client!=None:
+                    ssh_client.close()
                 return {'items':self.items.to_dict('list'),'rowmode': self.rowmode}
             # group all jobs by Instance and event to lists of Timestamps
             logpiv=runlog_Data.groupby([args_pivot[0],args_pivot[1]])[args_pivot[2]].apply(list).reset_index()
@@ -899,7 +878,7 @@ class nsfgm(flx.PyComponent):
             N_Finished=logpiv.applymap(lambda x:len(x))["Finished"]
             
             # get the running information from qstat and add the information to the Data-Frame
-            qstat=self.get_qstat(ssh_client_)
+            qstat=self.get_qstat(ssh_client)
             if len(qstat)>0:
                 runlog_Data=runlog_Data.merge(qstat,how='left')
                 runlog_Data.loc[runlog_Data["State"].isnull(),"State"]=''
@@ -908,7 +887,7 @@ class nsfgm(flx.PyComponent):
             if 'Job ID' in runlog_Data.columns:
                 if len(set(runlog_Data["Host"]))==1:
                     if list(set(runlog_Data["Host"]))[0]==LOCAL_HOST+"-LOCAL_RUN":
-                        PID = self.get_PID(ssh_client_)
+                        PID = self.get_PID(ssh_client)
                         if len(PID)>0:
                             runlog_Data = runlog_Data.merge(PID,how='left',on='Job ID')
                             runlog_Data.loc[~runlog_Data["PID_State"].isnull(),"State"]='running'
@@ -970,9 +949,7 @@ class nsfgm(flx.PyComponent):
                 self.items=pd.DataFrame(columns=["Samples","Started","Finished","Host","Memory","Running?"])
 
             self.rowmode=[]
-            if sftp!=None:
-                sftp.close()
-            
+        
         # if this function is running in a sub-process store the results in the queue
         if q!=None:
             if self.session.status!=0:
@@ -981,8 +958,8 @@ class nsfgm(flx.PyComponent):
                 else:
                     q.put({'items':self.items.to_dict('list'),'rowmode': self.rowmode,'source':Instance})
                 time.sleep(0.00001)
-        if ssh_client_!=None:
-            ssh_client_.close()
+        if ssh_client!=None:
+            ssh_client.close()
         return {'items':self.items.to_dict('list'),'rowmode': self.rowmode}
 
 class Relay_log_files(flx.PyComponent):
@@ -1003,7 +980,6 @@ class Relay_log_files(flx.PyComponent):
     def Refresh_log_files(self):
         if (not self.running) and (self.keep_running):
             try:
-                self.close()
                 self.Process  =         Process(target=self.mynsfgm.file_browser, args=(self.ssh_client,
                                                                                         self.mynsfgm.Regular,
                                                                                         self.q,))
@@ -1040,15 +1016,8 @@ class Relay_log_files(flx.PyComponent):
             asyncio.get_event_loop().call_later(self.refreshrate, self.Refresh_log_files) 
 
     def close(self):
-        if self.Process!=None:
-            self.Process.terminate()
-            self.Process.join()
-            self.Process=None
-        
-    def Kill(self):
-        self.close()
         self.keep_running = False
-        
+    
     @event.reaction('Table_H.Col2Sort')
     def Sort_Items(self, *events):
         for ev in events:
@@ -1113,8 +1082,6 @@ class Relay_log_data(flx.PyComponent):
     def Refresh_steps_menu(self):
         if (not self.running) and (self.keep_running):
             try:
-                
-                self.close()
                 self.Process  =        Process(target=self.mynsfgm.read_run_log, args=(self.ssh_client,
                                                                                        self.runlog_file,
                                                                                        self.mynsfgm.Bar_len,
@@ -1151,21 +1118,17 @@ class Relay_log_data(flx.PyComponent):
             asyncio.get_event_loop().call_later(self.refreshrate, self.Refresh_steps_menu)
                 
     def close(self):
-        if self.Process!=None:
-            self.Process.terminate()
-            self.Process.join()
-            self.Process=None
-    
-    def Kill(self):
-        self.close()
         self.keep_running = False
         
     @event.reaction('runlog_file')
     def Loading(self, *events):
         self.Table_H.set_Loading(True)
         if self.running:
-            self.close()
-            self.running=False
+            if self.Process!=None:
+                self.Process.terminate()
+                self.Process.join()
+                self.running=False
+                self.Process=None
     
     @event.reaction('Table_H.Col2Sort')
     def Sort_Items(self, *events):
@@ -1218,8 +1181,6 @@ class Relay_samples_menu(flx.PyComponent):
     def Refresh_samples_menu(self):
         if (not self.running) and (self.keep_running):
             try:
-                
-                self.close()
                 self.Process  =        Process(target=self.mynsfgm.read_run_log, args=(self.ssh_client,
                                                                                        self.runlog_file,
                                                                                        self.mynsfgm.Bar_len,
@@ -1257,21 +1218,17 @@ class Relay_samples_menu(flx.PyComponent):
             asyncio.get_event_loop().call_later(self.refreshrate, self.Refresh_samples_menu)
     
     def close(self):
-        if self.Process!=None:
-            self.Process.terminate()
-            self.Process.join()
-            self.Process=None
-            
-    def Kill(self):
-        self.close()
         self.keep_running = False
-        
+    
     @event.reaction('instances')
     def Loading(self, *events):
         self.Table_H.set_Loading(True)
         if self.running:
-            self.close()
-            self.running=False
+            if self.Process!=None:
+                self.Process.terminate()
+                self.Process.join()
+                self.running=False
+                self.Process=None
     
     @event.reaction('Table_H.Col2Sort')
     def Sort_Items(self, *events):
@@ -1369,10 +1326,6 @@ class Find_Error_Scripts(flx.PyComponent):
             ssh_client = paramiko.SSHClient()
             ssh_client.set_missing_host_key_policy( paramiko.AutoAddPolicy() )
             ssh_client.connect(transport.getpeername()[0], username=transport.get_username(), password=transport.auth_handler.password,port=transport.getpeername()[1])
-            if 'SSHClient' not in self.session.__dict__.keys():
-                self.session.SSHClient = [ssh_client]
-            else:
-                self.session.SSHClient.append(ssh_client)
             signal.alarm(TIMEOUT)
             SSH = Popen_SSH(self.session,ssh_client,command_Step)
             [out, errs , exit_status]  = SSH.output()
@@ -1540,7 +1493,7 @@ class Monitor_GUI(flx.PyComponent):
                   Bar_Marker        = '#',
                   Bar_Spacer        = '-',
                   Bar_len           = 40 ):
-        self.ssh_client              = ssh_client
+        
         self.send_massage            = send_massage()
         self.file_menu_title         = 'Log File Menu'
         self.steps_menu_title        = 'Steps Menu'
@@ -1556,21 +1509,10 @@ class Monitor_GUI(flx.PyComponent):
         self.sample_rerun_heder      = 'Re Run Samples'
         self.step_rerun_heder        = 'Re Run Step'
         global LOCAL_HOST
-        if self.ssh_client !=None:
-            try:
-                if 'SSHClient' not in self.session.__dict__.keys():
-                    self.session.SSHClient = [self.ssh_client]
-                else:
-                    self.session.SSHClient.append(self.ssh_client)
-            except:
-                pass
+        if ssh_client!=None:
             try:
                 signal.alarm(TIMEOUT)
-                SFTP                          = self.ssh_client.open_sftp()
-                if 'SSHClient' not in self.session.__dict__.keys():
-                    self.session.SSHClient = [SFTP]
-                else:
-                    self.session.SSHClient.append(SFTP)
+                SFTP                          = ssh_client.open_sftp()
                 signal.alarm(0)
                 SSH = Popen_SSH(ssh_client,'echo $HOST')
                 [outs, errs , exit_status] = SSH.output()
@@ -1578,15 +1520,10 @@ class Monitor_GUI(flx.PyComponent):
                 if exit_status==0:
                     LOCAL_HOST                = outs.strip()
             except:
-                try:
-                    SSH.kill()
-                except:
-                    pass
                 SFTP       = None
             if SFTP!=None:
                 try:
                     directory = SFTP.normalize(directory)
-                    SFTP.close()
                 except:
                     directory = SFTP.normalize('')
         else:
@@ -1595,6 +1532,7 @@ class Monitor_GUI(flx.PyComponent):
                 directory     = os.getcwd()
         
         self.directory  = directory
+        self.ssh_client = ssh_client
         samples_menu_flag=-1
         samples_menu_active=False
         #initializing the main monitor/qstat log file parser module
@@ -1617,7 +1555,7 @@ class Monitor_GUI(flx.PyComponent):
         
         #get list of log files and information about them
         
-        # self.Test_sftp    = Test_sftp_alive(ssh_client)
+        self.Test_sftp    = Test_sftp_alive(ssh_client)
         self.Relay_log    = Relay_log_files(ssh_client,
                                            self.mynsfgm,
                                            self.file_menu,
@@ -1637,17 +1575,17 @@ class Monitor_GUI(flx.PyComponent):
     def close_session(self):
         self.redirect.go()
             
-    # @event.reaction('Test_sftp.Kill_session')
-    # def kill_session(self, *events):
-        # for ev in events:
-            # if ev.new_value==True:
-                # self.close()
-                # self.close_session()
+    @event.reaction('Test_sftp.Kill_session')
+    def kill_session(self, *events):
+        for ev in events:
+            if ev.new_value==True:
+                self.close()
+                self.close_session()
                 
     def close(self):
-        self.Relay_data.Kill()
-        self.Relay_log.Kill()
-        self.Relay_sample.Kill()
+        self.Relay_data.close()
+        self.Relay_log.close()
+        self.Relay_sample.close()
 
     @event.reaction('Dir')
     def Update_Dir(self, *events):
@@ -1799,7 +1737,6 @@ class Monitor_GUI(flx.PyComponent):
                                 out = out.split('\n')
                                 if len(out)>1:
                                     script_Sample = out[-2].split('\t')[-1]
-                                    
                             
                             if (script_Sample!='') and (script_Step!=''):
                                 command = 'grep "' + script_Sample + '" ' + script_Step 
@@ -1844,60 +1781,6 @@ class Monitor_GUI(flx.PyComponent):
                                     Samples = items[Status]['Samples'].values
                         if self.Error_Scripts.running==False:
                             self.Error_Scripts.Get_Command(self.step,self.STEP_format,self.SAMPLE_format,Samples,self.directory,self.scripts_index_file_loc,self.log_id,self.master_scripts_file_loc)
-                        # Script = ''
-                        # script_Step = ''
-                        # Step = self.STEP_format.format(STEP = self.step,
-                                                           # ID   = self.log_id)
-                        # command_Step   = "grep " + Step   + ' ' + os.path.join(self.directory , self.scripts_index_file_loc.format(ID = self.log_id))
-                        
-                        # if self.ssh_client!=None:
-                            # [out, errs , exit_status]  = Popen_SSH(self.session,self.ssh_client,command_Step).output()
-                            # if exit_status==0:
-                                # out = out.split('\n')
-                                # if len(out)>1:
-                                    # script_Step = out[-2].split('\t')[-1]
-                        # else:
-                            # out = os.popen(command_Step).read()
-                            # out = out.split('\n')
-                            # script_Step = out[-2].split('\t')
-                        # if script_Step!='':
-                            # for Sample_Name in Samples:
-                                
-                                # Sample = self.SAMPLE_format.format(STEP   = self.step,
-                                                                   # SAMPLE = Sample_Name,
-                                                                   # ID     = self.log_id)
-                                
-                                # script_Sample =''
-                                # command_Sample = "grep " + Sample + ' ' + os.path.join(self.directory , self.scripts_index_file_loc.format(ID = self.log_id))
-                                # if self.ssh_client!=None:
-                                    # [out, errs , exit_status]  = Popen_SSH(self.session,self.ssh_client,command_Sample).output()
-                                    # if exit_status==0:
-                                        # out = out.split('\n')
-                                        # if len(out)>1:
-                                            # script_Sample = out[-2].split('\t')[-1]
-                                    
-                                    # if (script_Sample!='') and (script_Step!=''):
-                                        # command = 'grep "' + script_Sample + '" ' + script_Step 
-                                        # [out, errs , exit_status]  = Popen_SSH(self.session,self.ssh_client,command).output()
-                                        # if len(out)>0:
-                                            # Script+= out + '\n'
-                                        # else:
-                                            # self.send_massage.set_massage('Could Not find the script for Sample: ' + self.Sample + ' within Step: ' + self.step + '. It could be from previous run')
-                                # else:
-                                    
-                                    # out = os.popen(command_Sample).read()
-                                    # out = out.split('\n')
-                                    # script_Sample = out[-2].split('\t')
-                                    # if (script_Sample!='') and (script_Step!=''):
-                                        # command = 'grep "' + script_Sample + '" ' + script_Step 
-                                        # out = os.popen(command).read()
-                                        # if len(out)>0:
-                                            # Script+= out + '\n'
-                                        # else:
-                                            # self.send_massage.set_massage('Could Not find the script for Sample: ' + self.Sample + ' within Step: ' + self.step + '. It could be from previous run')
-                        # #print(Script)
-                        # if len(Script)>0:
-                            # self.set_RunCommand(Script)
                     except:
                         self.send_massage.set_massage('Could Not ' + ev.new_value + '. Try to Generate Scripts in the Run Tab')
                         self.stack.set_current(self.main_stack)

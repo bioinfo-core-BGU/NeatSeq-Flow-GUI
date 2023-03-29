@@ -655,7 +655,7 @@ class Step_Tree_Class(ui.Widget):
                 self.tree.text      = 'Top_level'
                 self.Order_Steps_b  = ui.Button(text='Order Steps',style='font-size: 80%;')
                 self.info_lable     = ui.Label(text='Help box:',style='max-height: 20px; min-height: 20px;')
-                self.info           = Documentation_Editor(DEFAULT_HELP_BOX_TEXT,True,False,True,flex=0.01,style='border: 1px solid red;min-height: 50px;min-width: 100px; ')
+                self.info           = Documentation_Editor(DEFAULT_HELP_BOX_TEXT,True,False,True,flex=0.05,style='border: 1px solid red;min-height: 50px;min-width: 100px; ')
                 Add_Tooltip(self.Order_Steps_b,HELP['order_steps'],'right')
                 self.info_lable.set_capture_mouse(2)
                 self.info.set_capture_mouse(2)
@@ -1693,7 +1693,7 @@ class Run_NeatSeq_Flow(ui.Widget):
         with ui.VSplit(spacing=10,padding=50):
             ui.Layout(style='max-height: 50px;')
             with ui.HSplit():
-                with ui.VSplit(flex=1):
+                with ui.VSplit():
                     with ui.GroupWidget(title='Project Information', style='min-height: 230px; min-width: 250px; border: 2px solid blue; '):
                         with ui.VSplit():
                             ui.Layout()
@@ -1740,7 +1740,7 @@ class Run_NeatSeq_Flow(ui.Widget):
                                     self.conda_env_b = ui.Button(text='Search', style='max-width: 100px; ')
                             ui.Layout()
                     ui.Label(style='padding: 0px ;min-height: 5px; max-height: 5px; ')
-                with ui.VSplit(flex=2):
+                with ui.VSplit():
 
                     with ui.HSplit():
                         self.Generate_scripts_b = ui.Button(text='Generate scripts', style='max-height: 55px; min-width: 150px; ')
@@ -2031,7 +2031,6 @@ class File_Browser(flx.GroupWidget):
         self.columns           = columns
         self.Sort_By           = list(self.columns.keys())[0]
         self.Sort_How          = True
-        self.First_SortBy      = 'Name'
         self.page              = 1
         self.page_limit        = 20
         self.page_names        = ['Previous Page','Next Page']
@@ -2092,14 +2091,7 @@ class File_Browser(flx.GroupWidget):
                     
                     
             flx.Layout(style='max-height: 10px;')
-            if self.First_SortBy in self.columns:
-                self.Sort_By = self.First_SortBy
-                if self.Sort_How:
-                    self.Sort_How = False
-                else:
-                    self.Sort_How = True
-                self.update_Dir()
-            
+
     @event.reaction('Download.pointer_click')
     def Download_Button_click(self):
         selected_path=[]
@@ -2339,10 +2331,6 @@ class Run_File_Browser(flx.PyComponent):
             try:
                 signal.alarm(self.timeout)
                 self.sftp   = self.ssh_client.open_sftp()
-                if 'SSHClient' not in self.session.__dict__.keys():
-                    self.session.SSHClient = [self.sftp]
-                else:
-                    self.session.SSHClient.append(self.sftp)
                 signal.alarm(0)
             except:
                 Redirect('/').go()
@@ -2354,11 +2342,7 @@ class Run_File_Browser(flx.PyComponent):
                 self.base_path = self.sftp.normalize(base_path)
                 signal.alarm(0)
             except:
-                # self.sftp      = self.ssh_client.open_sftp()
-                # if 'SSHClient' not in self.session.__dict__.keys():
-                    # self.session.SSHClient = [self.sftp]
-                # else:
-                    # self.session.SSHClient.append(self.sftp)
+                self.sftp      = self.ssh_client.open_sftp()
                 self.base_path = ''
             try:
                 signal.alarm(self.timeout)
@@ -2403,16 +2387,12 @@ class Run_File_Browser(flx.PyComponent):
                 path = os.path.join(self.File_Browser.Preview_Path[0],self.File_Browser.Preview_Path[1])
 
                 if self.ssh_client!=None:
-                    # try:
-                        # signal.alarm(self.timeout)
-                        # self.sftp.normalize('')
-                        # signal.alarm(0)
-                    # except:
-                        # self.sftp   = self.ssh_client.open_sftp()
-                        # if 'SSHClient' not in self.session.__dict__.keys():
-                            # self.session.SSHClient = [self.sftp]
-                        # else:
-                            # self.session.SSHClient.append(self.sftp)
+                    try:
+                        signal.alarm(self.timeout)
+                        self.sftp.normalize('')
+                        signal.alarm(0)
+                    except:
+                        self.sftp   = self.ssh_client.open_sftp()
                     try:
                         with self.sftp.file(path, mode='rb') as file:
                             file_size = Preview_Buffer
@@ -2448,16 +2428,12 @@ class Run_File_Browser(flx.PyComponent):
                 file_name = self.File_Browser.Selected_Path[-1]
                 path      = os.path.join(self.File_Browser.Path,file_name)
                 if self.ssh_client!=None:
-                    # try:
-                        # signal.alarm(self.timeout)
-                        # self.sftp.normalize('')
-                        # signal.alarm(0)
-                    # except:
-                        # self.sftp   = self.ssh_client.open_sftp()
-                        # if 'SSHClient' not in self.session.__dict__.keys():
-                            # self.session.SSHClient = [self.sftp]
-                        # else:
-                            # self.session.SSHClient.append(self.sftp)
+                    try:
+                        signal.alarm(self.timeout)
+                        self.sftp.normalize('')
+                        signal.alarm(0)
+                    except:
+                        self.sftp   = self.ssh_client.open_sftp()
                     try:
                         with self.sftp.file(path, mode='rb') as file:
                             file_size = file.stat().st_size
@@ -2546,28 +2522,20 @@ class Run_File_Browser(flx.PyComponent):
                 Dir['File']      = {}
                 
                 if self.ssh_client!=None:
-                    # try:
-                        # signal.alarm(self.timeout)
-                        # self.sftp.normalize('')
-                        # signal.alarm(0)
-                    # except:
-                        # self.sftp   = self.ssh_client.open_sftp()
-                        # if 'SSHClient' not in self.session.__dict__.keys():
-                            # self.session.SSHClient = [self.sftp]
-                        # else:
-                            # self.session.SSHClient.append(self.sftp)
+                    try:
+                        signal.alarm(self.timeout)
+                        self.sftp.normalize('')
+                        signal.alarm(0)
+                    except:
+                        self.sftp   = self.ssh_client.open_sftp()
                     try:
                         signal.alarm(self.timeout)
                         Path    = self.sftp.normalize(self.File_Browser.Path)
                         self.sftp.chdir(Path)
                         signal.alarm(0)
                     except:
+                        self.sftp   = self.ssh_client.open_sftp()
                         Path        = self.Path
-                        # self.sftp   = self.ssh_client.open_sftp()
-                        # if 'SSHClient' not in self.session.__dict__.keys():
-                            # self.session.SSHClient = [self.sftp]
-                        # else:
-                            # self.session.SSHClient.append(self.sftp)
                 else:
                     if self.File_Browser.Path=='':
                         Path = os.getcwd()
@@ -2586,16 +2554,12 @@ class Run_File_Browser(flx.PyComponent):
                 try:
                     columns = list(self.columns.keys())
                     if self.ssh_client!=None:
-                        # try:
-                            # signal.alarm(self.timeout)
-                            # self.sftp.normalize('')
-                            # signal.alarm(0)
-                        # except:
-                            # self.sftp   = self.ssh_client.open_sftp()
-                            # if 'SSHClient' not in self.session.__dict__.keys():
-                                # self.session.SSHClient = [self.sftp]
-                            # else:
-                                # self.session.SSHClient.append(self.sftp)
+                        try:
+                            signal.alarm(self.timeout)
+                            self.sftp.normalize('')
+                            signal.alarm(0)
+                        except:
+                            self.sftp   = self.ssh_client.open_sftp()
                         
                         signal.alarm(self.timeout)
                         for entry in self.sftp.listdir_attr(Path):
@@ -2651,12 +2615,8 @@ class Run_File_Browser(flx.PyComponent):
                     self.File_Browser.set_Dir(Dir)
                 except :# BaseException as e:
                     # print(str(e))
-                    # if self.ssh_client!=None:
-                        # self.sftp   = self.ssh_client.open_sftp()
-                        # if 'SSHClient' not in self.session.__dict__.keys():
-                            # self.session.SSHClient = [self.sftp]
-                        # else:
-                            # self.session.SSHClient.append(self.sftp)
+                    if self.ssh_client!=None:
+                        self.sftp   = self.ssh_client.open_sftp()
                     self.File_Browser.set_Path(self.Path)
                 self.File_Browser.set_update(False)
 
@@ -2685,18 +2645,9 @@ class Run_File_Browser(flx.PyComponent):
                 signal.alarm(0)
             else:
                 os.mkdir(Path)
-        except :
-            pass
-            # if self.sftp!=None:
-                # try:
-                    # self.sftp.close()
-                # except:
-                    # pass
-                # self.sftp   = self.ssh_client.open_sftp()
-                # if 'SSHClient' not in self.session.__dict__.keys():
-                    # self.session.SSHClient = [self.sftp]
-                # else:
-                    # self.session.SSHClient.append(self.sftp)
+        except :     
+            if self.sftp!=None:
+                self.sftp   = self.ssh_client.open_sftp()
 
         self.File_Browser.set_update(True)
 
@@ -2770,12 +2721,12 @@ def Reconnect_SSH(ssh_client):
     try:
         import paramiko
         transport  = ssh_client.get_transport()
-        ssh_client_ = paramiko.SSHClient()
-        ssh_client_.set_missing_host_key_policy( paramiko.AutoAddPolicy() )
-        ssh_client_.connect(transport.getpeername()[0], username=transport.get_username(), password=transport.auth_handler.password,port=transport.getpeername()[1])
+        ssh_client = paramiko.SSHClient()
+        ssh_client.set_missing_host_key_policy( paramiko.AutoAddPolicy() )
+        ssh_client.connect(transport.getpeername()[0], username=transport.get_username(), password=transport.auth_handler.password,port=transport.getpeername()[1])
     except:
-        ssh_client_.close()
-    return   ssh_client_
+        ssh_client.close()
+    return   ssh_client
 
 class Rainbow(flx.CanvasWidget):
     def init(self):
@@ -2982,23 +2933,12 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         self.send_massage = None
         self.ssh_client = ssh_client
         if self.ssh_client!=None:
-            if 'SSHClient' not in self.session.__dict__.keys():
-                self.session.SSHClient = [self.ssh_client]
-            else:
-                self.session.SSHClient.append(self.ssh_client)
             try:
                 from stat import S_ISDIR, S_ISREG
                 self.sftp = self.ssh_client.open_sftp()
                 Test_sftp_alive(self.ssh_client)
             except:
                 self.sftp = None
-                
-            if 'SSHClient' not in self.session.__dict__.keys():
-                if self.sftp!=None:
-                    self.session.SSHClient = [self.sftp]
-            else:
-                if self.sftp!=None:
-                    self.session.SSHClient.append(self.sftp)
         else:
             self.sftp = None
         
@@ -3088,18 +3028,13 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                         sample_file = re.sub('.yaml$','',sample_file)
                         if ev.source.ssh_client!=None:
                             import os,re
-                            # import signal
-                            # timeout = 2
-                            # signal.signal(signal.SIGALRM, lambda x,y: 1/0 )
+                            import signal
+                            timeout = 2
+                            signal.signal(signal.SIGALRM, lambda x,y: 1/0 )
                             try:
-                                sftp = ev.source.sftp
-                                # signal.alarm(timeout)
-                                # sftp   = ev.source.ssh_client.open_sftp()
-                                # if 'SSHClient' not in self.session.__dict__.keys():
-                                    # self.session.SSHClient = [sftp]
-                                # else:
-                                    # self.session.SSHClient.append(sftp)
-                                # signal.alarm(0)
+                                signal.alarm(timeout)
+                                sftp   = ev.source.ssh_client.open_sftp()
+                                signal.alarm(0)
                             except:
                                 sftp   = None
                             
@@ -3337,6 +3272,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         import os,re
         from subprocess import Popen, PIPE, STDOUT, TimeoutExpired
         
+        
         errs  = ''
         outs  = ''
         Error = ''
@@ -3345,29 +3281,14 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 Error = Error + '[Error]: No Project Directory\n'
             
             if len(conda_bin) > 0:
-                if self.sftp !=None:
+                if self.ssh_client != None:
                     try:
                         signal.alarm(5)
+                        self.sftp = self.ssh_client.open_sftp()
                         listdir   = self.sftp.listdir(conda_bin)
                         signal.alarm(0)
                     except:
                         listdir   = []
-                # if self.ssh_client != None:
-                    # try:
-                        # self.sftp.close()
-                    # except:
-                        # pass
-                    # try:
-                        # signal.alarm(5)
-                        # self.sftp = self.ssh_client.open_sftp()
-                        # if 'SSHClient' not in self.session.__dict__.keys():
-                            # self.session.SSHClient = [self.sftp]
-                        # else:
-                            # self.session.SSHClient.append(self.sftp)
-                        # listdir   = self.sftp.listdir(conda_bin)
-                        # signal.alarm(0)
-                    # except:
-                        # listdir   = []
                 else:
                     try:
                         listdir   = os.listdir(conda_bin)
@@ -3540,7 +3461,6 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         if len(Project_dir) > 0:
             fname = '99.kill_all.sh'
             dname = os.path.join(Project_dir,'scripts')
-            
             if self.sftp!= None:
                 if fname in self.sftp.listdir( self.sftp.normalize(dname) ):
                     temp_command = temp_command + 'source deactivate ;;'
@@ -3644,7 +3564,6 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         if len(Project_dir) > 0:
             fname = 'DD.utilities.sh'
             dname = os.path.join(Project_dir,'scripts')
-            
             if self.sftp!= None:
                 if fname in self.sftp.listdir( self.sftp.normalize(dname) ):
                     fname = 'AA.Recovery_script.sh'
@@ -3764,7 +3683,6 @@ class NeatSeq_Flow_GUI(app.PyComponent):
     
     @event.reaction('Running_script','Kill_Run','Recovery','Locate_Failures','Generating_scripts')
     def update_Terminal(self, *events):
-        from datetime import datetime
         for ev in events:
             if ev.new_value>0:
                 Task_End = False
@@ -3801,11 +3719,10 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                         Title = Title + '\n<p style="color:CadetBlue;"><b>The Task has Finished [ Look for Successful Run or Possible Errors ]</b></p>\n'
 
                     if len(Title) > 0:
-                        Time_STR = '<span  style="color:Green;">' + datetime.now().strftime("%d/%m %H:%M") + '</span >' 
-                        Job_STR  = '<span  style="color:Blue;">' + ev.type.replace('_',' ') + '</span >'
+
                         for line in Title.split('\n'):
                             if len(line)>0:
-                                self.Terminal_string = self.Terminal_string + '['+ Job_STR +'] ['+Time_STR+']: ' + line + '\n'
+                                self.Terminal_string = self.Terminal_string + '['+ ev.type.replace('_',' ') +']: ' + line + '\n'
                         self.Run.set_Terminal(self.Terminal_string)
     
     @event.reaction('step_info.Go2Help')
@@ -3822,7 +3739,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         for ev in events:
             if ev.new_value!='None':
                 self.monitor.close()
-                # self.monitor.dispose()
+                #self.monitor.dispose()
                 with self.Monitor:
                     with ui.Layout() as self.Monitor_Widget:
                         self.monitor      = Monitor_GUI.Monitor_GUI(ev.new_value,self.ssh_client)
@@ -4264,20 +4181,15 @@ class Popen_SSH(object):
             if (ssh_client!= None) and (self.session.status!=0):
                 import paramiko
                 transport  = ssh_client.get_transport()
-                ssh_client_ = paramiko.SSHClient()
-                ssh_client_.set_missing_host_key_policy( paramiko.AutoAddPolicy() )
-                ssh_client_.connect(transport.getpeername()[0],
+                ssh_client = paramiko.SSHClient()
+                ssh_client.set_missing_host_key_policy( paramiko.AutoAddPolicy() )
+                ssh_client.connect(transport.getpeername()[0],
                                    username=transport.get_username(),
                                    password=transport.auth_handler.password,
                                    port=transport.getpeername()[1])
-                                   
-                if 'SSHClient' not in self.session.__dict__.keys():
-                    self.session.SSHClient = [ssh_client_]
-                else:
-                    self.session.SSHClient.append(ssh_client_)
                 
-                if ssh_client_.get_transport().is_active():
-                    self.ssh_transport     = ssh_client_.get_transport()
+                if ssh_client.get_transport().is_active():
+                    self.ssh_transport     = ssh_client.get_transport()
                     self.ssh_session       = self.ssh_transport.open_channel(kind='session')
                     if pty:
                         self.ssh_session.get_pty('vt100')
@@ -4301,7 +4213,6 @@ class Popen_SSH(object):
             self.err_flag = True
             try:
                 self.ssh_session.close()
-                ssh_client_.close()
             except:
                 pass
             pass
@@ -4398,7 +4309,6 @@ class Popen_SSH(object):
     def kill(self):
         try:
             self.ssh_session.close()
-            ssh_client_.close()
         except:
             pass
     
@@ -4904,15 +4814,9 @@ class Run_NeatSeq_Flow_GUI(app.PyComponent):
                     ssh_client = paramiko.SSHClient()
                     ssh_client.set_missing_host_key_policy( paramiko.AutoAddPolicy() )
                     ssh_client.connect(SSH_HOST, username=ARG1, password=ARG2,port=SSH_PORT)
-                    if ssh_client!=None:
-                        if 'SSHClient' not in self.session.__dict__.keys():
-                            self.session.SSHClient = [ssh_client]
-                        else:
-                            self.session.SSHClient.append(ssh_client)
                 except:
                     self.session.set_cookie('ARG1', None)
                     self.session.set_cookie('ARG2', None)
-                    ssh_client.close()
                     ssh_client = None
                     self.redirect.go()
                     return
@@ -5076,7 +4980,6 @@ class Manage_Participants(flx.Component):
         
     def update_participants(self):
         import datetime
-        import gc
         # Query the app manager to see who's Logedin 
         sessions    = flx.manager.get_connections(self.app_name)
         names       = [s.app.UserName for s in sessions]
@@ -5085,11 +4988,11 @@ class Manage_Participants(flx.Component):
         for session in sessions:
             if 'Process' in session.__dict__.keys():
                 for Proces in session.Process:
-                    # print(Proces.pid)
                     if not Proces.is_alive():
                         Proces.terminate()
                         Proces.join()
                         session.Process.remove(Proces)
+        
         if self.sessions_id != sessions_id:
             self.names = names
             for closed_session in set(self.sessions_id).difference(sessions_id):
@@ -5097,20 +5000,10 @@ class Manage_Participants(flx.Component):
                     if session.id == closed_session:
                         if 'Process' in session.__dict__.keys():
                             for Proces in session.Process:
-                                # if Proces.is_alive():
+                                if Proces.is_alive():
                                     # print(Proces.pid)
-                                Proces.terminate()
-                                Proces.join()
-                                session.Process.remove(Proces)
-                        if 'SSHClient' in session.__dict__.keys():
-                            for SSHClient in session.SSHClient:
-                                try:
-                                    SSHClient.close()
-                                except:
-                                    pass
-                                session.SSHClient.remove(SSHClient)
-                        session.close()
-                        gc.collect()
+                                    Proces.terminate()
+                                    Proces.join()
                                         
             self.sessions_id = sessions_id
             self.count = self.max_count
@@ -5163,7 +5056,7 @@ if __name__ == '__main__':
                         help='Password For This Serve (Works only When --Server is set)')
     parser.add_argument('--USERSFILE',dest='USERSFILE',metavar="CHAR",type=str,default="",
                         help='''
-                                 The location of a Users file in which a list of users, E-mails addresses and Users Directorys are separated by one space (as:USER user@example.com /USER/DIR).
+                                 The location of a Users file in which a list of users, E-mails addresses and Users directories are separated by one space (as:USER user@example.com /USER/DIR).
                                  The login password will be send to the user e-mail after filling its user name and the password generated at the beginning of the run (Works only When --Server is set).
                                  You will need a Gmail account to send the password to the users (you will be prompt to type in your Gmail address and password) 
                                  '''
