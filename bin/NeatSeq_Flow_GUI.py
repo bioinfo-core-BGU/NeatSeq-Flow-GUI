@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/home/miniconda3/envs/NeatSeq_Flow/bin/python
 
 
 __author__ = "Liron Levin"
@@ -2645,12 +2645,12 @@ class Run_File_Browser(flx.PyComponent):
                                     else:
                                         Dir['File'][entry.name][columns[1]]=str(size)+'B'
                                     time = entry.stat().st_mtime
-                                    Dir['File'][entry.filename][columns[2]] = datetime.fromtimestamp(time).strftime('%Y-%m-%d-%H:%M')
+                                    Dir['File'][entry.name][columns[2]] = datetime.fromtimestamp(time).strftime('%Y-%m-%d-%H:%M')
                     self.File_Browser.set_Path(Path)
                     self.Path = Path
                     self.File_Browser.set_Dir(Dir)
-                except :# BaseException as e:
-                    # print(str(e))
+                except  BaseException as e:
+                    print(str(e))
                     # if self.ssh_client!=None:
                         # self.sftp   = self.ssh_client.open_sftp()
                         # if 'SSHClient' not in self.session.__dict__.keys():
@@ -5136,7 +5136,7 @@ if __name__ == '__main__':
     #getting arguments from the user 
     import argparse
     parser = argparse.ArgumentParser(description='NeatSeq-Flow GUI By Liron Levin ')
-    parser.add_argument('--Server',dest='Server',action='store_true',
+    parser.add_argument('--Server',dest='Server',action='store_true', default=True,
                         help='Run as Server')
     parser.add_argument('--PORT',dest='PORT',metavar="CHAR",type=int,default=None,
                         help='''Use this port in which to run the app,
