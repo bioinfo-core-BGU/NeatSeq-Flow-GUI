@@ -3376,7 +3376,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 if not (('conda' in listdir) and ('activate' in listdir)):
                     Error = Error + '[Error]: Your Conda Bin is incorrect\n[Error]: Make Sure the Programs: "conda" and "activate" are located within the Conda Bin Directory\n'
             
-            if  (len(conda_env)==0) and (len(Error))==0:
+            if (self.ssh_client != None) and (len(conda_env)==0) and (len(Error))==0:
                 if len(conda_bin) > 0:
                     options = self.conda_env_options(conda_bin)
                 else:
@@ -3384,11 +3384,9 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 if len(options)>0:
                     if NeatSeq_Flow_Conda_env in options:
                         conda_env = NeatSeq_Flow_Conda_env
-                        self.Terminal_string = self.Terminal_string + '[Note]: The Conda Environment '+ NeatSeq_Flow_Conda_env+' Was Detected and will be used to Generated Scripts\n[Note]:If You want to use a different NeatSeq Flow Environment, Choose an Environment from the "Conda environment to use" Drop-Down Menu\n\n'
-                        # self.Run.set_Terminal(self.Terminal_string + '[Note]: The Conda Environment '+ NeatSeq_Flow_Conda_env+' Was Detected and will be used to Generated Scripts\n[Note]:If You want to use a different NeatSeq Flow Environment, Choose an Environment from the "Conda environment to use" Drop-Down Menu\n')
+                        self.Run.set_Terminal(self.Terminal_string + '[Note]: The Conda Environment '+ NeatSeq_Flow_Conda_env+' Was Detected and will be used to Generated Scripts\n[Note]:If You want to use a different NeatSeq Flow Environment, Choose an Environment from the "Conda environment to use" Drop-Down Menu\n')
                     else:
-                        self.Terminal_string = self.Terminal_string + '[Note]: A NeatSeq-Flow Conda Environment Could NOT be Detected!!! \n[Note]: You Can Look for a NeatSeq Flow Environment from the "Conda environment to use" Drop-Down Menu\n\n'
-                        # self.Run.set_Terminal(self.Terminal_string + '[Note]: A NeatSeq-Flow Conda Environment Could NOT be Detected!!! \n[Note]: You Can Look for a NeatSeq Flow Environment from the "Conda environment to use" Drop-Down Menu\n')
+                        self.Run.set_Terminal(self.Terminal_string + '[Note]: A NeatSeq-Flow Conda Environment Could NOT be Detected!!! \n[Note]: You Can Look for a NeatSeq Flow Environment from the "Conda environment to use" Drop-Down Menu\n')
                         
             if len(NeatSeq_bin) > 0:
                 temp_command = ''
@@ -3402,9 +3400,9 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                         temp_command = temp_command + 'export CONDA_BASE=$(' + os.path.join(conda_bin,
                                                                                             'conda') + ' info --root) ;'
                     else:
+                        temp_command = temp_command + 'source activate '+ conda_env + ';;'
+                        temp_command = temp_command + 'source activate '+ conda_env + ';;'
                         temp_command = temp_command + 'export CONDA_BASE=$(conda  info --root); '
-                        temp_command = temp_command + 'source $CONDA_BASE/bin/activate '+ conda_env + ';'
-                        
                 elif self.ssh_client == None:
                     if 'CONDA_PREFIX' in os.environ.keys():
                         temp_command = temp_command + 'export CONDA_BASE=$(conda  info --root); '
@@ -3516,8 +3514,6 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         if len(Error) == 0:
             if self.Running_script == 0:
                 try:
-                    self.Terminal_string = self.Terminal_string + '[Running_script]:  Running scripts...\n'
-                    self.Run.set_Terminal(self.Terminal_string)
                     self.Running_Commands['Running_script'] =  Run_command_in_thread2(self.session,temp_command,self.ssh_client)
                     self.Running_Commands['Running_script'].Run()
                     self.set_Running_script(self.Running_script+1)
@@ -3561,8 +3557,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
             Error = Error + 'Error:\n No Project directory \n'
 
         try:
-            self.Running_Commands['Running_script'].Stop()
-            self.set_Running_script(0)
+            self.Running_Commands['Running_script'].proc.kill()
             self.Run.set_Terminal('Stop Running Scripts')
         except :
             pass
@@ -3783,7 +3778,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                        #asyncio.get_event_loop().call_later(0.5, self.change_value,ev.source,ev.type,ev.new_value + 1)
                        self.change_value(ev.source,ev.type,ev.new_value + 1)
                     else:
-                        self.Running_Commands[ev.type].Stop()
+                        self.Running_Commands[ev.type].Stop()                                     
                         outs, errs = self.Running_Commands[ev.type].output()
                         # self.Running_Commands[ev.type].Stop()
                         self.change_value(ev.source,ev.type,0)
@@ -4538,44 +4533,31 @@ class Run_command_in_thread2(object):
         self.ssh_client   =   ssh_client
         self.shell        =   shell
         self.Process      =   None
-        self.get_std_err  =   threading.Thread(target=self.collect_err)
-        self.get_std_out  =   threading.Thread(target=self.collect_out)
-        # self.get_std_err  =   None
-        # self.get_std_out  =   None
+        self.get_std_err  =   None
+        self.get_std_out  =   None
         self.refreshrate  =   1
-    
-    def collect_out(self):
-        if self.ssh_client != None:
-            if self.session.status!=0:
-                self.Process.output(self.stdout,self.stderr)
-            else:
-                self.Stop()
-        else:
-            while (self.session.status!=0):
-                stdout = self.Process.stdout.readline()
-                if self.session.status!=0:
+        
+    def collect_out(Process,session,stdout_q):
+        if session.status!=0:
+            for stdout in iter(Process.stdout.readline, ''):
+                if session.status!=0:
                     if len(stdout)>0:
-                        self.stdout.put(stdout)
-                    else:
-                        if self.Process.poll() != None:
-                            break
+                        stdout_q.put(stdout)
                 else:
-                    self.Stop()
                     break
+        else:
+            self.Stop()
 
-    def collect_err(self):
-        while (self.session.status!=0):
-            stderr = self.Process.stderr.readline()
-            if self.session.status!=0:
-                if len(stderr)>0:
-                    self.stderr.put(stderr)
+    def collect_err(Process,session,stderr_q):
+        if session.status!=0:
+            for stderr in iter(Process.stderr.readline, ''):
+                if session.status!=0:
+                    if len(stderr)>0:
+                        stderr_q.put(stderr)
                 else:
-                    if self.Process.poll() != None:
-                        break
-            else:
-                self.Stop()
-                break
-
+                    break
+        else:
+            self.Stop()
 
     def Run(self):
         if self.ssh_client != None:
@@ -4598,33 +4580,31 @@ class Run_command_in_thread2(object):
             asyncio.get_event_loop().call_later(self.refreshrate, self.Test_Alive)
         else:
             from subprocess import Popen, PIPE, STDOUT
-            
             self.Process     = Popen(self.Run_command , shell=self.shell, executable='/bin/bash', stdout=PIPE, stderr=PIPE,
                                      universal_newlines=True)
-            
+            self.get_std_out = Process(target=self.collect_out,args=(self.Process,
+                                                                     self.session,
+                                                                     self.stdout,))
+            self.get_std_err = Process(target=self.collect_out,args=(self.Process,
+                                                                     self.session,
+                                                                     self.stderr_q,))
             self.get_std_out.daemon = True
-            # if 'Threads' not in self.session.__dict__.keys():
-                # self.session.Threads = [self.get_std_out]
-            # else:
-                # self.session.Threads.append(self.get_std_out)
+            
+            if 'Process' not in self.session.__dict__.keys():
+                self.session.Process = [self.get_std_out]
+            else:
+                self.session.Process.append(self.get_std_out)
+            
             self.get_std_out.start()
             
-            
-            
             self.get_std_err.daemon = True
-            # if 'Threads' not in self.session.__dict__.keys():
-                # self.session.Threads = [self.get_std_err]
-            # else:
-                # self.session.Threads.append(self.get_std_err)
-            self.get_std_err.start()
             
-
-            if 'Pop_Process' not in self.session.__dict__.keys():
-                self.session.Pop_Process = [self.Process]
+            if 'Process' not in self.session.__dict__.keys():
+                self.session.Process = [self.get_std_err]
             else:
-                self.session.Pop_Process.append(self.Process)
-
-            
+                self.session.Process.append(self.get_std_err)
+                
+            self.get_std_err.start()
             asyncio.get_event_loop().call_later(self.refreshrate, self.Test_Alive)
             
     def Stop(self):
@@ -4634,14 +4614,14 @@ class Run_command_in_thread2(object):
                 self.Process.join()
                 self.Process=None
         else:
-            # if self.get_std_out!=None:
-                # #self.get_std_out.terminate()
-                # self.get_std_out.join()
-                # self.get_std_out = None
-            # if self.get_std_err!=None:
-                # #self.get_std_err.terminate()
-                # self.get_std_err.join()
-                # self.get_std_err = None
+            if self.get_std_out!=None:
+                self.get_std_out.terminate()
+                self.get_std_out.join()
+                self.get_std_out = None
+            if self.get_std_err!=None:
+                self.get_std_err.terminate()
+                self.get_std_err.join()
+                self.get_std_err = None
             if self.Process!=None:
                 self.Process.kill()
                 
@@ -4652,9 +4632,9 @@ class Run_command_in_thread2(object):
             return self.Process.is_alive()
         else:
             if self.Process.poll() == None:
-                return True
-            else:
                 return False
+            else:
+                return True
         
     def Test_Alive(self):
         if self.session.status==0:
@@ -5105,20 +5085,11 @@ class Manage_Participants(flx.Component):
         for session in sessions:
             if 'Process' in session.__dict__.keys():
                 for Proces in session.Process:
+                    # print(Proces.pid)
                     if not Proces.is_alive():
                         Proces.terminate()
                         Proces.join()
                         session.Process.remove(Proces)
-            if 'Threads' in session.__dict__.keys():
-                for Proces in session.Threads:
-                    if not Proces.is_alive():
-                        Proces.join()
-                        session.Threads.remove(Proces)
-            if 'Pop_Process' in session.__dict__.keys():
-                for Proces in session.Pop_Process:
-                    if Proces.poll() != None:
-                        Proces.kill()
-                        session.Pop_Process.remove(Proces)
         if self.sessions_id != sessions_id:
             self.names = names
             for closed_session in set(self.sessions_id).difference(sessions_id):
@@ -5126,17 +5097,11 @@ class Manage_Participants(flx.Component):
                     if session.id == closed_session:
                         if 'Process' in session.__dict__.keys():
                             for Proces in session.Process:
+                                # if Proces.is_alive():
+                                    # print(Proces.pid)
                                 Proces.terminate()
                                 Proces.join()
                                 session.Process.remove(Proces)
-                        if 'Threads' in session.__dict__.keys():
-                            for Proces in session.Threads:
-                                Proces.join()
-                                session.Threads.remove(Proces)
-                        if 'Pop_Process' in session.__dict__.keys():
-                            for Proces in session.Pop_Process:
-                                Proces.kill()
-                                session.Pop_Process.remove(Proces)
                         if 'SSHClient' in session.__dict__.keys():
                             for SSHClient in session.SSHClient:
                                 try:

@@ -724,22 +724,16 @@ class nsfgm(flx.PyComponent):
                 # else:
                     # self.qstat = None
             # if self.qstat:
-                try:
-                    SSH = Popen_SSH(self.session,ssh_client,'qstat -u $USER -xml')
-                    [out, errs , exit_status] = SSH.output()
-                    SSH.kill()
-                    if exit_status==0:
-                        xml = out
-                except:
-                    xml = ""
-        else:    
-            try:
-                if subprocess.call('type qstat', shell=True,
-                                        stdout=subprocess.PIPE, stderr=subprocess.PIPE) == 0:
-                    #xml = os.popen('qstat -xml -u $USER').read()
-                    xml = os.popen('qstat -xml ').read()
-            except:
-                xml = ""
+                SSH = Popen_SSH(self.session,ssh_client,'qstat -u $USER -xml')
+                [out, errs , exit_status] = SSH.output()
+                SSH.kill()
+                if exit_status==0:
+                    xml = out
+        else:            
+            if subprocess.call('type qstat', shell=True,
+                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE) == 0:
+                #xml = os.popen('qstat -xml -u $USER').read()
+                xml = os.popen('qstat -xml ').read()
         if len(xml)>0:
             # extract the jobs names
             Job_name          = [re.sub("[</]+JB_name>","",x) for x in re.findall('[</]+JB_name>\S+',xml)]
@@ -755,19 +749,13 @@ class nsfgm(flx.PyComponent):
     def get_PID(self,ssh_client):
         PID=pd.DataFrame()
         if ssh_client!=None:
-            try:
-                SSH = Popen_SSH(ssh_client,'ps -ae -o pid=')
-                [outs, errs , exit_status]    = SSH.output()
-                SSH.kill()
-                if exit_status == 0:
-                    PID["Job ID"]             = list(map(lambda x: str(int(x.strip('\n'))) if x.strip('\n').isdigit() else '' ,outs.split('\n')))
-            except :
-                PID["Job ID"] = ''
+            SSH = Popen_SSH(ssh_client,'ps -ae -o pid=')
+            [outs, errs , exit_status]    = SSH.output()
+            SSH.kill()
+            if exit_status == 0:
+                PID["Job ID"]             = list(map(lambda x: str(int(x.strip('\n'))) if x.strip('\n').isdigit() else '' ,outs.split('\n')))
         else:
-            try:
-                PID["Job ID"]                 = list(map(lambda x: str(int(x.strip('\n'))),os.popen('ps -ae -o pid=').readlines()))
-            except:
-                PID["Job ID"] = ''
+            PID["Job ID"]                 = list(map(lambda x: str(int(x.strip('\n'))),os.popen('ps -ae -o pid=').readlines()))
         PID["PID_State"] = 'running'
         return PID
 
