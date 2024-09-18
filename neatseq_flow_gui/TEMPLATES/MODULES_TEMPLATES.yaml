@@ -26,8 +26,21 @@ Generic:
                 prefix:             # A prefix for this output argument file name
                 suffix:             # A suffix for this output argument file name
 
-
-
+Fillout_Generic:
+    Fillout_Generic:                # Name of this step
+        module:    Fillout_Generic  # Name of module
+        base:                       # Name of the step [or list of names] to run after [must be after steps that generates the inputs File_Types] 
+        script_path:                # Main command for this module
+        scope:                      # The scope of this module could be sample/project, the default is If a sample-scope slot is used, in the inputs or the outputs, the scripts will be sample-scope scripts. Otherwise, one project-scope script will be produced. 
+        output:                     # The outputs for this module
+            File_Type_A:            # Replace with the Output File Type to create or update
+                scope:              # The scope of this Output File Type
+                string:             # A string describing the file to be stored in this File Type slot
+                                    # Can use in the script_path block as : {{o:File_Type_A}}
+            File_Type_B:            # Replace with the Output File Type to create or update
+                scope:              # The scope of this Output File Type
+                string:             # A string describing the file to be stored in this File Type slot
+                                    # Can use in the script_path block as : {{o:File_Type_B}}
 Import:                    
     Import:                
         module:           Import 
