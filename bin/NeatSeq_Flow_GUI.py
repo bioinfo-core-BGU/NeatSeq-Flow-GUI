@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-
 __author__ = "Liron Levin"
 __version__ = "2.0"
 
@@ -18,6 +17,8 @@ import signal
 from multiprocessing import Process, Queue
 
 sys.path.append(os.path.realpath(os.path.expanduser(os.path.dirname(os.path.abspath(__file__))+os.sep+"..")))
+
+keep_runing            = True
 
 Title                  = 'NeatSeq-Flow'
 
@@ -51,18 +52,18 @@ COLORS                 = ('#EF9A9A','#B2EBF2','#FFECB3',
 
 COLOR_BY               = ['module','tag','scope']
 
-CLUSTER                = {'Executor': 'Local',
+CLUSTER                = {'Executor': 'SGE',
            'Default_wait': '10',
            'Qsub_opts': '-cwd',
-           'Qsub_path': '/path/to/qstat',
-           'Qsub_q': 'queue.q',
+           'Qsub_path': '/storage/SGE6U8/bin/lx24-amd64',
+           'Qsub_q': 'fairshare.q,intel_all.q',
            'module_path': '/path/to/modules',
            'conda': {'path': '{Vars.conda.base}', 'env': '{Vars.conda.env}' }
            }
 
 VARS                   = {'Programs': {},
         'Genome': {},
-        'conda': {'base': None, 'env': None }
+        'conda': {'base': None, 'env': 'base' }
         }
 
 Executor               = ['SGE', 'SLURM', 'Local']
@@ -5167,6 +5168,28 @@ class Manage_Participants(flx.Component):
         del sessions
         asyncio.get_event_loop().call_later(self.refreshrate, self.update_participants)
 
+class Manage_UpTime(flx.Component):
+    
+    def init(self,UPTIMELIMIT,refreshrate=0.5):
+        import time
+        self.refreshrate = refreshrate
+        self.UPTIMELIMIT = UPTIMELIMIT
+        self.StarTime    = time.time()
+        self.UpTime()
+    
+    def UpTime(self):
+        import time
+        import sys
+        global keep_runing
+        
+        # print((time.time()-self.StarTime)/3600)
+        if ((time.time()-self.StarTime)/3600)>self.UPTIMELIMIT:
+            keep_runing = False
+            print('Bye Bye ..')
+            exit()
+        else:
+            asyncio.get_event_loop().call_later(self.refreshrate, self.UpTime)
+    
 if __name__ == '__main__':
     #getting arguments from the user 
     import argparse
@@ -5177,6 +5200,9 @@ if __name__ == '__main__':
                         help='''Use this port in which to run the app,
                                 If not set will search for open port
                                 (Works only When --Server is set)
+                                ''')
+    parser.add_argument('--UPTIMELIMIT',dest='UPTIMELIMIT',metavar="CHAR",type=float,default=None,
+                        help='''ShutDown after this amount of time (H)
                                 ''')
     parser.add_argument('--HOST',dest='HOST',metavar="CHAR",type=str,default=None,
                         help='''The host name/ip to serve the app,
@@ -5313,8 +5339,11 @@ if __name__ == '__main__':
         app.create_server(host=Host,port=args.PORT)
         m.serve('')
         Manage_Participants(m.name,LOG_DIR)
-        keep_runing = True
+        # keep_runing = True
         import signal
+        if args.UPTIMELIMIT!=None:
+            Manage_UpTime(args.UPTIMELIMIT)
+        
         while keep_runing:
             try:
                 flx.start()
