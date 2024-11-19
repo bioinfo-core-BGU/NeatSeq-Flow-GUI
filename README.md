@@ -48,10 +48,11 @@ For more information about **"NeatSeq-Flow"** see the full documentation on **[R
   Installing Using Conda will install NeatSeq-Flow-GUI with all its dependencies* in one go: 
   - First if you don't have **Conda**, [install it!](https://conda.io/miniconda.html) 
   - Then in the terminal:
-    1. Create the **NeatSeq_Flow** conda environment:
+    1. Install mamba and Create the **NeatSeq_Flow** conda environment:
     ```Bash
-       wget https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/NeatSeq_Flow_GUI_installer.yaml
-       conda env create -f NeatSeq_Flow_GUI_installer.yaml
+       bash
+       conda install conda-forge::mamba
+       mamba create -n NeatSeq_Flow -c bioconda -c conda-forge levinl::neatseq-flow
     ```  
     2. Activate the **NeatSeq_Flow** conda environment:
     ```Bash
