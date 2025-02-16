@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 __author__ = "Liron Levin"
-__version__ = "2.0"
+__version__ = "3.0"
 
 
 __affiliation__ = "Bioinformatics Core Unit, NIBN, Ben Gurion University"
@@ -66,7 +66,7 @@ VARS                   = {'Programs': {},
         'conda': {'base': None, 'env': 'base' }
         }
 
-Executor               = ['SGE', 'SLURM', 'Local']
+Executor               = ['SGE', 'SLURM','PBS', 'Local']
 
 MODULES_TEMPLATES      = {'Basic': {'Basic_New_Step': {'base': None, 'module': None, 'script_path': None, }}
 
@@ -1790,7 +1790,9 @@ class Run_NeatSeq_Flow(ui.Widget):
 
     @event.reaction('Tags')
     def set_Tags_options(self, *events):
-        options=self.Tags
+        options = self.Tags
+        options = list(options)
+        options.sort(reverse=False)
         #options.insert(0,self.Run_Tag_b.options[0])
         self.Run_Tag_b.set_options(options)
 
