@@ -741,7 +741,7 @@ class nsfgm(flx.PyComponent):
                 if Executor=="SGE":
                     Command = 'qstat -u $USER -xml'
                 elif Executor=="PBS":
-                    Command = 'qstat -u $USER -f'
+                    Command = 'qstat -u -f'
                 if  Executor!="Local":  
                     try:
                         SSH = Popen_SSH(self.session,ssh_client,Command)
@@ -761,7 +761,7 @@ class nsfgm(flx.PyComponent):
             if Executor=="SGE":
                 Command = 'qstat -xml'
             elif Executor=="PBS":
-                Command = 'qstat -u $USER -f'
+                Command = 'qstat -f'
             if  Executor!="Local":  
                 try:
                     xml = os.popen(Command).read()
