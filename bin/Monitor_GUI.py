@@ -1498,7 +1498,7 @@ class Find_Error_Scripts(flx.PyComponent):
             script_Step = out[-2].split('\t')
             if script_Step!='':
                 # out = os.popen("cat "+ os.path.join(directory , qsub_names_file_loc )).read()
-                jsonData   = json.load(os.path.join(directory , qsub_names_file_loc ))
+                jsonData   = json.load(open(os.path.join(directory , qsub_names_file_loc ), encoding="utf-8") )
                 AllSamples = list(map(lambda x: x.split("..")[2],jsonData[Step]["low_qsubs"]))
                 Samples    = list(set(AllSamples) - set(Samples))
                 
@@ -1675,6 +1675,7 @@ class Monitor_GUI(flx.PyComponent):
         self.master_scripts_file_loc = 'scripts/00.workflow.commands.sh'
         self.sample_rerun_heder      = 'Re Run Samples'
         self.step_rerun_heder        = 'Re Run Step'
+        self.NSF_exec                = 'scripts/NSF_exec.sh'
         global LOCAL_HOST
         global Executor
         global PBS_STATUS_CODE
@@ -1889,39 +1890,67 @@ class Monitor_GUI(flx.PyComponent):
                         self.steps_menu.set_Extra_Buttons_choice('')
                         step = self.STEP_format.format(STEP = self.step,
                                                        ID   = self.log_id)
+                        if Executor == "SGE":
+                            command = "grep " + step + ' ' + os.path.join(self.directory , self.scripts_index_file_loc.format(ID = self.log_id))
+                            if self.ssh_client!=None:
+                                SSH = Popen_SSH(self.session,self.ssh_client,command)
+                                [out, errs , exit_status]  = SSH.output()
+                                SSH.kill()
+                                if exit_status==0:
+                                    out = out.split('\n')
+                                    if len(out)>1:
+                                        script = out[-2].split('\t')
+                                        if len(script)>1: 
+                                            command = 'grep ' + script[-1] + ' ' + os.path.join(self.directory ,self.master_scripts_file_loc)
+                                            SSH = Popen_SSH(self.session,self.ssh_client,command)
+                                            [out, errs , exit_status]  = SSH.output()
+                                            SSH.kill()
+                                            if exit_status==0:
+                                                if len(out)>0:
+                                                    self.set_RunCommand(out)
+                                                else:
+                                                    self.send_massage.set_massage('Could Not find the script for Step: ' + self.step + '. It could be from previous run')
 
-                        command = "grep " + step + ' ' + os.path.join(self.directory , self.scripts_index_file_loc.format(ID = self.log_id))
-                        if self.ssh_client!=None:
-                            SSH = Popen_SSH(self.session,self.ssh_client,command)
-                            [out, errs , exit_status]  = SSH.output()
-                            SSH.kill()
-                            if exit_status==0:
+                            else:
+                                out = os.popen(command).read()
                                 out = out.split('\n')
                                 if len(out)>1:
                                     script = out[-2].split('\t')
                                     if len(script)>1: 
                                         command = 'grep ' + script[-1] + ' ' + os.path.join(self.directory ,self.master_scripts_file_loc)
-                                        SSH = Popen_SSH(self.session,self.ssh_client,command)
-                                        [out, errs , exit_status]  = SSH.output()
-                                        SSH.kill()
-                                        if exit_status==0:
-                                            if len(out)>0:
-                                                self.set_RunCommand(out)
-                                            else:
-                                                self.send_massage.set_massage('Could Not find the script for Step: ' + self.step + '. It could be from previous run')
-
+                                        print(command)
+                                        out = os.popen(command).read()
+                                    if len(out)>0:
+                                        self.set_RunCommand(out)
+                                    else:
+                                        self.send_massage.set_massage('Could Not find the script for Step: ' + self.step + '. It could be from previous run')
+                                        
                         else:
-                            out = os.popen(command).read()
-                            out = out.split('\n')
-                            if len(out)>1:
-                                script = out[-2].split('\t')
-                                if len(script)>1: 
-                                    command = 'grep ' + script[-1] + ' ' + os.path.join(self.directory ,self.master_scripts_file_loc)
-                                    out = os.popen(command).read()
+                            command = "grep " + step + ' ' +  os.path.join(self.directory ,self.master_scripts_file_loc) + " | grep " + self.NSF_exec
+                            if self.ssh_client!=None:
+                                SSH = Popen_SSH(self.session,self.ssh_client,command)
+                                [out, errs , exit_status]  = SSH.output()
+                                SSH.kill()
+                                if exit_status==0:
+                                    # out = out.split('\n')
+                                    # out.remove("")
+                                    if len(out)>0:
+                                        self.set_RunCommand(out)
+                                    else:
+                                        self.send_massage.set_massage('Could Not find the script for Step: ' + self.step + '. It could be from previous run')
+
+                            else:
+                                out = os.popen(command).read()
+                                # out = out.split('\n')
+                                # out.remove("")
                                 if len(out)>0:
                                     self.set_RunCommand(out)
                                 else:
                                     self.send_massage.set_massage('Could Not find the script for Step: ' + self.step + '. It could be from previous run')
+                            
+                            
+                            
+                            
                     except:
                         self.send_massage.set_massage('Could Not ' + ev.new_value + '. Try to Generate Scripts in the Run Tab')
 
@@ -1941,45 +1970,84 @@ class Monitor_GUI(flx.PyComponent):
                         script_Step   =''
                         script_Sample =''
                         
-                        command_Step   = "grep " + Step   + ' ' + os.path.join(self.directory , self.scripts_index_file_loc.format(ID = self.log_id))
-                        command_Sample = "grep " + Sample + ' ' + os.path.join(self.directory , self.scripts_index_file_loc.format(ID = self.log_id))
-                        if self.ssh_client!=None:
-                            [out, errs , exit_status]  = Popen_SSH(self.session,self.ssh_client,command_Step).output()
-                            if exit_status==0:
-                                out = out.split('\n')
-                                if len(out)>1:
-                                    script_Step = out[-2].split('\t')[-1]
-                            SSH = Popen_SSH(self.session,self.ssh_client,command_Sample)
-                            [out, errs , exit_status]  = SSH.output()
-                            SSH.kill()
-                            if exit_status==0:
-                                out = out.split('\n')
-                                if len(out)>1:
-                                    script_Sample = out[-2].split('\t')[-1]
-                                    
-                            
-                            if (script_Sample!='') and (script_Step!=''):
-                                command = 'grep "' + script_Sample + '" ' + script_Step 
-                                SSH = Popen_SSH(self.session,self.ssh_client,command)
+                        
+                        
+                        
+                        if Executor == "SGE":
+                            command_Step   = "grep " + Step   + ' ' + os.path.join(self.directory , self.scripts_index_file_loc.format(ID = self.log_id))
+                            command_Sample = "grep " + Sample + ' ' + os.path.join(self.directory , self.scripts_index_file_loc.format(ID = self.log_id))
+                            if self.ssh_client!=None:
+                                [out, errs , exit_status]  = Popen_SSH(self.session,self.ssh_client,command_Step).output()
+                                if exit_status==0:
+                                    out = out.split('\n')
+                                    if len(out)>1:
+                                        script_Step = out[-2].split('\t')[-1]
+                                SSH = Popen_SSH(self.session,self.ssh_client,command_Sample)
                                 [out, errs , exit_status]  = SSH.output()
                                 SSH.kill()
-                                if len(out)>0:
-                                    self.set_RunCommand(out)
+                                if exit_status==0:
+                                    out = out.split('\n')
+                                    if len(out)>1:
+                                        script_Sample = out[-2].split('\t')[-1]
+                                        
+                                
+                                if (script_Sample!='') and (script_Step!=''):
+                                    command = 'grep "' + script_Sample + '" ' + script_Step 
+                                    SSH = Popen_SSH(self.session,self.ssh_client,command)
+                                    [out, errs , exit_status]  = SSH.output()
+                                    SSH.kill()
+                                    if len(out)>0:
+                                        self.set_RunCommand(out)
+                                    else:
+                                        self.send_massage.set_massage('Could Not find the script for Sample: ' + self.Sample + ' within Step: ' + self.step + '. It could be from previous run')
+                            else:
+                                out = os.popen(command_Step).read()
+                                out = out.split('\n')
+                                script_Step = out[-2].split('\t')
+                                
+                                out = os.popen(command_Sample).read()
+                                out = out.split('\n')
+                                script_Sample = out[-2].split('\t')
+                                if (script_Sample!='') and (script_Step!=''):
+                                    command = 'grep "' + script_Sample + '" ' + script_Step 
+                                    out = os.popen(command).read()
+                                    if len(out)>0:
+                                        self.set_RunCommand(out)
+                                    else:
+                                        self.send_massage.set_massage('Could Not find the script for Sample: ' + self.Sample + ' within Step: ' + self.step + '. It could be from previous run')
+                        else:
+                            command_Step   = "grep " + Step   + ' ' + os.path.join(self.directory , self.scripts_index_file_loc.format(ID = self.log_id))
+                            if self.ssh_client!=None:
+                                [out, errs , exit_status]  = Popen_SSH(self.session,self.ssh_client,command_Step).output()
+                                if exit_status==0:
+                                    out = out.split('\n')
+                                    out.remove("")
+                                    if len(out)>0:
+                                        script_Step = out[-1].split('\t')[-1]
+                                if script_Step!="":
+                                    command_Sample = "grep " + Sample + " " + script_Step + " | grep " + self.NSF_exec 
+                                    SSH = Popen_SSH(self.session,self.ssh_client,command_Sample)
+                                    [out, errs , exit_status]  = SSH.output()
+                                    SSH.kill()
+                                    if len(out)>0:
+                                        self.set_RunCommand(out)
+                                    else:
+                                        self.send_massage.set_massage('Could Not find the script for Sample: ' + self.Sample + ' within Step: ' + self.step + '. It could be from previous run')
                                 else:
                                     self.send_massage.set_massage('Could Not find the script for Sample: ' + self.Sample + ' within Step: ' + self.step + '. It could be from previous run')
-                        else:
-                            out = os.popen(command_Step).read()
-                            out = out.split('\n')
-                            script_Step = out[-2].split('\t')
-                            
-                            out = os.popen(command_Sample).read()
-                            out = out.split('\n')
-                            script_Sample = out[-2].split('\t')
-                            if (script_Sample!='') and (script_Step!=''):
-                                command = 'grep "' + script_Sample + '" ' + script_Step 
-                                out = os.popen(command).read()
+                            else:
+                                out = os.popen(command_Step).read()
+                                out = out.split('\n')
+                                out.remove("")
                                 if len(out)>0:
-                                    self.set_RunCommand(out)
+                                    script_Step = out[-1].split('\t')[-1]
+                                if script_Step!="":
+                                    command_Sample = "grep " + Sample + " " + script_Step + " | grep " + self.NSF_exec 
+                                    out = os.popen(command_Sample).read()
+                                    if len(out)>0:
+                                        self.set_RunCommand(out)
+                                    else:
+                                        self.send_massage.set_massage('Could Not find the script for Sample: ' + self.Sample + ' within Step: ' + self.step + '. It could be from previous run')
                                 else:
                                     self.send_massage.set_massage('Could Not find the script for Sample: ' + self.Sample + ' within Step: ' + self.step + '. It could be from previous run')
                     except:
