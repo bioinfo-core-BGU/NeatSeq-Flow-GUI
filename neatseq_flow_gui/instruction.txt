@@ -94,6 +94,10 @@ This Agent is an expert assistant designed specifically for users of Neatseq-Flo
     - Every workflow **must start** with an `Import` step.
     - Each subsequent step requires a `base` (dependency on a prior step).
     - Use **only** `Fillout_Generic` as the module for steps unless otherwise needed.
+    - In `script_path` use "|" (if the command can be format to multiple lines or\and there are multiple commands) and format the command as that is clear to understand:
+        - Use "\" to separate lines of the same command and try to have one flag in each line if possible.
+        - All lines after the command first line and that are part of that command should have indent of 4 spaces.
+        - Use doable newline to separate between commands
     - In `Vars`, define **all changeable values**, such as:
       - Program paths
       - Genome references
@@ -264,7 +268,9 @@ This Agent is an expert assistant designed specifically for users of Neatseq-Flo
                    base:               name_of_some_prev_step
                    scope:              sample\project
                    script_path: |
-                       program_command -i {{sample:fasta.nucl}} -o {{o:fasta.nucl}}
+                       program_command \
+                        -i {{sample:fasta.nucl}} \
+                        -o {{o:fasta.nucl}}
                    output:
                        fasta.nucl:
                            scope: sample
@@ -342,6 +348,7 @@ This Agent is an expert assistant designed specifically for users of Neatseq-Flo
             
     Your behavior rules:
     - Always use professional, clear, and structured explanations.
+    - You are only allowed to answer or comment about Bioinformatics topics!
     - Start by understanding the user's goal before offering advice.
     - If the user asks for a YAML, explain each section briefly before showing it.
     - Use markdown formatting for YAML blocks, tables, and examples.
@@ -428,7 +435,7 @@ This Agent is an expert assistant designed specifically for users of Neatseq-Flo
         Fastqc_Raw:
             module: Fillout_Generic
             base: Create_Conda_Env
-            script_path: >
+            script_path: |
               cp -fs {{sample:fastq.F}} "{{dir}}/{{sample}}.F.fastq"
               cp -fs {{sample:fastq.R}} "{{dir}}/{{sample}}.R.fastq"
               {Vars.Programs.FastQC} \
@@ -454,12 +461,13 @@ This Agent is an expert assistant designed specifically for users of Neatseq-Flo
         Trimmomatic:
             module: Fillout_Generic
             base: Create_Conda_Env
-            script_path: '{Vars.Programs.Trimmomatic.Bin} PE -phred33 \
-                {{sample:fastq.F}} {{sample:fastq.R}} \
-                {{o:trimmed_fastq_F}} {{o:unpaired_fastq_F}} \
-                {{o:trimmed_fastq_R}} {{o:unpaired_fastq_R}} \
-                ILLUMINACLIP:{Vars.Programs.Trimmomatic.Adapters}:2:30:10 \
-                LEADING:20 TRAILING:20 SLIDINGWINDOW:4:15 MINLEN:36'
+            script_path: |
+                {Vars.Programs.Trimmomatic.Bin} PE -phred33 \
+                    {{sample:fastq.F}} {{sample:fastq.R}} \
+                    {{o:trimmed_fastq_F}} {{o:unpaired_fastq_F}} \
+                    {{o:trimmed_fastq_R}} {{o:unpaired_fastq_R}} \
+                    ILLUMINACLIP:{Vars.Programs.Trimmomatic.Adapters}:2:30:10 \
+                    LEADING:20 TRAILING:20 SLIDINGWINDOW:4:15 MINLEN:36
             output:
                 fastq.F:
                     scope: sample
@@ -476,7 +484,7 @@ This Agent is an expert assistant designed specifically for users of Neatseq-Flo
         FastQC_Trimmomatic:
             module: Fillout_Generic
             base: Trimmomatic
-            script_path: >
+            script_path: |
               cp -fs {{sample:fastq.F}} "{{dir}}/{{sample}}.F.fastq"
               cp -fs {{sample:fastq.R}} "{{dir}}/{{sample}}.R.fastq"
               {Vars.Programs.FastQC} \
@@ -502,7 +510,10 @@ This Agent is an expert assistant designed specifically for users of Neatseq-Flo
         BWA_Index_Builder:
             module: Fillout_Generic
             base: Trimmomatic
-            script_path: '{Vars.Programs.BWA} index {{project:fasta.nucl}} -p {{o:bwa_index}} '
+            script_path: |
+                {Vars.Programs.BWA} index \
+                    {{project:fasta.nucl}} \
+                    -p {{o:bwa_index}} 
             output:
                 bwa_index:
                     scope: project
@@ -510,7 +521,11 @@ This Agent is an expert assistant designed specifically for users of Neatseq-Flo
         BWA:
             module: Fillout_Generic
             base: BWA_Index_Builder
-            script_path: '{Vars.Programs.BWA} mem -t {Vars.CPU.BWA} -B 5 {{project:bwa_index}} {{sample:fastq.F}} {{sample:fastq.R}} > {{o:mapped_bam}}'
+            script_path: |
+                {Vars.Programs.BWA} mem \
+                    -t {Vars.CPU.BWA} \
+                    -B 5 {{project:bwa_index}} \
+                    {{sample:fastq.F}} {{sample:fastq.R}} > {{o:mapped_bam}}
             output:
                 mapped_bam:
                     scope: sample
@@ -520,7 +535,10 @@ This Agent is an expert assistant designed specifically for users of Neatseq-Flo
         Bwt2_Index_Builder:
             module: Fillout_Generic
             base: Trimmomatic
-            script_path: '{Vars.Programs.bowtie2_builder} {{project:fasta.nucl}} {{o:bowtie_index}} '
+            script_path: |
+                {Vars.Programs.bowtie2_builder} \
+                    {{project:fasta.nucl}} \
+                    {{o:bowtie_index}} 
             output:
                 bowtie_index:
                     scope: project
@@ -528,7 +546,18 @@ This Agent is an expert assistant designed specifically for users of Neatseq-Flo
         Bwt2:
             module: Fillout_Generic
             base: Bwt2_Index_Builder
-            script_path: "{Vars.Programs.bowtie2} \\\n\t--end-to-end -p {Vars.CPU.Bwt2} -q \\\n    --rg-id {{sample}} \\\n    --rg SM:{{sample}} \\\n    -x {{project:bowtie_index}} \\\n    -1 {{sample:fastq.F}} \\\n    -2 {{sample:fastq.R}} \\\n    --met-file {{o:bowtie_stats}} \\\n    -S {{o:bowtie_sam}} \\ \n    2> {{o:bowtie_log}} "
+            script_path: |
+                {Vars.Programs.bowtie2} \
+                    --end-to-end \
+                    -p {Vars.CPU.Bwt2} -q \
+                    --rg-id {{sample}} \
+                    --rg SM:{{sample}} \
+                    -x {{project:bowtie_index}} \
+                    -1 {{sample:fastq.F}} \
+                    -2 {{sample:fastq.R}} \
+                    --met-file {{o:bowtie_stats}} \
+                    -S {{o:bowtie_sam}} \
+                    2> {{o:bowtie_log}} 
             output:
                 bowtie_sam:
                     scope: sample
@@ -544,7 +573,27 @@ This Agent is an expert assistant designed specifically for users of Neatseq-Flo
         Samtools_BWA:
             module: Fillout_Generic
             base: BWA
-            script_path: "cp -fs {{sample:mapped_bam}}  {{o:bam}}\n\n{Vars.Programs.samtools} view -buh -o {{o:view_bam}} {{o:bam}}  \n\n{Vars.Programs.samtools} sort -@ {Vars.CPU.samtools} -o {{o:sorted_bam}} {{o:view_bam}}  \n\n{Vars.Programs.samtools} index {{o:sorted_bam}}  \n\n{Vars.Programs.samtools} flagstat {{o:sorted_bam}} > {{o:flagstat}}\n\n{Vars.Programs.samtools} idxstats {{o:sorted_bam}} > {{o:idxstats}} \n\n{Vars.Programs.samtools} stats --remove-dups {{o:sorted_bam}} > {{o:stats}} "
+            script_path: |
+                cp -fs {{sample:mapped_bam}}  {{o:bam}} 
+                
+                {Vars.Programs.samtools} view \
+                    -buh -o {{o:view_bam}} \
+                    {{o:bam}} 
+                    
+                {Vars.Programs.samtools} sort \
+                    -@ {Vars.CPU.samtools} \
+                    -o {{o:sorted_bam}} {{o:view_bam}}
+                    
+                {Vars.Programs.samtools} index {{o:sorted_bam}}
+                
+                {Vars.Programs.samtools} flagstat \
+                    {{o:sorted_bam}} > {{o:flagstat}}
+                    
+                {Vars.Programs.samtools} idxstats \
+                    {{o:sorted_bam}} > {{o:idxstats}} 
+                
+                {Vars.Programs.samtools} stats \
+                    --remove-dups {{o:sorted_bam}} > {{o:stats}} 
             output:
                 bam:
                     scope: sample
@@ -570,7 +619,24 @@ This Agent is an expert assistant designed specifically for users of Neatseq-Flo
         Samtools_Bwt2:
             module: Fillout_Generic
             base: Bwt2
-            script_path: "cp -fs {{sample:bowtie_sam}} {{o:bam}}\n\n{Vars.Programs.samtools} view -buh -o {{o:view_bam}} {{o:bam}} \n\n{Vars.Programs.samtools} sort -@ {Vars.CPU.samtools} -o {{o:sorted_bam}} {{o:view_bam}} \n\n{Vars.Programs.samtools} index {{o:sorted_bam}} \n\n{Vars.Programs.samtools} flagstat {{o:sorted_bam}} > {{o:flagstat}} \n\n{Vars.Programs.samtools} idxstats {{o:sorted_bam}} > {{o:idxstats}} \n\n{Vars.Programs.samtools} stats --remove-dups {{o:sorted_bam}} > {{o:stats}} "
+            script_path: |
+                cp -fs {{sample:bowtie_sam}} {{o:bam}}
+                
+                {Vars.Programs.samtools} view \
+                    -buh -o {{o:view_bam}} {{o:bam}} 
+                
+                {Vars.Programs.samtools} sort \
+                    -@ {Vars.CPU.samtools} \
+                    -o {{o:sorted_bam}} {{o:view_bam}} 
+                
+                {Vars.Programs.samtools} index {{o:sorted_bam}} 
+                
+                {Vars.Programs.samtools} flagstat {{o:sorted_bam}} > {{o:flagstat}} 
+                
+                {Vars.Programs.samtools} idxstats {{o:sorted_bam}} > {{o:idxstats}} 
+                
+                {Vars.Programs.samtools} stats \
+                    --remove-dups {{o:sorted_bam}} > {{o:stats}}
             output:
                 bam:
                     scope: sample
@@ -599,7 +665,16 @@ This Agent is an expert assistant designed specifically for users of Neatseq-Flo
             - FastQC_Trimmomatic
             - Samtools_Bwt2
             - Samtools_BWA
-            script_path: "{Vars.Programs.multiqc} \\\n\t{{base_dir:::Fastqc_Raw}} \\\n\t{{base_dir:::FastQC_Trimmomatic}} \\\n\t{{base_dir:::Samtools_Bwt2}} \\\n\t{{base_dir:::Samtools_BWA}} \\\n    {{base_dir:::BWA}} \\\n    {{base_dir:::Bwt2}} \\\n\t-s -f \\\n\t-o {{o:multiqc_output_dir}}"
+            script_path: |
+                {Vars.Programs.multiqc} \
+                    {{base_dir:::Fastqc_Raw}} \
+                    {{base_dir:::FastQC_Trimmomatic}} \
+                    {{base_dir:::Samtools_Bwt2}} \
+                    {{base_dir:::Samtools_BWA}} \
+                    {{base_dir:::BWA}} \
+                    {{base_dir:::Bwt2}} \
+                    -s -f \
+                    -o {{o:multiqc_output_dir}}
             output:
                 multiqc_output_dir:
                     scope: project
