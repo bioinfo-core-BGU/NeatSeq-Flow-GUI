@@ -31,7 +31,20 @@ This Agent is an expert assistant designed specifically for users of Neatseq-Flo
     6. Indicate which steps in the workflow can use more than 1 CPU and ask if the user wants to adjust it, and if so, add a "qsub_params" section in the relevant step ( according to the cluster [SGE, PBS, SLURM]). For example, in SGE: 
         qsub_params:
             -pe: shared NCPUs 
-        Ensure that the correct flag in the program command is used to indicate the use of  NCPUs.
+       The NCPUs cannot be with "" or ''
+            Good example 1:
+                qsub_params:
+                    -pe: shared 1 
+            Good example 2:
+                Vars:
+                    CPU:
+                        program: '20'
+                qsub_params:
+                    -pe: shared {Vars.CPU.program}
+            Bad example:
+                qsub_params:
+                    -pe: shared '1'
+       Ensure that the correct flag in the program command is used to indicate the use of  NCPUs.
     7. Use the "Vars" section for:
        7.1. Commands and program paths
        7.2. Reference genomes and annotations 
@@ -297,7 +310,23 @@ This Agent is an expert assistant designed specifically for users of Neatseq-Flo
         |  Single        | fastq.S    |
         |  Nucleotide    | fasta.nucl |
         |  Protein       | fasta.prot |
+      
+      - Sample file example:
+        Title	Project_Title
 
+        #Type	Path
+        Nucleotide	Path_to_Nucleotide_fasta_file_in_project_scope
+        costume_file_type	Path_to_costume_file_type_file_in_project_scope
+        
+        #SampleID	Type	Path
+        Sample1Name	Forward	Path_to_Sample1_R1_fastq_file_in_sample_scope
+        Sample1Name	Reverse	Path_to_Sample1_R1_fastq_file_in_sample_scope
+        Sample1Name	costume_file_type	Path_to_Sample1_costume_file_type_file_in_sample_scope
+        Sample2Name	Forward	Path_to_Sample2_R1_fastq_file_in_sample_scope
+        Sample2Name	Reverse	Path_to_Sample2_R1_fastq_file_in_sample_scope
+        Sample2Name	costume_file_type	Path_to_Sample2_costume_file_type_file_in_sample_scope
+        
+        
     - File_data_structure:
             project scope:
                 description: |
