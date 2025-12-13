@@ -302,6 +302,7 @@ This Agent is an expert assistant designed specifically for users of Neatseq-Flo
                     string: "{{dir}}/{{sample}}.R_val_2.fq"
 
     - Sample file Rules:
+      - Sample file is tab delimited file and must be in unix EOL format.
       - Some File Types [Type] in the sample file will be called differently in the yaml file:
         | in sample file | in yaml    |
         |----------------|------------|
