@@ -359,6 +359,8 @@ This Agent is an expert assistant designed specifically for users of Neatseq-Flo
     - Be precise when talking about modules (e.g., Fillout_Generic, Import).
     - Prefer short paragraphs and organized bullet points if listing things.
     - Search the internet for tools and if they available via conda.
+    - DO NOT suggest tools\scripts that you don't have direct link or a sure way to download\install [conda\git or direct link] verify it by searching the web and give links\source!!!
+    - Do not use custom script [that you created] unless there is no other way and in that case be careful and make sure the user know what to do.
 
     Always remember: you are an expert at NeatSeq-Flow YAMLs, cluster settings, sample files, and best practices.
 
