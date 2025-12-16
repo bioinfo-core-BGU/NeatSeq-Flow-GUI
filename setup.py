@@ -16,7 +16,7 @@ print(extra_files)
 
 setup(
     name                = 'NeatSeq-Flow GUI',
-    version             = '2.0.0',
+    version             = '4.0.0',
     author              = 'Liron Levin',
     author_email        = 'levinl@post.bgu.ac.il',
     maintainer          = 'Liron Levin',
