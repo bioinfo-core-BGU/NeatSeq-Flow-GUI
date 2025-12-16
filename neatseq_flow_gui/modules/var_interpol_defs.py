@@ -6,7 +6,7 @@ __version__ = "1.2.0"
 
 
 
-import re, sys, collections
+import re, sys, collections.abc
 from pprint import pprint as pp
 
 # A closure:
@@ -69,7 +69,7 @@ def walk(node, variables_bunch, callback):
             node = "{%s}" % list(node.keys())[0] #callback("{%s}" % list(node.keys())[0])
         else:
             for key, item in node.items():
-                if isinstance(item, collections.Iterable):
+                if isinstance(item, collections.abc.Iterable):
                     node[key] = walk(item, variables_bunch, callback)
                 elif isinstance(item, str):
                     # node[key] = interpol_atom(item, variables_bunch)
@@ -80,7 +80,7 @@ def walk(node, variables_bunch, callback):
     elif isinstance(node,list):
         # print "in 2\n"
         for i in range(0,len(node)):
-            if isinstance(node[i], collections.Iterable):
+            if isinstance(node[i], collections.abc.Iterable):
                 node[i] = walk(node[i], variables_bunch, callback)
             elif isinstance(node[i], str):
                 # node[i] = interpol_atom(node[i], variables_bunch)

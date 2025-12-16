@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 __author__ = "Liron Levin"
-__version__ = "3.0"
+__version__ = "4.0"
 
 
 __affiliation__ = "Bioinformatics Core Unit, NIBN, Ben Gurion University"
@@ -10,11 +10,14 @@ __affiliation__ = "Bioinformatics Core Unit, NIBN, Ben Gurion University"
 
 from flexx import app, event, ui, flx 
 from pscript import RawJS
-import os,sys,dialite
+import os,sys,dialite,yaml
 from collections import OrderedDict
 import asyncio
 import signal
+import re
 from multiprocessing import Process, Queue
+# import google.generativeai as genai
+
 
 sys.path.append(os.path.realpath(os.path.expanduser(os.path.dirname(os.path.abspath(__file__))+os.sep+"..")))
 
@@ -29,6 +32,11 @@ NeatSeq_Flow_Conda_env = 'NeatSeq_Flow'
 CONDA_BIN              = ''
 
 Base_Help_URL          = 'https://neatseq-flow.readthedocs.io/projects/neatseq-flow-modules/en/latest/'
+
+ChatGPT_URL            = 'https://chatgpt.com/g/g-67ea5e3d8e88819182952234731a2951-neatseq-guide'
+
+CHATGPT_LOGO           = 'https://upload.wikimedia.org/wikipedia/commons/0/04/ChatGPT_logo.svg'  # public SVG
+
 
 MODULES_TEMPLATES_FILE = 'https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/neatseq_flow_gui/TEMPLATES/MODULES_TEMPLATES.yaml'
 
@@ -142,7 +150,9 @@ HELP                   = {'login'             :'Click to Log-in',
                           'select_s_files'    :'Click to Choose and Add Sample Level Files',
                           'select_p_files'    :'Click to Choose and Add Project Level Files',
                           
-                          'cite'              :'Click to See How to Cite NeatSeq-Flow'
+                          'cite'              :'Click to See How to Cite NeatSeq-Flow',
+                          'Paste'             :'Click to Paste yaml Parameter file in order to load it',
+                          'Copy'              :'Click to See the Currnet Parameter file in a yaml format, it is also possible to edit and load it'
                          }
 
 Download_FileName      = 'Download_File'
@@ -156,6 +166,28 @@ Preview_Buffer         = 10000
 COMMAND_TIME_OUT       = 10000
 
 Process_Runing = {}
+
+API_KEY        = ""
+
+GPT_MODEL      = "gpt-4o-mini"
+
+GPT_ASSISTANT  = "asst_kshd8Sn1WQXxAMacl87PYbQw"
+
+OPENAI          = None
+
+INSTRUCTION_URL = 'https://raw.githubusercontent.com/bioinfo-core-BGU/NeatSeq-Flow-GUI/master/neatseq_flow_gui/instruction.txt'
+
+CACHE_FILE      = os.path.join(os.path.realpath(os.path.expanduser(os.path.dirname(os.path.abspath(__file__))+os.sep+"..")),'neatseq_flow_gui','instruction.txt')
+
+# This variable stays alive as long as your app is running
+GPT_PROPMT = None 
+
+# Put your Gemini API Key here
+GEMINI_API_KEY = []
+
+AI2USE = "GEMINI" # "GPT"
+
+GEMINI_MODEL = "auto"
 
 def tracefunc(frame, event, arg, indent=[0]):
     if os.path.basename(__file__) != os.path.basename(frame.f_code.co_filename):
@@ -687,8 +719,14 @@ class Step_Tree_Class(ui.Widget):
                                                                  options=list(map(lambda x: x.capitalize(),COLOR_BY)) )
                                 Add_Tooltip(self.Color_by_b,HELP['color_steps_by'],'top')
                         with ui.VSplit(spacing=2):
-                            self.tree_Load_WorkFlow_b = ui.Button(text='Load WorkFlow',style='max-height: 30px; max-width: 150px;')
-                            self.tree_save_WorkFlow_b = ui.Button(text='Save WorkFlow',style='max-height: 30px; max-width: 150px;')
+                            with ui.HSplit():
+                                self.tree_Load_WorkFlow_b  = ui.Button(text='Load WorkFlow',style='max-height: 30px; max-width: 150px;')
+                                self.tree_paste_WorkFlow_b = ui.Button(text='📋',style='max-height: 30px; max-width: 35px;')
+                                Add_Tooltip(self.tree_paste_WorkFlow_b,HELP['Paste'],'left')
+                            with ui.HSplit():
+                                self.tree_save_WorkFlow_b = ui.Button(text='Save WorkFlow',style='max-height: 30px; max-width: 150px;')
+                                self.tree_copy_WorkFlow_b = ui.Button(text='📥',style='max-height: 30px; max-width: 35px;')
+                                Add_Tooltip(self.tree_copy_WorkFlow_b,HELP['Copy'],'left')
                             Add_Tooltip(self.tree_Load_WorkFlow_b,HELP['load_workflow'],'left')
                             Add_Tooltip(self.tree_save_WorkFlow_b,HELP['save_workflow'],'left')
                 self.Graphical_panel = Graphical_panel(flex=0.5, style='min-height:600px; overflow-y: auto; overflow-x: auto;')
@@ -779,10 +817,20 @@ class Step_Tree_Class(ui.Widget):
         for ev in events:
             self.set_open_filepicker('workflow_file')
 
+    @event.reaction('tree_paste_WorkFlow_b.pointer_click')
+    def on_paste_workflow_click(self, *events):
+        for ev in events:
+            self.set_open_filepicker('paste_workflow')
+
     @event.reaction('tree_save_WorkFlow_b.pointer_click')
     def on_save_workflow_click(self, *events):
         for ev in events:
             self.set_open_filepicker('save_workflow_file')
+
+    @event.reaction('tree_copy_WorkFlow_b.pointer_click')
+    def on_copy_workflow_click(self, *events):
+        for ev in events:
+            self.set_open_filepicker('copy_workflow')
 
     @event.reaction('file_path_b.pointer_click')
     def on_file_path_click(self, *events):
@@ -1903,6 +1951,103 @@ class Run_NeatSeq_Flow(ui.Widget):
                 self.parameter_file_L.set_text(self.parameter_file[0][0])
                 self.set_parameter_file([])
 
+class Markdown_Chat_Viewer(flx.Widget):
+    """ A Widget that renders Markdown content into HTML using marked.js """
+    
+    value           = event.StringProp('', settable=True)
+    load_flag       = event.BoolProp(False, settable=True)
+    update_flag     = event.BoolProp(False, settable=True)
+    
+    # We load marked.js (parser) and highlight.js (for code blocks) from CDNs
+    CSS = """
+    .flx-Markdown_Chat_Viewer {
+        background-color: #002b36;
+        color: #839496;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        padding: 15px;
+        overflow-y: auto;
+        border: 1px solid gray;
+    }
+    
+    /* The Name Header */
+    .sender-name {
+        font-size: 140%;    /* Much larger */
+        font-weight: bold;
+        margin-bottom: 8px;
+        display: block;
+        border-bottom: 1px solid rgba(0,0,0,0.2);
+        padding-bottom: 4px;
+    }
+
+    .chat-user .sender-name { color: #2aa198; } /* Cyan for You */
+    .chat-bot .sender-name  { color: #b58900; } /* Yellow for Gemini */
+
+    .chat-user {
+        background-color: #073642;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        border-left: 5px solid #2aa198;
+    }
+    
+    .chat-bot {
+        background-color: #002b36; 
+        padding: 15px;
+        margin-bottom: 15px;
+        border-left: 5px solid #b58900;
+        border: 1px solid #073642;
+    }
+
+    /* Standard Markdown Styles */
+    .flx-Markdown_Chat_Viewer h1, h2, h3 { color: #cb4b16; margin-top: 10px; }
+    .flx-Markdown_Chat_Viewer strong { color: #dc322f; font-weight: bold; }
+    .flx-Markdown_Chat_Viewer code { 
+        background-color: #001f27; 
+        padding: 2px 4px; 
+        border-radius: 3px; 
+        font-family: Consolas, monospace;
+        color: #859900;
+        border: 1px solid #586e75;
+    }
+    .flx-Markdown_Chat_Viewer pre {
+        background-color: #001f27;
+        padding: 10px;
+        border-radius: 5px;
+        overflow-x: auto;
+        border: 1px solid #586e75;
+    }
+    """
+
+    def init(self):
+        # 1. Inject the Marked.js library
+        if getattr(window, 'marked', None) is None:
+            script = window.document.createElement("script")
+            script.src = "https://cdn.jsdelivr.net/npm/marked/marked.min.js"
+            script.onload = self._init_marked
+            window.document.head.appendChild(script)
+        else:
+            self._init_marked()
+
+    def _init_marked(self):
+        # Configure marked options if needed
+        # window.marked.setOptions({'breaks': True})
+        pass
+
+    @event.reaction('value')
+    def _update_content(self, *events):
+        if getattr(window, 'marked', None):
+            # Convert Markdown -> HTML
+            html_content = window.marked.parse(self.value)
+            self.node.innerHTML = html_content
+            
+            # Auto-scroll to bottom
+            self.node.scrollTop = self.node.scrollHeight
+        else:
+            self.node.innerHTML = "<i>Loading renderer...</i><br/>" + self.value
+
+    def scroll_to_bottom(self):
+        self.node.scrollTop = self.node.scrollHeight
+
 class Documentation_Editor(flx.Widget):
     """ A CodeEditor widget based on CodeMirror.
     """
@@ -1926,24 +2071,27 @@ class Documentation_Editor(flx.Widget):
     }
 
     """
-    value     = event.StringProp('', settable=True)
-    load_flag = event.BoolProp(False, settable=True)
-    text      = event.StringProp('', settable=True)
-    multiline = event.BoolProp(True, settable=True)
-    disabled  = event.BoolProp(False, settable=True)
-    readOnly  = event.BoolProp(False, settable=True)
-    options   = event.ListProp([],settable=True)
+    value           = event.StringProp('', settable=True)
+    load_flag       = event.BoolProp(False, settable=True)
+    update_flag     = event.BoolProp(False, settable=True)
+    text            = event.StringProp('', settable=True)
+    multiline       = event.BoolProp(True, settable=True)
+    disabled        = event.BoolProp(False, settable=True)
+    readOnly        = event.BoolProp(False, settable=True)
+    DisabledOption  = event.BoolProp(True, settable=True)
+    options         = event.ListProp([],settable=True)
+    Size            = event.ListProp(["100%","100%"],settable=True)
+    Command         = event.StringProp('', settable=True)
 
-    def init(self,value=Documentation,readOnly=False,lineNumbers=True,multiline=True,styleActiveLine=True):
+    def init(self,value=Documentation,readOnly=False,lineNumbers=True,multiline=True,styleActiveLine=True,mode='markdown',theme='default'):
         global window
         self.set_value(value)
         self.set_multiline(multiline)
         self.set_readOnly(readOnly)
         # https://codemirror.net/doc/manual.html
         options = dict(value=self.value,
-                        mode='markdown',
-                        theme='default',
-                        #theme='solarized dark',
+                        mode=mode,
+                        theme=theme,
                         #highlightFormatting=True,
                         maxBlockquoteDepth=True,
                         fencedCodeBlockHighlighting=True,
@@ -1962,13 +2110,26 @@ class Documentation_Editor(flx.Widget):
         self.cm = window.CodeMirror(self.node, options)
         self.set_load_flag(True)
 
-    @flx.reaction('size')
-    def __on_size(self, *events):
+    @flx.reaction('Size')
+    def OnSize(self, *events):
+        for ev in events:
+            if ev.new_value!='':
+                if len(self.Size)==2:
+                    self.cm.setSize(self.Size[0],self.Size[1])
+                self.set_Size([])
+                self.set_load_flag(True)
+        self.cm.focus()
         self.cm.refresh()
 
-    @flx.reaction('key_down')
+    @flx.reaction('size')
+    def __on_size(self, *events):
+        self.cm.focus()
+        self.cm.refresh()
+
+    @flx.reaction('key_down','update_flag')
     def __update_text(self, *events):
         if self.multiline:
+            self.cm.focus()
             self.cm.refresh()
             self.set_value(self.cm.getValue())
         else:
@@ -1976,30 +2137,40 @@ class Documentation_Editor(flx.Widget):
                 pos=self.cm.getCursor()
                 self.cm.setValue(self.value)
                 self.cm.setCursor(pos)
+                self.cm.focus()
                 self.cm.refresh()
             else:
+                self.cm.focus()
                 self.cm.refresh()
                 self.set_value(self.cm.getValue())
+        if self.update_flag:
+            self.set_update_flag(False)
 
     @flx.reaction('load_flag')
     def __load_text(self, *events):
         if self.load_flag:
             self.cm.setValue(self.value)
+            self.cm.focus()
             self.cm.refresh()
             self.set_load_flag(False)
+            try: self.check_real_size()
+            except: pass
+        
 
     @flx.reaction('disabled')
     def disable(self, *events):
         if self.disabled:
             self.cm.setOption('readOnly',self.disabled)
-            self.cm.setOption('theme','solarized dark')
+            if self.DisabledOption:
+                self.cm.setOption('theme','solarized dark')
             self.cm.setOption('styleActiveLine',False)
             self.set_value('')
             self.set_load_flag(True)
         else:
             if self.readOnly==False:
                 self.cm.setOption('readOnly',self.disabled)
-            self.cm.setOption('theme','default')
+            if self.DisabledOption:
+                self.cm.setOption('theme','default')
             self.cm.setOption('styleActiveLine',True)
     
     @flx.reaction('options')
@@ -2011,6 +2182,932 @@ class Documentation_Editor(flx.Widget):
                         self.cm.setOption(options[0],options[1])
                 self.set_options([])
                 self.set_load_flag(True)
+
+    @flx.reaction('Command')
+    def execCommand(self,*events):
+         for ev in events:
+            if ev.new_value!='':
+                if len(self.Command)>0:
+                    self.cm.execCommand(self.Command)
+                    self.set_Command('')
+                    self.set_load_flag(True)
+
+class Yaml_Editor_Page(flx.PyComponent):
+    value     = event.StringProp('', settable=True)
+    Done      = event.BoolProp(False, settable=True)
+    Load      = event.BoolProp(False, settable=True)
+
+    def init(self):                
+        with ui.HSplit():
+            ui.Layout(flex=0.15)
+            with ui.VSplit(flex=0.7):
+                with flx.GroupWidget(title="Load",style='font-size: 100%; border: 2px solid purple;'):
+                    with ui.HBox(style='overflow-y: auto;',spacing=5,padding=5):
+                        with flx.Widget(flex=1,style='border: 1px solid gray;overflow-y: auto;background-color: #002b36;'):
+                            self.Yaml_Editor_h = Documentation_Editor()
+                        self.Yaml_Editor_h.set_disabled(False)
+                        self.Yaml_Editor_h.set_options([['mode','yaml'],['theme',"solarized dark"]])
+                        self.Yaml_Editor_h.set_Size(["100%","100%"])
+                        self.Yaml_Editor_h.set_value("")
+                        self.Yaml_Editor_h.apply_style('font-size:120%;')
+                        with ui.VSplit(style= 'width: 210px;'):
+                            self.Cancel_b = ui.Button(text="❌ Cancel",disabled= False,style= 'font-size: 80%; color: black; background: white;border: 2px solid gray; min-width: 80px;max-height: 30px;min-height: 30px;')  
+                            # ui.Layout()
+                            self.Clean_b = ui.Button(text="🧼 Clean",disabled= False,style= 'font-size: 80%; color: black; background: white;border: 2px solid gray; min-width: 80px;max-height: 30px;min-height: 30px;')
+                            # ui.Layout()
+                            self.Load_b   = ui.Button(text="✔️ Load",disabled= False,style= 'font-size: 80%; color: black; background: white;border: 2px solid gray; min-width: 80px;max-height: 30px;min-height: 30px;')  
+                            ui.Layout()
+            ui.Layout(flex=0.15)
+
+    @event.reaction('Load_b.pointer_click')
+    def Load_Button_click(self,*events):
+        self.Yaml_Editor_h.set_update_flag(True)
+        self.set_value(self.Yaml_Editor_h.value)
+        self.set_Load(True)
+        self.set_Done(True)
+    
+    @event.reaction('Cancel_b.pointer_click')
+    def Cancel_Button_click(self,*events):
+        self.set_Done(True)
+
+    @event.reaction('Clean_b.pointer_click')
+    def Clean_Button_click(self,*events):
+        self.set_value("")
+        self.Yaml_Editor_h.set_value("")
+        self.Yaml_Editor_h.set_load_flag(True)
+
+    @event.reaction('value')
+    def Update_value(self,*events):
+        for ev in events:
+            if ev.source.value!="":
+                self.Yaml_Editor_h.set_value(self.value)
+                self.Yaml_Editor_h.set_load_flag(True)
+                self.set_value("")
+        
+class ChatGPT(flx.PyComponent):
+    value     = event.StringProp('', settable=True)
+    Done      = event.BoolProp(False, settable=True)
+    Load      = event.BoolProp(False, settable=True)
+
+    def init(self):           
+        self.client       = None
+        self.chat_history = []
+        self.q            = Queue()
+        self.Process      = None
+        self.refreshrate  = 1
+        self.Thinking     = False
+        self.you          = "🧠	You"
+        self.chat         = "🤖 ChatGPT"
+        self.max_count    = 4
+        self.Thinking_str   = "Thinking"
+
+        with ui.HSplit():
+            ui.Layout(flex=0.05)
+            with ui.VSplit(flex=0.55):
+                with flx.GroupWidget(flex=1,title="Chat",style='font-size: 100%; border: 2px solid purple;'):
+                    with ui.HBox(style='overflow-y: auto;',spacing=5,padding=5):
+                        with flx.Widget(flex=1,style='border: 1px solid gray;overflow-y: auto;background-color: #002b36;'):
+                            self.Chat_Editor_h = Documentation_Editor()
+                        self.Chat_Editor_h.set_disabled(True)
+                        self.Chat_Editor_h.set_options([['mode','markdown'],['lineNumbers',False],['theme',"solarized dark"]])
+                        self.Chat_Editor_h.set_Size(["auto","auto"])
+                        self.Chat_Editor_h.set_value("")
+                        self.Chat_Editor_h.apply_style('font-size:120%;')
+                with flx.GroupWidget(title="Massage",style='font-size: 100%; border: 2px solid purple;min-height: 150px'):
+                    with ui.HBox(style='overflow-y: auto;',spacing=5,padding=5):
+                        with flx.Widget(flex=1,style='border: 1px solid gray;overflow-y: auto;background-color: #002b36;'):
+                            self.Massage_Editor_h = Documentation_Editor()
+                        self.Massage_Editor_h.set_disabled(False)
+                        self.Massage_Editor_h.set_options([['mode','markdown'],['theme',"solarized dark"]])
+                        self.Massage_Editor_h.set_Size(["100%","100%"])
+                        self.Massage_Editor_h.set_value("")
+                        self.Massage_Editor_h.apply_style('font-size:120%;')
+                        with ui.VSplit(style= 'width: 210px;'):
+                            self.send_b = ui.Button(text="➤ Send",disabled= False,style= 'font-size: 80%; color: black; background: white;border: 2px solid gray; min-width: 80px;max-height: 30px;min-height: 30px;')  
+                            self.Clean_b = ui.Button(text="🧼 Clean",disabled= False,style= 'font-size: 80%; color: black; background: white;border: 2px solid gray; min-width: 80px;max-height: 30px;min-height: 30px;')
+                            ui.Layout()
+            with ui.VSplit(flex=0.35):
+                with flx.GroupWidget(title="Yaml Editor",style='font-size: 100%; border: 2px solid purple;min-height=300px'):
+                    with ui.HBox(style='overflow-y: auto;',spacing=5,padding=5):
+                        with flx.Widget(flex=1,style='border: 1px solid gray;overflow-y: auto;background-color: #002b36;'):
+                            self.Yaml_Editor_h = Documentation_Editor()
+                        self.Yaml_Editor_h.set_disabled(False)
+                        self.Yaml_Editor_h.set_options([['mode','yaml'],['theme',"solarized dark"]])
+                        self.Yaml_Editor_h.set_Size(["100%","100%"])
+                        self.Yaml_Editor_h.set_value("")
+                        self.Yaml_Editor_h.apply_style('font-size:120%;')
+            ui.Layout(flex=0.05)
+
+
+    @event.reaction('send_b.pointer_click')
+    def Send_Button_click(self,*events):
+        message =  self.Massage_Editor_h.value
+        if len(message)>0:
+            self.count = 0
+            try:
+                if self.client==None:
+                    if GPT_ASSISTANT!=None:
+                        self.client = OPENAI.beta.threads.create()
+                    else:
+                        import openai
+                        self.client = openai.OpenAI(api_key = API_KEY)
+            except Exception as e: 
+                print(str(e))
+                self.client=None
+                pass
+        
+            self.chat_history.append((self.you, message))
+            self.Chat_Editor_h.set_value(self.get_chat())
+            self.Chat_Editor_h.set_load_flag(True)
+            self.Massage_Editor_h.set_value("")
+            self.Massage_Editor_h.set_load_flag(True)
+           
+                
+            if (not self.Thinking) and (self.client!=None):
+                try:    
+                    self.close()
+                    self.Process  =        Process(target=self.send_massage, args=(self.client,
+                                                                                        self.chat_history,
+                                                                                        self.q,))
+                    self.Process.daemon = True
+                    if 'Process' not in self.session.__dict__.keys():
+                        self.session.Process = [self.Process]
+                    else:
+                        self.session.Process.append(self.Process)
+                    
+                    self.Process.start()
+                    self.Thinking=True
+                except Exception as e: 
+                    print(str(e))
+                    try:
+                        self.Process.terminate()
+                    except Exception as e: 
+                        print(str(e))
+                        # pass
+                    self.Process=None
+                    self.Thinking=False
+
+        if  (self.Thinking):
+            self.count = self.count+1 
+            if self.q.empty()==False:
+                response = self.q.get(True)
+                if GPT_ASSISTANT==None:
+                    reply    = response.choices[0].message.content
+                else:
+                    reply    = response
+                self.chat_history.append((self.chat, reply))
+                self.Chat_Editor_h.set_value(self.get_chat())
+                self.Chat_Editor_h.set_load_flag(True)
+                # self.Chat_Editor_h.set_Command("goDocEnd")
+                self.Thinking = False
+                self.count = 0
+            else:
+                if self.count>self.max_count:
+                    self.count = 0
+                self.Chat_Editor_h.set_value(self.get_chat()+self.Thinking_str+self.count*".")
+                self.Chat_Editor_h.set_load_flag(True)
+                # self.Chat_Editor_h.set_Command("goDocEnd")
+                
+        if self.Process!=None:
+            if not self.Process.is_alive():
+                self.Thinking = False
+        if (self.session.status!=0) and (self.Thinking):
+            asyncio.get_event_loop().call_later(self.refreshrate, self.Send_Button_click)
+    
+    def close(self):
+        if self.Process!=None:
+            self.Process.terminate()
+            self.Process.join()
+            self.Process=None
+            
+    def Kill(self):
+        self.close()
+        self.keep_running = False
+
+    def send_massage(self,client,chat_history,q):
+        if GPT_ASSISTANT==None:
+            response =  client.chat.completions.create(
+                        model=GPT_MODEL,
+                        messages=[
+                            {
+                                "role": "system",
+                                "content": GPT_PROPMT
+                            }
+                        ] + [{"role": "user", "content": m} for role, m in chat_history if role == self.you],
+                        # temperature=0.3,  # Lower temperature for expert, consistent tone
+                    )
+            q.put(response)
+        else:
+            OPENAI.beta.threads.messages.create(
+                thread_id=client.id,
+                role="user",
+                content=chat_history[-1][1]
+            )
+
+            # Step 4: Run the assistant
+            run = OPENAI.beta.threads.runs.create(
+                thread_id=client.id,
+                assistant_id=GPT_ASSISTANT
+            )
+
+            import time
+            while True:
+                run_status = OPENAI.beta.threads.runs.retrieve(thread_id=client.id, run_id=run.id)
+                if run_status.status == "completed":
+                    break
+                time.sleep(1)
+
+            # Step 6: Retrieve the messages
+            messages = OPENAI.beta.threads.messages.list(thread_id=client.id)
+            message  = messages.data[0]
+            response = message.content[0].text.value
+            q.put(response)
+
+    def get_chat(self):
+        formatted = []
+        for msg in self.chat_history:
+            if msg[0]==self.you:
+                block = f"\n\n{self.you}:\n    {msg[1].strip()}\n"
+            else:
+                block = f"{self.chat}:\n    {msg[1].strip()}\n"
+            formatted.append(block)
+        return "".join(formatted)
+
+    # @event.reaction('Load_b.pointer_click')
+    # def Load_Button_click(self,*events):
+    #     self.Yaml_Editor_h.set_update_flag(True)
+    #     self.set_value(self.Yaml_Editor_h.value)
+    #     self.set_Load(True)
+    #     self.set_Done(True)
+
+    # @event.reaction('Cancel_b.pointer_click')
+    # def Cancel_Button_click(self,*events):
+    #     self.set_Done(True)
+
+    # @event.reaction('Clean_b.pointer_click')
+    # def Clean_Button_click(self,*events):
+    #     self.set_value("")
+    #     self.Yaml_Editor_h.set_value("")
+    #     self.Yaml_Editor_h.set_load_flag(True)
+
+    # @event.reaction('value')
+    # def Update_value(self,*events):
+    #     for ev in events:
+    #         if ev.source.value!="":
+    #             self.Yaml_Editor_h.set_value(self.value)
+    #             self.Yaml_Editor_h.set_load_flag(True)
+    #             self.set_value("")
+
+def resolve_model_name(api_key):
+    """
+    Determines the best model based on configuration and availability.
+    
+    requested_config options:
+    1. "auto"       -> Use priority wishlist (Best for Agents).
+    2. "ByVersion"  -> Mathematically find highest version number.
+    3. "gemini-..." -> Try this specific name. If fails, fallback to auto.
+    """
+    global GEMINI_MODEL
+    AVAILABLE_MODELS_CACHE = None
+    import google.generativeai as genai
+
+    # 1. Fetch Available Models (Lazy Loading)
+    if AVAILABLE_MODELS_CACHE is None:
+        print("🔍 Querying Google for available models...")
+        try:
+            genai.configure(api_key=api_key)
+            # Create a clean list (removing 'models/' prefix)
+            models = []
+            for m in genai.list_models():
+                if 'generateContent' in m.supported_generation_methods:
+                    models.append(m.name.replace("models/", ""))
+            AVAILABLE_MODELS_CACHE = models
+        except Exception as e:
+            print(f"⚠️ API Error listing models: {e}")
+            GEMINI_MODEL = "gemini-1.5-flash" # Ultimate Panic Fallback
+            return ""
+
+    available_list = AVAILABLE_MODELS_CACHE
+    
+    # --- LOGIC FLOW ---
+    
+    # CASE A: Specific Model Requested
+    if GEMINI_MODEL != "auto" and GEMINI_MODEL != "ByVersion":
+        # Does the user's specific request exist in the allowed list?
+        if GEMINI_MODEL in available_list:
+            print(f"✅ Found requested model: {GEMINI_MODEL}")
+            return GEMINI_MODEL
+        
+        # If we are here, the requested model (e.g. 'gemini-4.0') does NOT exist.
+        print(f"⚠️ Request '{GEMINI_MODEL}' not found in allowed list.")
+        print("🔄 Falling back to 'auto' mode.")
+        GEMINI_MODEL = "auto" # Override and continue below
+
+    # CASE B: ByVersion (Find the highest number)
+    if GEMINI_MODEL == "ByVersion":
+        def extract_version(name):
+            # Finds '1.5', '2.0', '1.0' in string. Defaults to 0 if none.
+            match = re.search(r'(\d+(\.\d+)?)', name)
+            return float(match.group(1)) if match else 0.0
+        
+        # Sort list by version (Highest first)
+        # We filter for 'pro' or 'flash' to avoid legacy models like 'bison'
+        candidates = [m for m in available_list if "gemini" in m]
+        if candidates:
+            candidates.sort(key=extract_version, reverse=True)
+            best_ver = candidates[0]
+            print(f"🚀 Selected by Version (Highest): {best_ver}")
+            GEMINI_MODEL = best_ver
+            return GEMINI_MODEL
+
+    # CASE C: Auto (Wishlist Priority)
+    # This is the default fallback
+    wishlist = [
+        "gemini-2.5-flash",       # Newest Speed King
+        "gemini-2.0-flash",       # Next Best
+        "gemini-1.5-flash",       # Standard
+        "gemini-1.5-flash-001",   # Legacy Stable
+        "gemini-flash-latest"     # Alias
+    ]
+    
+    for preferred in wishlist:
+        if preferred in available_list:
+            print(f"✨ Auto-selected from Wishlist: {preferred}")
+            GEMINI_MODEL = preferred
+            return GEMINI_MODEL
+
+    # CASE D: Safety Net
+    # If logic fails, just return the first available Gemini model
+    if available_list:
+        GEMINI_MODEL = available_list[0]
+        return GEMINI_MODEL
+        
+    return ""
+
+def load_system_instruction():
+    """
+    Priority 1: Download from URL (Updates RAM & Disk).
+    Priority 2: If Download fails, use RAM (if we have data from a previous call).
+    Priority 3: If RAM is empty, read from Disk (and update RAM).
+    Priority 4: Default string.
+    """
+    import os
+    import requests
+
+    global GPT_PROPMT
+    
+    print(f"🔄 Fetching instructions")
+    
+    # --- PHASE 1: Try Download ---
+    try:
+        response = requests.get(INSTRUCTION_URL, timeout=4)
+        response.raise_for_status()
+        
+        content = response.text
+        
+        # Success! Update RAM immediately
+        GPT_PROPMT = content
+        print("✅ Download successful. RAM updated.")
+        
+        # Try to save to disk (Best Effort)
+        try:
+            with open(CACHE_FILE, "w", encoding="utf-8") as f:
+                f.write(content)
+        except Exception as e:
+            print(f"⚠️  Note: Could not save to disk ({e}), but RAM is valid.")
+            
+        return content
+
+    except Exception as e:
+        print(f"❌ Download failed ({str(e)}).")
+
+    # --- PHASE 2: Check RAM ---
+    # If we successfully downloaded it 5 minutes ago, use that copy!
+    if GPT_PROPMT is not None:
+        print("🧠 Using instruction from RAM (Memory).")
+        return GPT_PROPMT
+
+    # --- PHASE 3: Check Disk ---
+    # RAM was empty (maybe app just started), so look for a file
+    if os.path.exists(CACHE_FILE):
+        print("📂 Reading from local Disk cache...")
+        try:
+            with open(CACHE_FILE, "r", encoding="utf-8") as f:
+                content = f.read()
+                # Update RAM so next time we don't even need the disk
+                GPT_PROPMT = content 
+                return content
+        except Exception as e:
+            print(f"❌ Critical: Could not read Disk cache ({e}).")
+    
+    # --- PHASE 4: Total Failure ---
+    print("❌ Total Failure: No Internet, No RAM, No Disk.")
+    return "You are a helpful assistant."
+
+class GeminiAgent(flx.PyComponent):
+    value            = event.StringProp('', settable=True)
+    Done             = event.BoolProp(False, settable=True)
+    YAML             = event.StringProp('', settable=True)
+    open_filepicker  = event.StringProp('', settable=True)
+    
+    def init(self):           
+        self.chat_history = []
+        self.q            = Queue()
+        self.Process      = None
+        self.refreshrate  = 0.2 
+        self.Thinking     = False
+        self.you          = "🧠 You"
+        self.chat         = "✨ Gemini" 
+        self.max_count    = 4
+        self.Thinking_str = "Thinking"
+        self.accumulated_response = "" 
+        
+
+        # --- UI LAYOUT ---
+        with ui.HSplit():
+            ui.Layout(flex=0.05)
+            with ui.VSplit(flex=0.5):
+                # Chat History Area
+                with flx.GroupWidget(flex=1, title="Chat History", style='font-size: 100%; border: 2px solid purple;'):
+                    with ui.HBox(style='overflow-y: auto;', spacing=5, padding=5):
+                        # with flx.Widget(flex=1, style='border: 1px solid gray;overflow-y: auto;background-color: #002b36;'):
+                            # self.Chat_Editor_h = Documentation_Editor() 
+
+                        # self.Chat_Editor_h.set_disabled(True)
+                        # self.Chat_Editor_h.set_options([['mode','markdown'],['lineNumbers',False],['theme',"solarized dark"]])
+                        # self.Chat_Editor_h.set_Size(["auto","auto"])
+                        # self.Chat_Editor_h.set_value("")
+                        # self.Chat_Editor_h.apply_style('font-size:120%;')
+
+                        self.Chat_Editor_h = Markdown_Chat_Viewer(flex=1)
+                        self.Chat_Editor_h.set_value("")
+
+                # Message Entry Area
+                with flx.GroupWidget(title="Message", style='font-size: 100%; border: 2px solid purple;min-height: 150px'):
+                    with ui.HBox(style='overflow-y: auto;', spacing=5, padding=5):
+                        with flx.Widget(flex=1, style='border: 1px solid gray;overflow-y: auto;background-color: #002b36;'):
+                            self.Massage_Editor_h = Documentation_Editor()
+                        self.Massage_Editor_h.set_disabled(False)
+                        self.Massage_Editor_h.set_options([['mode','markdown'],['theme',"solarized dark"]])
+                        self.Massage_Editor_h.set_Size(["100%","100%"])
+                        self.Massage_Editor_h.set_value("")
+                        self.Massage_Editor_h.apply_style('font-size:120%;')
+                        
+                        # --- BUTTONS SECTION ---
+                        with ui.VSplit(style='width: 210px;'):
+                            # Row 1: Send and Stop
+                            with ui.HBox(flex=1):
+                                self.send_b = ui.Button(text="➤ Send", disabled= False,style= 'font-size: 80%; color: black; background: white;border: 2px solid gray; min-width: 80px;max-height: 30px;min-height: 30px;')
+                                self.Stop_b = ui.Button(text="⛔ Stop", disabled= False,style= 'font-size: 80%; color: black; background: white;border: 2px solid gray; min-width: 80px;max-height: 30px;min-height: 30px;')
+                            
+                            # Row 2: New Session
+                            self.New_Session_b = ui.Button(text="✨ New Session",disabled= False,style= 'font-size: 80%; color: black; background: white;border: 2px solid gray; min-width: 80px;max-height: 30px;min-height: 30px;')
+                            ui.Layout()
+
+                            self.Load_Yaml_b = ui.Button(text="✔️ Load WorkFlow",disabled= False,style= 'font-size: 80%; color: black; background: white;border: 2px solid gray; min-width: 80px;max-height: 30px;min-height: 30px;')
+                            ui.Layout()
+
+
+            # Right Side (YAML Editor)
+            with ui.VSplit(flex=0.4):
+                with flx.GroupWidget(title="Yaml Editor", style='font-size: 100%; border: 2px solid purple;min-height=300px'):
+                    with ui.HBox(style='overflow-y: auto;', spacing=5, padding=5):
+                        with flx.Widget(flex=1, style='border: 1px solid gray;overflow-y: auto;background-color: #002b36;'):
+                            self.Yaml_Editor_h = Documentation_Editor()
+                        self.Yaml_Editor_h.set_disabled(False)
+                        self.Yaml_Editor_h.set_options([['mode','yaml'],['theme',"solarized dark"]])
+                        self.Yaml_Editor_h.set_Size(["100%","100%"])
+                        self.Yaml_Editor_h.set_value("")
+                        self.Yaml_Editor_h.apply_style('font-size:120%;')
+            ui.Layout(flex=0.05)
+
+    # --- BUTTON HANDLER: Load YAML ---
+    @event.reaction('Load_Yaml_b.pointer_click')
+    def Load_Button_click(self,*events):
+        for ev in events:
+            self.set_open_filepicker('workflow_file')
+            if len(self.Yaml_Editor_h.value)>0:
+                self.set_YAML(self.Yaml_Editor_h.value)
+                self.set_Done(True)
+
+    @event.reaction('YAML')
+    def Update_YAML(self,*events):
+        for ev in events:
+            if ev.source.YAML!="":
+                self.Yaml_Editor_h.set_value(self.YAML)
+                self.set_YAML("")
+
+    # --- BUTTON HANDLER: STOP REQUEST ---
+    @event.reaction('Stop_b.pointer_click')
+    def Stop_Button_click(self, *events):
+        if self.Thinking:
+            self.close() # Kills the process
+            self.Thinking = False
+            
+            # Update UI to show it was stopped
+            self.chat_history.append((self.chat, "⛔ *Request stopped by user.*"))
+            self.Chat_Editor_h.set_value(self.get_chat())
+            # self.Stop_b.set_disabled(True)
+            # self.send_b.set_disabled(False)
+            # self.Chat_Editor_h.set_load_flag(True)
+
+    # --- BUTTON HANDLER: NEW SESSION ---
+    @event.reaction('New_Session_b.pointer_click')
+    def New_Session_click(self, *events):
+        # 1. Stop any active process
+        self.close()
+        self.Thinking = False
+        
+        # 2. Clear Data
+        self.chat_history = []
+        self.count = 0
+        
+        # 3. Clear Editors
+        self.Chat_Editor_h.set_value("")
+        self.Massage_Editor_h.set_value("")
+        self.Yaml_Editor_h.set_value("")
+       
+        
+        # 4. Reset Buttons
+        self.Stop_b.set_disabled(True)
+        self.send_b.set_disabled(False)
+
+        self.Yaml_Editor_h.set_load_flag(True)
+        self.Massage_Editor_h.set_load_flag(True)
+        # self.Chat_Editor_h.set_load_flag(True)
+
+    def extract_yaml_data(self, text):
+        extracted_parts = []
+        clean_text = text
+        
+        # IMPROVED REGEX: 
+        # 1. matches ``` (optional language)
+        # 2. Non-greedy match for content
+        # 3. Handles cases where ``` is touching text
+        pattern_closed = r"```(\w*)\s*\n(.*?)```"
+        
+        matches = list(re.finditer(pattern_closed, text, re.DOTALL))
+        
+        for m in matches:
+            tag = m.group(1).lower()
+            content = m.group(2)
+            full_match_str = m.group(0)
+            
+            is_valid_yaml = False
+            
+            # Criteria: Explicit 'yaml' OR implicit NeatSeq content
+            if "yaml" in tag:
+                is_valid_yaml = True
+            elif ("Documentation:" in content or "Global_params:" in content):
+                is_valid_yaml = True
+            
+            if is_valid_yaml:
+                extracted_parts.append(content.strip())
+                # Replace with placeholder
+                clean_text = clean_text.replace(full_match_str, "\n\n> 📝 *[YAML Segment Extracted]*\n\n")
+
+        # Capture Truncated Blocks (End of stream)
+        pattern_unclosed = r"```(\w*)\s*\n(.*)$"
+        m_unclosed = re.search(pattern_unclosed, clean_text, re.DOTALL)
+        
+        if m_unclosed:
+            tag = m_unclosed.group(1).lower()
+            content = m_unclosed.group(2)
+            if "yaml" in tag or "Documentation:" in content:
+                extracted_parts.append(content.strip())
+                clean_text = clean_text.replace(m_unclosed.group(0), "\n\n> 📝 *[YAML Segment Extracted (End)]*\n\n")
+
+        if not extracted_parts:
+            return text, ""
+
+        if len(extracted_parts) > 1:
+            full_yaml = "\n\n# --- [Merged Block] ---\n\n".join(extracted_parts)
+        else:
+            full_yaml = extracted_parts[0]
+            
+        return clean_text, full_yaml
+    
+    @event.reaction('send_b.pointer_click')
+    def Send_Button_click(self, *events):
+        import queue 
+        message = self.Massage_Editor_h.value
+        
+        if len(message) > 0:
+            self.count = 0
+            self.accumulated_response = "" 
+            
+            # Update UI
+            self.chat_history.append((self.you, message))
+            self.Chat_Editor_h.set_value(self.get_chat())
+            # self.Chat_Editor_h.set_load_flag(True)
+            self.Massage_Editor_h.set_value("")
+            self.Massage_Editor_h.set_load_flag(True)
+            
+            # Enable Stop Button / Disable Send
+            self.Stop_b.set_disabled(False)
+            self.send_b.set_disabled(True)
+           
+            if not self.Thinking:
+                try:    
+                    self.close()
+                    
+                    # Ensure globals are available
+                    load_system_instruction()
+                    current_instruction = GPT_PROPMT 
+                    best_model = GEMINI_MODEL
+
+                    self.Process = Process(target=self.send_massage, args=(
+                        GEMINI_API_KEY,
+                        current_instruction,
+                        best_model,
+                        self.chat_history,
+                        self.q,
+                        self.you
+                    ))
+                    self.Process.daemon = True
+                    
+                    if 'Process' not in self.session.__dict__.keys():
+                        self.session.Process = [self.Process]
+                    else:
+                        self.session.Process.append(self.Process)
+                    
+                    self.Process.start()
+                    self.Thinking = True
+                except Exception as e: 
+                    print(f"❌ Main Thread Start Error: {str(e)}")
+                    self.Thinking = False
+                    self.Stop_b.set_disabled(True)
+                    self.send_b.set_disabled(False)
+
+        if self.Thinking:
+            try:
+                while True:
+                    # Expecting tuple: (TYPE, CONTENT, [OPTIONAL_EXTRA])
+                    data = self.q.get_nowait()
+                    msg_type = data[0]
+                    content = data[1]
+                    
+                    if msg_type == "status":
+                        self.Thinking_str = content 
+                        self.count = 0
+                        
+                    elif msg_type == "success":
+                        print("✅ Success received.")
+                        
+                        # UPDATE WORKING KEY INDEX
+                        if len(data) > 2:
+                            working_index = data[2]
+                            self.current_key_index = working_index # Remember for next time!
+
+                        clean_text, extracted_yaml = self.extract_yaml_data(content)
+                        if extracted_yaml: 
+                            self.Yaml_Editor_h.set_load_flag(False)
+                            self.Yaml_Editor_h.set_value(extracted_yaml)
+                            self.Yaml_Editor_h.set_load_flag(True)
+
+                        self.chat_history.append((self.chat, clean_text))
+                        self.Chat_Editor_h.set_value(self.get_chat())
+                        
+                        self.Thinking = False
+                        self.Thinking_str = "Thinking"
+                        self.Stop_b.set_disabled(True)
+                        self.send_b.set_disabled(False)
+                        break
+                        
+                    elif msg_type == "error":
+                        self.chat_history.append((self.chat, f"❌ {content}"))
+                        self.Chat_Editor_h.set_value(self.get_chat())
+                        
+                        self.Thinking = False
+                        self.Stop_b.set_disabled(True)
+                        self.send_b.set_disabled(False)
+                        break
+
+            except queue.Empty:
+                if self.count > 5: self.count = 0
+                current_display = self.chat_history[:]
+                current_display.append((self.chat, f"⚙️ {self.Thinking_str}" + "." * self.count))
+                self.Chat_Editor_h.set_value(self.get_chat_from_list(current_display))
+                self.count += 1
+
+        if self.Process is not None:
+            if not self.Process.is_alive() and self.Thinking:
+                if self.q.empty(): 
+                    self.Thinking = False
+                    self.Chat_Editor_h.set_value(self.get_chat() + "\n\n❌ Error: Process died unexpectedly.")
+                    self.Stop_b.set_disabled(True)
+                    self.send_b.set_disabled(False)
+
+        if (self.session.status != 0) and (self.Thinking):
+            asyncio.get_event_loop().call_later(self.refreshrate, self.Send_Button_click)
+    
+    def close(self):
+        if self.Process is not None:
+            try:
+                self.Process.terminate()
+                self.Process.join()
+            except: pass
+            self.Process = None
+            
+    def Kill(self):
+        self.close()
+        self.keep_running = False
+
+    # --- BACKGROUND PROCESS (SMART ROTATION) ---
+    @staticmethod
+    def send_massage(api_keys_list, system_instruction, model_name, chat_history, q, user_label):
+        import sys
+        import requests
+        import json
+        import time 
+        import random # <--- Added Import
+        
+        # Ensure input is a list
+        if isinstance(api_keys_list, str): api_keys_list = [api_keys_list]
+        
+        # --- RANDOMIZE KEYS ---
+        # We create a copy to shuffle so we don't mess up the original order if needed later
+        keys_to_try = api_keys_list.copy()
+        random.shuffle(keys_to_try)
+
+        def log(msg):
+            print(f"[Process] {msg}")
+            sys.stdout.flush()
+            q.put(("status", msg))
+
+        try:
+            log("Preparing Request...")
+            
+            contents = []
+            for sender, text in chat_history:
+                role = "user" if sender == user_label else "model"
+                contents.append({"role": role, "parts": [{"text": text}]})
+            
+            payload = {
+                "contents": contents,
+                "system_instruction": {"parts": [{"text": system_instruction}]},
+                "generationConfig": {"temperature": 0.3}
+            }
+            headers = {'Content-Type': 'application/json'}
+            data_payload = json.dumps(payload)
+
+            # --- LOOP THROUGH SHUFFLED KEYS ---
+            success = False
+            
+            for i, current_key in enumerate(keys_to_try):
+                if success: break
+                
+                # Obfuscate key for logging (show only last 4 chars)
+                # key_id = f"...{current_key[-4:]}" if len(current_key) > 4 else "Key"
+                # log(f"Trying Random Key {i+1}/{len(keys_to_try)} ({key_id})...")
+                
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={current_key}"
+                
+                # Retry loop for SERVER OVERLOAD (503) only
+                max_retries = 2
+                backoff = 2
+                
+                for attempt in range(max_retries):
+                    try:
+                        response = requests.post(url, headers=headers, data=data_payload, timeout=60)
+                        
+                        # 1. SUCCESS
+                        if response.status_code == 200:
+                            data = response.json()
+                            try:
+                                generated_text = data['candidates'][0]['content']['parts'][0]['text']
+                                q.put(("success", generated_text))
+                                success = True
+                                return 
+                            except (KeyError, IndexError):
+                                q.put(("error", "JSON Parse Error"))
+                                return 
+
+                        # 2. RATE LIMIT (429) -> Try next key
+                        elif response.status_code == 429:
+                            log(f" Rate Limited (429). Switching...")
+                            break 
+                        
+                        # 3. SERVER BUSY (503) -> Wait and Retry same key
+                        elif response.status_code == 503:
+                            log(f"Server Busy. Waiting {backoff}s...")
+                            time.sleep(backoff)
+                            backoff *= 2
+                            continue 
+
+                        # 4. OTHER ERROR -> Try next key
+                        else:
+                            log(f"Failed: {response.status_code}")
+                            break
+                            
+                    except requests.exceptions.Timeout:
+                        log("Timeout...")
+                        break 
+                    except Exception as e:
+                        log(f"Error: {e}")
+                        break
+            
+            if not success:
+                q.put(("error", "All API Keys exhausted."))
+
+        except Exception as e:
+            q.put(("error", str(e)))
+
+    def get_chat(self):
+        return self.get_chat_from_list(self.chat_history)
+
+    def get_chat_from_list_v1(self, history_list):
+        formatted = []
+        for msg in history_list:
+            if msg[0] == self.you:
+                block = f"\n\n{self.you}:\n    {msg[1].strip()}\n"
+            else:
+                block = f"{self.chat}:\n    {msg[1].strip()}\n"
+            formatted.append(block)
+        return "".join(formatted)
+
+    def get_chat_from_list(self, history_list):
+        formatted = []
+        for msg in history_list:
+            sender = msg[0]
+            text = msg[1].strip()
+            
+            # CRITICAL FIXES:
+            # 1. No indentation at the start of the string (avoids Code Block).
+            # 2. \n\n after the opening <div> (enables Markdown parsing inside HTML).
+            
+            if sender == self.you:
+                block = f"""<div class="chat-user">
+<span class="sender-name">{sender}</span>
+
+{text}
+
+</div>"""
+            else:
+                block = f"""<div class="chat-bot">
+<span class="sender-name">{sender}</span>
+
+{text}
+
+</div>"""
+                
+            formatted.append(block)
+        return "\n".join(formatted)
+    
+class AI_Tab(flx.Widget):
+    def init(self):
+        with ui.HSplit():
+            ui.Layout()
+            with ui.VSplit():
+                ui.Layout()
+                with flx.GroupWidget(title="Click to Use the Neatseq Guide AI Assistant",style='font-size: 200%; border: 0px solid purple;'):
+                    with ui.VBox():
+                        ui.Widget()  # Spacing
+                        self.ChatGPT_b = Rainbow(style='min-height: 200px; min-width: 200px;cursor:pointer;') 
+                        # ui.Button(text='🤖💬',style='width:30px;;)
+                        #self.ChatGPT_b = ui.ImageWidget(stretch=False,css_class='chatgpt-button',style='width:100px; height:100px;cursor:pointer; align-items:center;vertical-align:middle;',
+                        #                source=CHATGPT_LOGO)
+                        
+                ui.Layout()
+            ui.Layout()
+
+class WaveLines(flx.CanvasWidget):
+    def init(self):
+        global Math, window
+        self.ctx = self.node.getContext('2d')
+        self.tick = 0
+        self.draw()
+
+    def draw(self):
+        global Math, window
+        w, h = self.size
+        self.ctx.clearRect(0, 0, w, h)
+
+        num_waves = 5
+        spacing = h / (num_waves + 1)
+
+        for i in range(num_waves):
+            y_base = spacing * (i + 1)
+            color = f'hsl({i * 60}, 100%, 70%)'  # colorful lines
+
+            self.ctx.beginPath()
+            self.ctx.strokeStyle = color
+            self.ctx.lineWidth = 10
+
+            for x in range(0, w + 1, 2):
+                angle = (x + self.tick * 4) / 40
+                amplitude = 10 + 3 * Math.sin(self.tick * 0.05 + i)
+                y = y_base + Math.sin(angle + i) * amplitude
+                if x == 0:
+                    self.ctx.moveTo(x, y)
+                else:
+                    self.ctx.lineTo(x, y)
+
+            self.ctx.stroke()
+            self.ctx.closePath()
+
+        self.tick += 1
+        window.setTimeout(self.draw, 1000 / 30)
 
 class File_Browser(flx.GroupWidget):
     Dir           = event.DictProp({}, settable=True)
@@ -2780,6 +3877,107 @@ def Reconnect_SSH(ssh_client):
         ssh_client_.close()
     return   ssh_client_
 
+class AIChipWithNeatSeqIcon(flx.CanvasWidget):
+    def init(self):
+        global Math, window
+        self.ctx = self.node.getContext('2d')
+        self.tick = 0
+        self.draw()
+
+    def draw(self):
+        global Math, window
+        w, h = self.size
+        cx, cy = w * 0.5, h * 0.5
+
+        self.ctx.clearRect(0, 0, w, h)
+
+        # --- Background glow pulse ---
+        pulse = 0.5 + 0.4 * Math.sin(self.tick * 0.1)
+        self.ctx.beginPath()
+        self.ctx.fillStyle = f'rgba(0,255,180,{pulse * 0.2})'
+        self.ctx.arc(cx, cy, 40 + 5 * Math.sin(self.tick * 0.05), 0, Math.PI * 2)
+        self.ctx.fill()
+
+        # --- Rounded chip body ---
+        self.ctx.beginPath()
+        self.ctx.fillStyle = "#00FF88"
+        self.ctx.strokeStyle = "#00FFFF"
+        self.ctx.lineWidth = 3
+        self._roundedRect(cx - 25, cy - 25, 50, 50, 6)
+        self.ctx.fill()
+        self.ctx.stroke()
+
+        # --- Draw NeatSeq icon (custom DNA strand) ---
+        self.drawNeatSeqIcon(cx, cy)
+
+        # --- Animated pins (glow + slight movement) ---
+        pinCount = 6
+        pinSpacing = 10
+        pinLen = 12 + 3 * Math.sin(self.tick * 0.1)
+
+        self.ctx.lineWidth = 2
+
+        for i in range(-pinCount, pinCount + 1):
+            offset = i * pinSpacing
+            glow = 0.3 + 0.7 * Math.abs(Math.sin(self.tick * 0.1 + i))
+
+            self._glowLine(cx + offset, cy - 25, cx + offset, cy - 25 - pinLen, glow)  # Top
+            self._glowLine(cx + offset, cy + 25, cx + offset, cy + 25 + pinLen, glow)  # Bottom
+            self._glowLine(cx - 25, cy + offset, cx - 25 - pinLen, cy + offset, glow)  # Left
+            self._glowLine(cx + 25, cy + offset, cx + 25 + pinLen, cy + offset, glow)  # Right
+
+        self.tick += 1
+        window.setTimeout(self.draw, 1000 / 30)
+
+    def _roundedRect(self, x, y, w, h, r):
+        self.ctx.moveTo(x + r, y)
+        self.ctx.lineTo(x + w - r, y)
+        self.ctx.quadraticCurveTo(x + w, y, x + w, y + r)
+        self.ctx.lineTo(x + w, y + h - r)
+        self.ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h)
+        self.ctx.lineTo(x + r, y + h)
+        self.ctx.quadraticCurveTo(x, y + h, x, y + h - r)
+        self.ctx.lineTo(x, y + r)
+        self.ctx.quadraticCurveTo(x, y, x + r, y)
+
+    def _glowLine(self, x1, y1, x2, y2, glow):
+        self.ctx.beginPath()
+        self.ctx.strokeStyle = f'rgba(0,255,255,{glow})'
+        self.ctx.moveTo(x1, y1)
+        self.ctx.lineTo(x2, y2)
+        self.ctx.stroke()
+        self.ctx.closePath()
+
+    def drawNeatSeqIcon(self, cx, cy):
+        global Math
+        self.ctx.save()
+        self.ctx.translate(cx, cy)
+        self.ctx.scale(1, 1)
+
+        # DNA strand curves
+        self.ctx.strokeStyle = '#ffffff'
+        self.ctx.lineWidth = 1.5
+        for flip in [-1, 1]:
+            self.ctx.beginPath()
+            for y in range(-10, 11, 2):
+                x = flip * 4 * Math.sin(y / 6 + self.tick * 0.05)
+                if y == -10:
+                    self.ctx.moveTo(x, y)
+                else:
+                    self.ctx.lineTo(x, y)
+            self.ctx.stroke()
+
+        # Rungs
+        self.ctx.strokeStyle = '#80f8ff'
+        self.ctx.lineWidth = 1
+        for y in range(-8, 9, 4):
+            self.ctx.beginPath()
+            self.ctx.moveTo(-3, y)
+            self.ctx.lineTo(3, y)
+            self.ctx.stroke()
+
+        self.ctx.restore()
+
 class Rainbow(flx.CanvasWidget):
     def init(self):
         global Math, window
@@ -2844,6 +4042,15 @@ def LoadingWin(string='Collecting Data'):
                     ui.Widget()  # Spacing
             ui.Layout()
         ui.Layout()
+
+class NoTagDumper(yaml.SafeDumper):
+    pass
+
+def represent_ordereddict(dumper, data):
+    return dumper.represent_mapping(
+        yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
+        data.items()
+    )
 
 class NeatSeq_Flow_GUI(app.PyComponent):
     CSS = """
@@ -3028,6 +4235,18 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                         self.Results = Results(path,self.ssh_client)
                     self.Help    = ui.IFrame(url=Base_Help_URL,
                                           title='Help')
+                    
+                    if AI2USE == "GPT":
+                        with ui.Widget(title='🤖💬 ChatGPT'):
+                            load_system_instruction()
+                            self.ChatGPT = ChatGPT()
+                    elif AI2USE == "GEMINI":
+                        with ui.Widget(title='🤖💬 GeminiAgent'):
+                            load_system_instruction()
+                            self.ChatGPT = GeminiAgent(title='🤖💬 GeminiAgent')
+                    else:
+                        self.ChatGPT = AI_Tab(title='🤖💬 Ai Assistant')
+
                 
                 self.label = ui.Label(text='NeatSeq-Flow Graphical User Interface By Liron Levin',
                                       style='padding-left: 40px; background: #e8eaff; min-height: 15px; font-size:15px; transition: all 0.5s;')
@@ -3041,6 +4260,8 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                 self.Browser         = Run_File_Browser(path,self.ssh_client)
             with ui.Widget(style='background:white;') as self.LoadingWin:
                 LoadingWin()
+            with ui.Widget() as self.Editor:
+                self.Yaml_Editor     = Yaml_Editor_Page()
             if SERVE:
                 with ui.Widget(flex=1) as self.Option_Menu_w:
                     if (WOKFLOW_DIR != None):
@@ -3060,10 +4281,41 @@ class NeatSeq_Flow_GUI(app.PyComponent):
             else:
                 self.workflow_select = Empty_class()
                 self.Option_Menu     = Empty_class()
-                
+            
         if not SERVE:
             self.stack.apply_style('font-size:80%;')
         self.Run_FUN = Run_function_in_thread()
+
+    @event.reaction('stack.current')
+    def __on_stack_change(self, *events):
+        """
+        Triggered when the main stack changes. 
+        Waits 0.1s for the browser to render, then fixes the layout recursively.
+        """
+        import asyncio
+        asyncio.get_event_loop().call_later(0.1, lambda: self.__recursive_resize(self.stack))
+
+    def __recursive_resize(self, widget):
+        """
+        Dynamically walks down the VISIBLE widget tree and forces a resize.
+        Fixes the 'AttributeError' by using attribute detection instead of class names.
+        """
+        # 1. Force resize on the current object
+        try:
+            widget.check_real_size()
+        except Exception:
+            pass
+
+        # 2. CHECK: Is it a Stack or Tab? (Only one child is visible)
+        # If the widget has a 'current' attribute that is not None, follow that path only.
+        if getattr(widget, 'current', None):
+            self.__recursive_resize(widget.current)
+
+        # 3. CHECK: Is it a Split, Box, or Group? (All children are visible)
+        # If it didn't have 'current', but has 'children', resize all of them.
+        elif hasattr(widget, 'children'):
+            for child in widget.children:
+                self.__recursive_resize(child)
 
     @event.reaction('!Option_Menu.Done')
     def Option_Menu_Done(self,*events):
@@ -3137,6 +4389,37 @@ class NeatSeq_Flow_GUI(app.PyComponent):
         self.label.set_flex(0.2)
         asyncio.get_event_loop().call_later(5, self.label.set_flex,0.02)
     
+    def yaml_page(self,Type="Paste"):
+        if Type=="Paste":
+            self.stack.set_current(self.Editor)
+        else:
+            from io import StringIO
+            with StringIO() as outfile:
+                outfile = self.Extract_workflow(outfile)
+                outfile.seek(0)
+                self.stack.set_current(self.Editor)
+                self.Yaml_Editor.set_value(outfile.getvalue())
+            
+    @event.reaction('ChatGPT.Done')
+    def when_AI_Yaml_Editor_Done(self,*events):
+        for ev in events:
+            if ev.source.Done:
+                ev.source.set_Done(False)
+                self.set_filepicker_options([ev.source.YAML])
+                self.stack.set_current(self.MainStack)
+                self.TabLayout2.set_current(self.TabLayout)
+                self.TabLayout.set_current(self.step_info)
+
+    @event.reaction('Yaml_Editor.Done')
+    def when_Yaml_Editor_Done(self,*events):
+        for ev in events:
+            if ev.source.Done:
+                ev.source.set_Done(False)
+                if ev.source.Load:
+                    ev.source.set_Load(False)
+                    self.set_filepicker_options([ev.source.value])
+                self.stack.set_current(self.MainStack)
+
     def select_files(self,select_style='Single', select_type='Open', wildcard='*'):
         if SERVE:
             Regular = wildcard.replace('*','.+')
@@ -3245,7 +4528,9 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                    'load_samples_file'    : lambda: self.select_files('Single', 'Open'),
                    'save_samples_file'    : lambda: self.select_files('Single', 'Save'),
                    'step_export_file'     : lambda: self.select_files('Single', 'Save'),
-                   'Load_step_file'       : lambda: self.select_files('Single', 'Open','*.step')
+                   'Load_step_file'       : lambda: self.select_files('Single', 'Open','*.step'),
+                   'paste_workflow'       : lambda: self.yaml_page('Paste'),
+                   'copy_workflow'        : lambda: self.yaml_page('Copy')
                    }
         if key in options.keys():
             self.filepicker_key = key
@@ -3270,7 +4555,8 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                    'load_samples_file'    : lambda: self.samples_info.set_load_samples_file(Selected_Path),
                    'save_samples_file'    : lambda: self.samples_info.set_save_samples_file(Selected_Path),
                    'step_export_file'     : lambda: self.step_info.set_step_export_file(Selected_Path),
-                   'Load_step_file'       : lambda: self.step_info.set_Load_step_file(Selected_Path)
+                   'paste_workflow'       : lambda: self.step_info.set_workflow_file(Selected_Path),
+                   'Load_step_file'       : lambda: self.step_info.set_workflow_file(Selected_Path)
                    }
         if self.filepicker_key in options.keys():
             return options[self.filepicker_key]()
@@ -3854,7 +5140,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                         print(Error)
                         
     @event.reaction('!Run.open_filepicker', 'samples_info.open_filepicker', 'step_info.open_filepicker',
-                    'cluster_info.open_filepicker', 'vars_info.open_filepicker')
+                    'cluster_info.open_filepicker', 'vars_info.open_filepicker','ChatGPT.open_filepicker')
     def open_filepicker(self, *events):
         for ev in events:
             if ev.source.open_filepicker != '':
@@ -4031,25 +5317,32 @@ class NeatSeq_Flow_GUI(app.PyComponent):
     @event.reaction('step_info.workflow_file')
     def load_workflow_file(self, *events):
         for ev in events:
+            param_data = []
             if len(self.step_info.workflow_file) > 0:
                 self.stack.set_current(self.LoadingWin)
                 # self.Run_FUN.Run_Function(Name='sleep',FUN=Test_FUN,agrs=(50))
                 try:
-                    if self.sftp!=None:
+                    if len(self.step_info.workflow_file[0])>10:
                         from neatseq_flow_gui.modules.parse_param_data import parse_param_file_object
-                        file_name   = self.step_info.workflow_file[0][0]
-                        file_object = self.sftp.open(file_name)
-                        param_data  = parse_param_file_object(file_object,file_name)
-                        file_object.close()
-                    else:
-                        from neatseq_flow_gui.modules.parse_param_data import parse_param_file
-                        param_data = parse_param_file(self.step_info.workflow_file[0][0])
+                        from io import StringIO
+                        file_name   = "Loading from Editor"
+                        with StringIO(self.step_info.workflow_file[0]) as file_object:
+                            param_data  = parse_param_file_object(file_object,file_name)
+                    elif len(self.step_info.workflow_file[0])==2:
+                        if self.sftp!=None:
+                            from neatseq_flow_gui.modules.parse_param_data import parse_param_file_object
+                            file_name   = self.step_info.workflow_file[0][0]
+                            file_object = self.sftp.open(file_name)
+                            param_data  = parse_param_file_object(file_object,file_name)
+                            file_object.close()
+                        else:
+                            from neatseq_flow_gui.modules.parse_param_data import parse_param_file
+                            param_data = parse_param_file(self.step_info.workflow_file[0][0])
                 except BaseException as e: 
                     if SERVE:
                         self.send_massage.set_massage('[Load WorkFlow Error]:'+str(e))
                     else:
                         dialite.fail('Load WorkFlow Error', str(e))
-                    param_data = []
                     self.step_info.set_workflow_file([])
                 if len(param_data) > 0:
 
@@ -4068,13 +5361,59 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                     if 'Documentation' in param_data.keys():
                         self.Documentation.set_value(param_data['Documentation'])
                         self.Documentation.set_load_flag(True)
-                    
-                    self.Run.set_parameter_file(self.step_info.workflow_file)
-                    self.TabLayout.set_title('Work-Flow - '+os.path.basename(self.step_info.workflow_file[0][0]))
+                    if file_name  != "Loading from Editor":
+                        self.Run.set_parameter_file(self.step_info.workflow_file)
+                        self.TabLayout.set_title('Work-Flow - '+os.path.basename(self.step_info.workflow_file[0][0]))
+                else:
+                    self.stack.set_current(self.MainStack)
+                    self.label.set_flex(0.02)
             else:
                 self.stack.set_current(self.MainStack)
                 self.label.set_flex(0.02)
     
+    def Extract_workflow(self,outfile):
+        import yaml,re
+        # from ruamel.yaml import YAML
+        from collections import OrderedDict
+        # yaml = YAML()
+        NoTagDumper.add_representer(OrderedDict, represent_ordereddict)
+
+        param_data = OrderedDict()
+        param_data['Documentation'] = re.sub(string=self.Documentation.value.rstrip('\t').replace('\t',"    "),
+                                                pattern=' +\n',
+                                                repl='\n').rstrip(' ').rstrip('\n')
+        yaml.dump(param_data, outfile,Dumper=NoTagDumper,
+                    default_flow_style=False,
+                    width=float("inf"),
+                    default_style="|" ,
+                    explicit_start = False,
+                    explicit_end   = False,
+                    #version=(1,2),
+                    indent=4)
+
+        param_data = OrderedDict()
+        param_data['Global_params'] = self.fix_order_dict(self.cluster_info.Data)
+        yaml.dump(param_data, outfile,
+                    Dumper=NoTagDumper,
+                    default_flow_style=False,
+                    width=float("inf"),
+                    indent=4)
+        param_data = OrderedDict()
+        param_data['Vars'] = self.fix_order_dict(self.vars_info.Data)
+        yaml.dump(param_data, outfile,
+                    Dumper=NoTagDumper,
+                    default_flow_style=False,
+                    width=float("inf"),
+                    indent=4)
+        param_data = OrderedDict()
+        param_data['Step_params'] = self.fix_order_dict(self.step_info.Data)
+        yaml.dump(param_data, outfile,
+                    Dumper=NoTagDumper,
+                    default_flow_style=False,
+                    width=float("inf"),
+                    indent=4)
+        return outfile
+
     @event.reaction('step_info.save_workflow_file')
     def save_workflow_file(self, *events):
         import yaml,re
@@ -4099,28 +5438,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                             file_object = open(self.step_info.save_workflow_file[0][0], 'w')
                             
                         with file_object as outfile:
-                            param_data = OrderedDict()
-                            param_data['Documentation'] = re.sub(string=self.Documentation.value.rstrip('\t').replace('\t',"    "),
-                                                                 pattern=' +\n',
-                                                                 repl='\n').rstrip(' ').rstrip('\n')
-                            yaml.dump(param_data, outfile,
-                                      default_flow_style=False,
-                                      width=float("inf"),
-                                      default_style="|" ,
-                                      explicit_start = False,
-                                      explicit_end   = False,
-                                      #version=(1,2),
-                                      indent=4)
-
-                            param_data = OrderedDict()
-                            param_data['Global_params'] = self.fix_order_dict(self.cluster_info.Data)
-                            yaml.dump(param_data, outfile, default_flow_style=False,width=float("inf"), indent=4)
-                            param_data = OrderedDict()
-                            param_data['Vars'] = self.fix_order_dict(self.vars_info.Data)
-                            yaml.dump(param_data, outfile, default_flow_style=False,width=float("inf"), indent=4)
-                            param_data = OrderedDict()
-                            param_data['Step_params'] = self.fix_order_dict(self.step_info.Data)
-                            yaml.dump(param_data, outfile, default_flow_style=False,width=float("inf"), indent=4)
+                            outfile = self.Extract_workflow(outfile)
 
                     except BaseException as e: 
                         if SERVE:
@@ -5191,7 +6509,24 @@ class Manage_UpTime(flx.Component):
             exit()
         else:
             asyncio.get_event_loop().call_later(self.refreshrate, self.UpTime)
+
+def openai_create_assistants():
+    global OPENAI
+    global GPT_ASSISTANT
+
+    import openai as OPENAI
     
+    OPENAI.api_key = API_KEY
+
+    if GPT_ASSISTANT==None:
+        # Step 1: Create an assistant (once)
+        assistant = OPENAI.beta.assistants.create(
+            name = "Neatseq Guide",
+            model=GPT_MODEL,
+            instructions=GPT_PROPMT
+        )    
+        GPT_ASSISTANT = assistant.id
+
 if __name__ == '__main__':
     #getting arguments from the user 
     import argparse
@@ -5242,6 +6577,13 @@ if __name__ == '__main__':
                         help='''A path to a the CONDA bin location. 
                                 If --SSH_HOST is set, the Path needs to be in the remote host.
                         ''')
+    parser.add_argument('--GEMINI_API_KEY',dest='GEMINI_API_KEY',metavar="CHAR",type=str,default='',
+                        help='''A list of Gemini API keys separated by comma. 
+                                If used a Gemini Agent tab is added to the app.
+                        ''')
+    parser.add_argument('--GEMINI_MODEL',dest='GEMINI_MODEL',metavar="CHAR",type=str,default='auto',
+                        help='''A Gemini Model to use. Default is auto detect.
+                        ''')
     parser.add_argument('--LOG_DIR',dest='LOG_DIR',metavar="CHAR",type=str,default='',
                         help='''A path to a directory to save log files about users statistics. 
                                 Only woks If --Server is set.
@@ -5258,6 +6600,29 @@ if __name__ == '__main__':
     icon = os.path.join(os.path.realpath(os.path.expanduser(os.path.dirname(os.path.abspath(__file__))+os.sep+"..")),'neatseq_flow_gui','NeatSeq_Flow.ico')
     #icon = app.assets.add_shared_data('ico.icon', open(icon, 'rb').read())
     ICON = app.assets.add_shared_data('ico.icon', open(icon, 'rb').read())
+
+    if AI2USE == "GPT":
+        if len(API_KEY)>0:
+            try:
+                load_system_instruction()
+                openai_create_assistants()
+            except:
+                GPT_ASSISTANT = None
+                AI2USE = ""
+    elif  AI2USE=="GEMINI":
+        if len(args.GEMINI_API_KEY)==0:
+            AI2USE=""
+        else:     
+            GEMINI_API_KEY = args.GEMINI_API_KEY.split(",")
+            if len(GEMINI_API_KEY)>0:
+                GEMINI_MODEL = args.GEMINI_MODEL
+                if len(resolve_model_name(GEMINI_API_KEY[0]))==0:
+                    AI2USE=""
+                else:
+                    load_system_instruction()
+            else:
+                AI2USE=""
+
     if args.Server:
         import socket 
         from tornado.web import create_signed_value
