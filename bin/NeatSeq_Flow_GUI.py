@@ -2931,6 +2931,10 @@ class GeminiAgent(flx.PyComponent):
         random.shuffle(keys_to_try)
 
         def log(msg):
+            # If the message contains newlines, print it as a raw string to verify structure
+            if "\n" in str(msg):
+                print(f"[Process] Raw Payload Check: {repr(msg)[:200]}...") # Prints 'Line1\nLine2'
+            
             print(f"[Process] {msg}")
             sys.stdout.flush()
             q.put(("status", msg))
@@ -2964,8 +2968,8 @@ class GeminiAgent(flx.PyComponent):
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={current_key}"
                 
                 # Retry loop for SERVER OVERLOAD (503) only
-                max_retries = 2
-                backoff = 2
+                max_retries = 5
+                backoff = 3
                 
                 for attempt in range(max_retries):
                     try:
@@ -3016,44 +3020,33 @@ class GeminiAgent(flx.PyComponent):
     def get_chat(self):
         return self.get_chat_from_list(self.chat_history)
 
-    def get_chat_from_list_v1(self, history_list):
-        formatted = []
-        for msg in history_list:
-            if msg[0] == self.you:
-                block = f"\n\n{self.you}:\n    {msg[1].strip()}\n"
-            else:
-                block = f"{self.chat}:\n    {msg[1].strip()}\n"
-            formatted.append(block)
-        return "".join(formatted)
-
     def get_chat_from_list(self, history_list):
         formatted = []
         for msg in history_list:
             sender = msg[0]
             text = msg[1].strip()
             
-            # CRITICAL FIXES:
-            # 1. No indentation at the start of the string (avoids Code Block).
-            # 2. \n\n after the opening <div> (enables Markdown parsing inside HTML).
-            
             if sender == self.you:
-                block = f"""<div class="chat-user">
+                # FIX: Add 'white-space: pre-wrap' style
+                # This forces the HTML to respect every newline and space you typed.
+                block = f"""<div class="chat-user" style="white-space: pre-wrap;">
 <span class="sender-name">{sender}</span>
 
 {text}
 
 </div>"""
             else:
+                # Bot messages are usually Markdown, so we let them flow naturally
+                # (unless they use code blocks, which Markdown handles automatically)
                 block = f"""<div class="chat-bot">
 <span class="sender-name">{sender}</span>
 
 {text}
 
 </div>"""
-                
             formatted.append(block)
         return "\n".join(formatted)
-    
+
 class AI_Tab(flx.Widget):
     def init(self):
         with ui.HSplit():
