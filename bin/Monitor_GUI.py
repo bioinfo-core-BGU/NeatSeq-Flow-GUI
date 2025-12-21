@@ -989,9 +989,9 @@ class nsfgm(flx.PyComponent):
             # make a copy of the Finished column
             logpiv["temp_Finished"]=logpiv["Finished"]
             # count how many jobs started
-            N_Started=logpiv.applymap(lambda x:len(x))["Started"]
+            N_Started=logpiv.map(lambda x:len(x))["Started"]
             # count how many jobs Finished
-            N_Finished=logpiv.applymap(lambda x:len(x))["Finished"]
+            N_Finished=logpiv.map(lambda x:len(x))["Finished"]
             
             # get the running information from qstat and add the information to the Data-Frame
             qstat=self.get_qstat(ssh_client_)
@@ -1165,7 +1165,7 @@ class Relay_log_files(flx.PyComponent):
         items_DataFrame = pd.DataFrame.from_dict(items)
         items_DataFrame = items_DataFrame.assign(rowmode = rowmode) 
         if col in items_DataFrame.columns:
-            index = items_DataFrame.applymap(lambda col: int(col) if str(col).isnumeric() else col.lower()).sort_values(col,
+            index = items_DataFrame.map(lambda col: int(col) if str(col).isnumeric() else col.lower()).sort_values(col,
                                                                ascending=self.ascending).index
             items_DataFrame_sort = items_DataFrame.loc[index,].reset_index(drop=True).copy()
             # items_DataFrame_sort.index = list(range(len(items_DataFrame_sort.index)))
@@ -1283,7 +1283,7 @@ class Relay_log_data(flx.PyComponent):
         items_DataFrame = pd.DataFrame.from_dict(items)
         items_DataFrame = items_DataFrame.assign(rowmode = rowmode) 
         if col in items_DataFrame.columns:
-            index = items_DataFrame.applymap(lambda col: int(col) if str(col).isnumeric() else col.lower()).sort_values(col,
+            index = items_DataFrame.map(lambda col: int(col) if str(col).isnumeric() else col.lower()).sort_values(col,
                                                                ascending=self.ascending).index
             items_DataFrame_sort = items_DataFrame.loc[index,].reset_index(drop=True).copy()
             # items_DataFrame_sort.index = list(range(len(items_DataFrame_sort.index)))
@@ -1389,7 +1389,7 @@ class Relay_samples_menu(flx.PyComponent):
         items_DataFrame = pd.DataFrame.from_dict(items)
         items_DataFrame = items_DataFrame.assign(rowmode = rowmode) 
         if col in items_DataFrame.columns:
-            index = items_DataFrame.applymap(lambda col: int(col) if str(col).isnumeric() else col.lower()).sort_values(col,
+            index = items_DataFrame.map(lambda col: int(col) if str(col).isnumeric() else col.lower()).sort_values(col,
                                                                ascending=self.ascending).index
             items_DataFrame_sort = items_DataFrame.loc[index,].reset_index(drop=True).copy()
             # items_DataFrame_sort.index = list(range(len(items_DataFrame_sort.index)))
