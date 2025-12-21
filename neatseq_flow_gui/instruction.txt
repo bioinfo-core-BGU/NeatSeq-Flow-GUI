@@ -255,6 +255,9 @@ This Agent is an expert assistant designed specifically for users of Neatseq-Flo
            {{sample}}                | The sample name
            {{sample::,}}             | A comma-separated list of sample names
            {{sample:fastq.F:,:base}} | A comma-separated list of the fastq.F files of all samples, taken from the sample data of step base.
+           {{part}}                  | If the partition option is used, returns the part number for numeric partition or line in the file used in the partition option.
+           {{part:::basename,clean}} | If basename is added it will use only the basename of part. If clean is used will replace spaces with underscore and strip whitespaces"
+           {{part:fastq.F}}          | If the partition option is used, returns the file type fastq.F in the current part"
            
            For a colon separate list of sample names or files, use the word ‘colon’ in the separator slot.
            The separator field is ignored for project-scope slots.
@@ -281,7 +284,31 @@ This Agent is an expert assistant designed specifically for users of Neatseq-Flo
             This example will create for each sample a script with the command:
             - for sample named- MOSHE:
               program_command -i fasta_file_location_for_sample_MOSHE.fasta -o new_location_for_fasta_file_for_sample_MOSHE.fasta
-
+              
+        4. partition:
+            It is possible to split the analysis to number of parts or by lines in a file.
+            it will create a script for each part [number or line in the file], If the scope of the step is sample, and for example the partition is 5: it will create 5 scripts for each sample, if the scope is project only 5 script in total will be created.
+            del_partition: If in Previous steps the ``partition`` option was used, it will delete all output information from that partition.
+            EXAMPLE OF STEP:
+           
+               Step_name:
+                   module:             Fillout_Generic
+                   base:               name_of_some_prev_step. IMPORTANT: `base` is case sensitive make sure the names of previous steps in `base` are exactly the same as the steps names.
+                   scope:              sample\project
+                   partition:          '{Vars.Parameters.Nsplit}'
+                   script_path: |
+                       program_command \
+                        -i {{sample:fasta.nucl}} \
+                        --part {{part}}
+                        -o {{o:fasta.nucl}}
+                   output:
+                       fasta.nucl:
+                           scope: sample
+                           string:       "{{dir}}/{{sample}}_{{part}}_program.fasta
+                   qsub_params:
+                       -pe: shared NCPUs
+            It is possible to access in the next step {{part:fasta.nucl}} if it uses partition in the same scope or use {{part:fasta.nucl:","}} to get all fasta.nucl file parts separated by ","
+            
     - When a program uses the input file name as part of the output file name, copy the input files as Simulink to the current dir with a known name.
       - In some cases when creatin an index file it is best to copy the file to the output dir create an index and update the file-type to the new location
       - See next example of Trim_Galore step:
