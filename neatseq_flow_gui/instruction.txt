@@ -714,3 +714,104 @@ This Agent is an expert assistant designed specifically for users of Neatseq-Flo
                     scope: project
                     string: '{{dir}}/multiqc_report.html'
             tag: MultiQC
+    
+    Generic Module: Only use to convert to Fillout_Generic:
+        Step_Name:                      # Name of this step
+            module: Generic             # Name of module
+            base:                       # Name of the step [or list of names] to run after [must be after steps that generates the inputs File_Types] 
+            script_path:                # Main command for this module
+            scope:                      # The scope of this module could be sample/project, the default is by sample
+            shell:                      # Type of shell [csh OR bash]. bash is the default. only bash can be used in conda environment  
+            arg_separator:              # The separator between the arguments and values [The default is space].
+            inputs_last:                # The inputs arguments will be at the end of the command. [The default is inputs arguments at the beginning of the command]
+            command_order:              # The order of the command parts as string default 'redirects,inputs,outputs' ignored if inputs_last is set.
+            use_base_dir:               # Use the base step directory as the output for this step, it is possible to specify the base to use.
+            cd:                         # Change current working directory to the output location.
+            no_sample_dir:              # In Sample Scope: will NOT create a dedicated folder for each sample and the location of the base folder will be stored
+                                        # in a project level 'base_dir' File_Type
+            remove_subsamples:          # Will remove subsamples created by previous steps (split_fasta for example)
+            subsamples_string:          # A string to identify a subsample, all subsample will start with this string. [default: 'subsample']
+            inputs:                     # The inputs for this module
+                STR:                    # Input argument, e.g. -i, --input [could be also 'empty1', 'empty2'.. for no input argument string]
+                    scope:              # The scope of this input argument could be sample/project
+                                        # If the module scope is project and the argument scope is sample:
+                                        # all the samples inputs File_Types of this argument will be listed as: [input argument] [File_Type(sample#)] e.g. -i sample1.bam -i sample2.bam ... 
+                    File_Type:          # The input File_Type could be any File_Type available from previous (in this branch) steps
+                                        # It is possible to indicate more then one File_Type separated by comma 'fastq.F,fastq.R'
+                    base:               # From which previous step to take the input File_Type. The default is the current step.
+                    sep:                # If the module scope is project and the argument scope is sample:  
+                                        #       All the samples inputs File_Types of this argument will be listed delimited by sep. e.g. [sep=,] -i sample1.bam,sample2.bam ... 
+                                        # If more then one File_Type was specify the inputs File_Types of this argument will be listed delimited by sep.
+                    prefix:             # A prefix for this input argument file name
+                    suffix:             # A suffix for this input argument file name
+                    use_dirname:        # Use only the input Directory and add suffix for constant file name and prefix to add a string before the input Directory
+                    del:                # Delete the files in the input File_Type after the step ends [use to save space for large files you don't need downstream]
+                                        # Will generate empty file with the same name and a suffix of _DELETED
+                    constant_value:     # use a constant value instead of "File_Type".
+                                        # it is the same as the "redirects".
+                                        # use when the order of inputs are important!!
+                                        # use '{{sample_name}}' to be replace with the sample name (or project name in project scope)
+                                        # using the constant_value option will override all other input arguments!!!!!!
+            outputs:                    # The outputs for this module
+                STR:                    # Output argument, e.g. -o, --out , the scope of the output arguments is determinant by the module scope
+                                        # could be also 'empty1', 'empty2'.. for no output argument string OR 'No_run1', 'No_run2'.. for only entering the file information to output File_Type
+                    File_Type:          # The output File_Type could be any File_Type name for the current branch downstream work 
+                                        # If the File_Type exists its content will be override for the current branch downstream work 
+                    prefix:             # A prefix for this output argument file name
+                    suffix:             # A suffix for this output argument file name
+                                        # between prefix and suffix will be the sample name [in sample scope] or the project title [in project scope] 
+                    constant_file_name: # Use constant file name for this output argument [ignore prefix and suffix]
+                                        # If empty [''] will enter the output directory location
+                    use_base_name:      # use only the base name of the output file [ignored if constant_file_name is used]
+            copy_File_Types:            # Transferring information between File_Types
+                STR:                    # Unique name for the transfer
+                    source:
+                        File_Type:      # Copy the content of source File_Type to the target File_Type [copy from here]
+                        scope:          # Copy the source File_Type From this scope [if not specified the default is sample]
+                        base:           # The source step to copy the File_Type from (from previous steps). The default it the current step.
+                        constant_value: # Use to transfer information outside of the 'File_Type' system to a File Type, will always be considered as project scope
+                                        # Using the constant_value option will override all other source arguments!!!!!!
+                    target:
+                        File_Type:      # Copy the content of source File_Type to the target File_Type [copy to here]
+                        scope:          # Copy to the target File_Type in this scope [if not specified the default is sample]
+            collect_results:            # Will copy (symbolic link) selected files to a Results folder
+                sample:                 # 
+                    File_Type:          # list of sample scope File_Type separated by comma to copy ['fastq.F,fastq.R']
+                project:                # 
+                    File_Type:          # list of project scope File_Type separated by comma to copy ['fastq.F,fastq.R']
+            qsub_params:                # Parameters for qsub [number of cpus or memory to reserve etc ]
+                STR: 
+            redirects:                  # Parameters to pass directly to the command
+                STR: 
+        
+        EXAMPLE OF STEP in Generic:
+            Make_Blast_DB:
+                module: Generic
+                base: Import
+                script_path: {Vars.Programs.makeblastdb}
+                scope: sample
+                inputs:
+                    -in:
+                        scope: sample
+                        File_Type: fasta.nucl
+                outputs:
+                    -out:
+                        prefix:
+                        File_Type: blast_db
+                        suffix: ".out"
+                redirects:
+                    -dbtype: nucl
+        EXAMPLE OF the same STEP in Fillout_Generic:
+            Make_Blast_DB:
+                module: Fillout_Generic
+                base: Import
+                scope: sample
+                script_path: |
+                    {Vars.Programs.makeblastdb} \
+                        -in {{sample:fasta.nucl} \
+                        -out {{o:blast_db}} \
+                        -dbtype nucl
+                output:
+                    blast_db:
+                        scope: sample
+                        string: '{{dir}}/{{sample}}.out'
