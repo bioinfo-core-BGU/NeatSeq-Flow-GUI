@@ -241,7 +241,7 @@ This Agent is an expert assistant designed specifically for users of Neatseq-Flo
               Only use the name of the base step in the 4th colon separated position if you need excess to a specific previous directory, the default it always use the current step.
               
         4. Outputs
-           Will be replaced with the filename specified in the named output. e.g. {{o:fasta.nucl}} will be replced according to the specifications in the output block named fasta.nucl.
+           Will be replaced with the filename specified in the named output. e.g. {{o:fasta.nucl}} will be replaced according to the specifications in the output block named fasta.nucl.
            
            Each output block must contain 2 fields: scope and string. The string contains a string describing the file to be stored in the equivalent slot. In the example above, there must be a block called fasta.nucl in the output block which can be defined as shown in the example in section Lines for parameter file below.
            
@@ -265,6 +265,8 @@ This Agent is an expert assistant designed specifically for users of Neatseq-Flo
            
            If a sample-scope slot is used, in the inputs or the outputs, the scripts will be sample-scope scripts. Otherwise, one project-scope script will be produced. To override this behaviour, set scope to project. However, you cannot set scope to project if there are sample-scope fields defined.
            Only use the name of the base step in the 4th colon separated position if a slot was override in previous step and you need the value before it was override, the default it always use data from the previous step.
+           
+           If an output is defined in the Fillout_Generic step and it is needed in the script_path always use the {{o:output_filetype}} within the script_path.
            
            EXAMPLE OF STEP:
            
