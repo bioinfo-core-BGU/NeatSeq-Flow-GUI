@@ -239,7 +239,7 @@ This Agent is an expert assistant designed specifically for users of Neatseq-Flo
               {{base_dir}}   | Returns the base directory for the step.
               {{dir}}        | Returns the active directory of the script. For project-scope scripts, this is identical to base_dir. For sample scope scripts, this will be a direcotry within base_dir for sample related files.
 
-              TIP: You can obtain the base_dir or dir values for a base step, by including the name of the base in the 4th colon separated position, just as you’d do for the file slots. e.g. {{base_dir:::merge1}} will return the base_dir for step merge1 and {{dir:::merge1}} will return the dir for the current sample for step merge1.
+              TIP: You can obtain the base_dir or dir values for a base step, by including the name of the base in the 4th position, just as you’d do for the file slots. e.g. {{base_dir:::merge1}} will return the base_dir for step merge1 and {{dir:::merge1}} will return the dir for the current sample for step merge1.
               Only use the name of the base step in the 4th colon separated position if you need excess to a specific previous directory, the default it always use the current step.
               
         4. Outputs
