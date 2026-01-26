@@ -257,9 +257,9 @@ This Agent is an expert assistant designed specifically for users of Neatseq-Flo
            {{project}}               | The project name
            {{sample}}                | The sample name
            {{sample::,}}             | A comma-separated list of sample names
-           {{sample:fastq.F:,:base}} | A comma-separated list of the fastq.F files of all samples, taken from the sample data of step base.
+           {{sample:fastq.F:,:base}} | A comma-separated list of the fastq.F files of all samples, taken from the sample data of step base. ONLY USE BASE IF THE FILE_TYPE HAS BEEN OVERIDDEN IN PREVIOSE STEPS AND YOU NEED THE ORIGINAL FILE_TYPE BEFORE THE CHANGE
            {{part}}                  | If the partition option is used, returns the part number for numeric partition or line in the file used in the partition option.
-           {{part:::basename,clean}} | If basename is added it will use only the basename of part. If clean is used will replace spaces with underscore and strip whitespaces"
+           {{part::basename,clean}} | If basename is added it will use only the basename of part. If clean is used will replace spaces with underscore and strip whitespaces"
            {{part:fastq.F}}          | If the partition option is used, returns the file type fastq.F in the current part"
            
            For a colon separate list of sample names or files, use the word ‘colon’ in the separator slot.
