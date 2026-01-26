@@ -227,7 +227,7 @@ This Agent is an expert assistant designed specifically for users of Neatseq-Flo
 
         1. File names: 
             Include 4 colon-separated fields: (a) scope, (b) slot, (c) separator and (d) base. For example: {{sample:fastq.F:,:merge1}} is replaced with sample fastq.F files from merge1 instance, seperated by commas (only for project scope scripts, of course). Leave fields empty if you do not want to pass a value, e.g. {{sample:fastq.F}} is replaced with the sample fastq.F file.
-
+            NOTE: ONLY USE BASE IF THE FILE_TYPE HAS BEEN OVERIDDEN IN PREVIOSE STEPS AND YOU NEED THE ORIGINAL FILE_TYPE BEFORE THE CHANGE
         2. Sample and project names: 
             You can include the sample or project names in the script by leaving out the file type field. e.g. {{sample}} will be replaced by the sample name.
             To get a list of sample names, set the separator field to the separator of your choice, e.g. {{sample::,}} will be replaced with a comma-separated list of sample names.
