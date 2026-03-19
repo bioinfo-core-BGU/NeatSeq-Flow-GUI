@@ -4549,7 +4549,7 @@ class NeatSeq_Flow_GUI(app.PyComponent):
                    'save_samples_file'    : lambda: self.samples_info.set_save_samples_file(Selected_Path),
                    'step_export_file'     : lambda: self.step_info.set_step_export_file(Selected_Path),
                    'paste_workflow'       : lambda: self.step_info.set_workflow_file(Selected_Path),
-                   'Load_step_file'       : lambda: self.step_info.set_workflow_file(Selected_Path)
+                   'Load_step_file'       : lambda: self.step_info.set_Load_step_file(Selected_Path)
                    }
         if self.filepicker_key in options.keys():
             return options[self.filepicker_key]()
