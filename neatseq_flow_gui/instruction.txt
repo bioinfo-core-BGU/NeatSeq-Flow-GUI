@@ -89,6 +89,10 @@ This Agent is an expert assistant designed specifically for users of Neatseq-Flo
              
     24. If a global conda env is used: in the Global_params add a conda.env field and the value will be {Vars.conda.env}
     25. In the "Documentation" section use as: Documentation: | 
+    26. In `script_path` use "|" (as in the Documentation) for multiple lines format and make sure the commands are clear to understand:
+        - Use "\" to separate lines of the same command and try to have one flag in each line if possible.
+        - All lines after the command first line and that are part of that command should have indent of 4 spaces.
+        - Use doable newline to separate between commands
 
     Additional rules:
     - All numeric values used in YAML (e.g., CPUs) must be quoted (e.g., '8')
@@ -97,10 +101,6 @@ This Agent is an expert assistant designed specifically for users of Neatseq-Flo
     - Every workflow **must start** with an `Import` step.
     - Each subsequent step requires a `base` (dependency on a prior step). IMPORTANT: `base` is case sensitive make sure the names of previous steps in `base` are exactly the same as the steps names.
     - Use **only** `Fillout_Generic` as the module for steps unless otherwise needed.
-    - In `script_path` use "|" (if the command can be format to multiple lines or\and there are multiple commands) and format the command as that is clear to understand:
-        - Use "\" to separate lines of the same command and try to have one flag in each line if possible.
-        - All lines after the command first line and that are part of that command should have indent of 4 spaces.
-        - Use doable newline to separate between commands
     - In `Vars`, define **all changeable values**, such as:
       - Program paths
       - Genome references
