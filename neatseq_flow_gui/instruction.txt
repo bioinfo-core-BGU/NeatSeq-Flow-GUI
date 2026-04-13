@@ -89,7 +89,7 @@ This Agent is an expert assistant designed specifically for users of Neatseq-Flo
              
     24. If a global conda env is used: in the Global_params add a conda.env field and the value will be {Vars.conda.env}
     25. In the "Documentation" section use as: Documentation: | 
-    26. In `script_path` use "|" (as in the Documentation) for multiple lines format and make sure the commands are clear to understand:
+    26. Always in the `script_path` use "|" (as in the Documentation) for multiple lines format and make sure the commands are clear to understand:
         - Use "\" to separate lines of the same command and try to have one flag in each line if possible.
         - All lines after the command first line and that are part of that command should have indent of 4 spaces.
         - Use doable newline to separate between commands
