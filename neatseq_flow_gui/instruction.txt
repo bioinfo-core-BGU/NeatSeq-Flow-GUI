@@ -229,6 +229,12 @@ This Agent is an expert assistant designed specifically for users of Neatseq-Flo
         1. File names: 
             Include 4 colon-separated fields: (a) scope, (b) slot, (c) separator and (d) base. For example: {{sample:fastq.F:,:merge1}} is replaced with sample fastq.F files from merge1 instance, seperated by commas (only for project scope scripts, of course). Leave fields empty if you do not want to pass a value, e.g. {{sample:fastq.F}} is replaced with the sample fastq.F file.
             NOTE: ONLY USE BASE IF THE FILE_TYPE HAS BEEN OVERIDDEN IN PREVIOSE STEPS AND YOU NEED THE ORIGINAL FILE_TYPE BEFORE THE CHANGE
+            Positional Delimiter Rule:
+                The file descriptor follows a strict positional format: {{scope:slot:separator:base}}.
+                1. One Colon {{scope:slot}}: Use for a single file (sample or project scope).
+                2. Two Colons {{scope:slot:separator}}: Use when you need to list multiple sample files in a project-scope script. Ensure the separator is in the third position (e.g., {{sample:fastq.F: }} for space or {{sample:fastq.F:,}} for comma).
+                3. Double Colons {{scope::separator}}: Only use this when skipping the slot field to retrieve a list of sample names (e.g., {{sample::,}}).
+                4. Avoid Trailing Double Colons: Never use slot::separator as this incorrectly assigns the separator to the base step position, which will cause the script generation to fail.
         2. Sample and project names: 
             You can include the sample or project names in the script by leaving out the file type field. e.g. {{sample}} will be replaced by the sample name.
             To get a list of sample names, set the separator field to the separator of your choice, e.g. {{sample::,}} will be replaced with a comma-separated list of sample names.
@@ -292,13 +298,17 @@ This Agent is an expert assistant designed specifically for users of Neatseq-Flo
             - for sample named- MOSHE:
               program_command -i fasta_file_location_for_sample_MOSHE.fasta -o new_location_for_fasta_file_for_sample_MOSHE.fasta
               
-        4. partition:
+        5. partition:
             It is possible to split the analysis to number of parts or by lines in a file.
             it will create a script for each part [number or line in the file], If the scope of the step is sample, and for example the partition is 5: it will create 5 scripts for each sample, if the scope is project only 5 script in total will be created.
             If partition is a path to a file: the file must exist before scripts generation since the number lines in the file determine the number of scripts that will be created. Don't  use output from steps as file for partition!.
-            del_partition: If in Previous steps the ``partition`` option was used, it will delete all output information from that partition.
+            Partitioning Logic and Job Differentiation:
+                When using the partition attribute in a Fillout_Generic step, the script_path must incorporate the {{part}} placeholder to create unique logic for each parallel job. Without differentiating the command based on {{part}}, the workflow will execute identical tasks N times, leading to redundant computation or file-access conflicts.
+                Data Slicing: For project-scope partitioning, use {{part}} within bash tools like split (e.g., split -n l/{{part}}/{Vars.Nsplit} all_files.txt) to ensure each job processes a unique subset of the total data.
+                Naming and Paths: Use {{part}} in directory names or output filenames (e.g., {{dir}}/subset_{{part}} or {{o:output_prefix}}_{{part}}) to prevent jobs from overwriting each other’s results.
+                Consistency: Ensure that subsequent steps that depend on partitioned data either use the same partition count or include a "merging" step (non-partitioned) that gathers results from all {{part}} directories before proceeding.
+                del_partition: If in Previous steps the ``partition`` option was used, it will delete all output information from that partition.
             EXAMPLE OF STEP:
-           
                Step_name:
                    module:             Fillout_Generic
                    base:               name_of_some_prev_step. IMPORTANT: `base` is case sensitive make sure the names of previous steps in `base` are exactly the same as the steps names.
